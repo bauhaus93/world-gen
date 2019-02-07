@@ -20,7 +20,8 @@ pub struct Application {
     window_size: [f64; 2],
     quit: bool,
     time_passed: u32,
-    sleep_time: time::Duration
+    sleep_time: time::Duration,
+    movement_keys_down: [bool; 4]
 }
 
 impl Application {
@@ -41,7 +42,8 @@ impl Application {
             window_size: window_size,
             quit: false,
             time_passed: 0,
-            sleep_time: time::Duration::from_millis(50)
+            sleep_time: time::Duration::from_millis(50),
+            movement_keys_down: [false, false, false, false]
         };
         Ok(app)
     }
@@ -51,6 +53,7 @@ impl Application {
         let mut last_time = time::Instant::now();
         while !self.quit {
             self.handle_events();
+            self.handle_movement();
             self.world.tick(self.time_passed);
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
@@ -73,7 +76,7 @@ impl Application {
     }
 
     fn process_events(&mut self, events: &[glutin::Event]) {
-        let mut keys_pressed: Vec<glutin::VirtualKeyCode> = Vec::new();
+        let mut keys_pressed: Vec<(glutin::VirtualKeyCode, bool)> = Vec::new();
         for event in events {
             match event {
                 glutin::Event::WindowEvent { event, .. } => {
@@ -109,33 +112,38 @@ impl Application {
         self.world.get_camera_mut().mod_rotation(offset * 0.025 * (self.time_passed as Float / 1000.));
     }
 
-    fn handle_pressed_keys(&mut self, key_list: &[glutin::VirtualKeyCode]) {
+    fn handle_movement(&mut self) {
         let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
-        for key in key_list {
-            match key {
-                glutin::VirtualKeyCode::W => {
-                    move_offset = move_offset.add(self.world.get_camera().get_direction());
-                },
-                glutin::VirtualKeyCode::A => {
-                    let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
-                    move_offset = move_offset.sub(right);
-                },
-                glutin::VirtualKeyCode::S => {
-                    move_offset = move_offset.sub(self.world.get_camera().get_direction());
-                },
-                glutin::VirtualKeyCode::D => {
-                    let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
-                    move_offset = move_offset.add(right);
-                },
-                glutin::VirtualKeyCode::P => {
-                    self.world.toggle_camera_projection();
-                },
-                _=> info!("other")
-            }
+        if self.movement_keys_down[0] {
+            move_offset = move_offset.add(self.world.get_camera().get_direction());
+        }
+        if self.movement_keys_down[1] {
+            let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+            move_offset = move_offset.sub(right);
+        }
+        if self.movement_keys_down[2] {
+            move_offset = move_offset.sub(self.world.get_camera().get_direction());
+        }
+        if self.movement_keys_down[3] {
+            let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+            move_offset = move_offset.add(right);
         }
         if length(move_offset) > 1e-3 {
             const SPEED: Float = 1.;
             self.world.get_camera_mut().mod_translation(normalize(move_offset) * SPEED);
+        }
+    }
+
+    fn handle_pressed_keys(&mut self, key_list: &[(glutin::VirtualKeyCode, bool)]) {
+        for (key, down) in key_list {
+            match key {
+                glutin::VirtualKeyCode::W => { self.movement_keys_down[0] = *down; },
+                glutin::VirtualKeyCode::A => { self.movement_keys_down[1] = *down; },
+                glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
+                glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
+                glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },
+                _ => {}
+            }
         }
     }
 
@@ -186,9 +194,10 @@ impl Application {
     }
 }
 
-fn get_keycode(input: glutin::KeyboardInput) -> Option<glutin::VirtualKeyCode> {
+fn get_keycode(input: glutin::KeyboardInput) -> Option<(glutin::VirtualKeyCode, bool)> {
     match (input.virtual_keycode, input.state) {
-        (Some(keycode), glutin::ElementState::Pressed) => Some(keycode),
+        (Some(keycode), glutin::ElementState::Pressed) => Some((keycode, true)),
+        (Some(keycode), glutin::ElementState::Released) => Some((keycode, false)),
         (_, _) => None
     }
 }

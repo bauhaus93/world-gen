@@ -38,11 +38,10 @@ impl World {
         height_noise.set_range((0., 5.));
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
-        test_object.set_translation(Vector3::new(-1., -1., 1.));
+        test_object.set_translation(Vector3::new(0., 0., 0.));
 
         let camera = Camera::default();
         let cam_dir = create_direction(camera.get_rotation());
-        info!("Camera direction = {:.2}/{:.2}/{:.2}", cam_dir.x, cam_dir.y, cam_dir.z);
 
         let mut world = World {
             texture_array: texture_array,
@@ -53,25 +52,15 @@ impl World {
         Ok(world)
     }
 
-    pub fn move_camera(&mut self, mut offset: Vector3<Float>) {
-        let curr_height = self.camera.get_translation().z;
-        match self.camera.get_projection() {
-            Projection::Orthographic { .. } if curr_height > 0. => { offset.z = -curr_height; },
-            Projection::Orthographic { .. } if curr_height + offset.z > 0. => { offset.z = 0.; },
-            _ => {}
-        }
-        self.camera.mod_translation(offset);
-    }
-
     pub fn toggle_camera_projection(&mut self) {
         match self.camera.get_projection() {
             Projection::Orthographic { .. } => {
                 self.camera.set_projection(create_default_perspective());
-                self.camera.set_translation(Vector3::new(-10., -10., 20.));
+                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             },
             Projection::Perspective { .. } => {
                 self.camera.set_projection(create_default_orthographic());
-                self.camera.set_translation(Vector3::new(0., 0., 0.));
+                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             }
         }
     }

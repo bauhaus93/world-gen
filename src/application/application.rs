@@ -3,26 +3,28 @@ use std::{ thread, time, ops::{ Add, Sub } };
 use glutin;
 use gl;
 use gl::types::GLsizei;
-use glm::Vector3;
+use glm::{ GenNum, Vector3, normalize, length, cross };
 
-use super::ApplicationError;
-use super::window;
 use crate::graphics;
 use crate::world;
-use crate::world::traits::{ Updatable, Translatable };
+use crate::world::traits::{ Updatable, Translatable, Rotatable };
+use crate::utility::Float;
+use super::ApplicationError;
+use super::window;
 
 pub struct Application {
     world: world::World,
     shader_program: graphics::ShaderProgram,
     window: glutin::GlWindow,
     events_loop: glutin::EventsLoop,
+    window_size: [f64; 2],
     quit: bool,
     time_passed: u32,
     sleep_time: time::Duration
 }
 
 impl Application {
-    pub fn new(window_size: (f64, f64)) -> Result<Application, ApplicationError> {
+    pub fn new(window_size: [f64; 2]) -> Result<Application, ApplicationError> {
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
         let shader_program = graphics::ShaderProgramBuilder::new()
@@ -36,6 +38,7 @@ impl Application {
             window: window,
             shader_program: shader_program,
             world: world,
+            window_size: window_size,
             quit: false,
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50)
@@ -52,39 +55,93 @@ impl Application {
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
             last_time = time::Instant::now();
-            self.handle_sleep_time();
+            self.update_sleep_time();
             thread::sleep(self.sleep_time);
         }
         Ok(())
     }
 
     fn handle_events(&mut self) {
+        let events = self.collect_events();
+        self.process_events(&events);
+    }
+
+    fn collect_events(&mut self) -> Vec<glutin::Event> {
         let mut events: Vec<glutin::Event> = Vec::new();
         self.events_loop.poll_events(|event| { events.push(event); });
+        events
+    }
+
+    fn process_events(&mut self, events: &[glutin::Event]) {
+        let mut keys_pressed: Vec<glutin::VirtualKeyCode> = Vec::new();
         for event in events {
-            self.handle_event(event);
+            match event {
+                glutin::Event::WindowEvent { event, .. } => {
+                    match event {
+                        glutin::WindowEvent::CloseRequested => { self.quit = true; },
+                        glutin::WindowEvent::Resized(logical_size) => { self.handle_resize((*logical_size).into()); },
+                        glutin::WindowEvent::KeyboardInput { input, .. } => {
+                            if let Some(key) = get_keycode(*input) {
+                                keys_pressed.push(key);
+                            }
+                        },
+                        glutin::WindowEvent::MouseWheel { delta, phase, .. } => { self.handle_mousewheel(*delta, *phase); }
+                        _ => {}
+                    }
+                },
+                glutin::Event::DeviceEvent { event, .. } => {
+                    match event {
+                        glutin::DeviceEvent::MouseMotion { delta } => { self.handle_mouse_movement(*delta); },
+                        _ => {}
+                    }
+                },
+                _ => {}
+            }
+        }
+        self.handle_pressed_keys(&keys_pressed);
+    }
+
+    fn handle_mouse_movement(&mut self, delta: (f64, f64)) {
+        if let Err(msg) = self.window.set_cursor_position(glutin::dpi::LogicalPosition::new(self.window_size[0] / 2., self.window_size[1] / 2.)) {
+            warn!("window.set_cursor position: {}", msg);
+        }
+        let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
+        self.world.get_camera_mut().mod_rotation(offset * 0.025 * (self.time_passed as Float / 1000.));
+    }
+
+    fn handle_pressed_keys(&mut self, key_list: &[glutin::VirtualKeyCode]) {
+        let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
+        for key in key_list {
+            match key {
+                glutin::VirtualKeyCode::W => {
+                    move_offset = move_offset.add(self.world.get_camera().get_direction());
+                },
+                glutin::VirtualKeyCode::A => {
+                    let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+                    move_offset = move_offset.sub(right);
+                },
+                glutin::VirtualKeyCode::S => {
+                    move_offset = move_offset.sub(self.world.get_camera().get_direction());
+                },
+                glutin::VirtualKeyCode::D => {
+                    let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+                    move_offset = move_offset.add(right);
+                },
+                glutin::VirtualKeyCode::P => {
+                    self.world.toggle_camera_projection();
+                },
+                _=> info!("other")
+            }
+        }
+        if length(move_offset) > 1e-3 {
+            const SPEED: Float = 1.;
+            self.world.get_camera_mut().mod_translation(normalize(move_offset) * SPEED);
         }
     }
 
-    fn handle_event(&mut self, event: glutin::Event) {
-        match event {
-            glutin::Event::WindowEvent { event, .. } => {
-                match event {
-                    glutin::WindowEvent::CloseRequested => { self.quit = true; },
-                    glutin::WindowEvent::Resized(logical_size) => { self.handle_resize(logical_size.into()); },
-                    glutin::WindowEvent::KeyboardInput { input, .. } => { self.handle_keyboard_input(input); },
-                    glutin::WindowEvent::MouseWheel { delta, phase, .. } => { self.handle_mousewheel(delta, phase); }
-                    _ => {}
-                }
-            },
-            _ => {}
-        }
-    }
-
-    fn handle_resize(&self, new_size: (u32, u32)) {
-        unsafe {
-            gl::Viewport(0, 0, new_size.0 as GLsizei, new_size.1 as GLsizei);
-        }
+    fn handle_resize(&mut self, new_size: (u32, u32)) {
+        unsafe { gl::Viewport(0, 0, new_size.0 as GLsizei, new_size.1 as GLsizei); }
+        self.window_size = [new_size.0 as f64, new_size.1 as f64];
         info!("Updated viewport to {}/{}/{}/{}", 0, 0, new_size.0, new_size.1);
         match graphics::check_opengl_error("gl::Viewport") {
             Ok(_) => {},
@@ -92,29 +149,13 @@ impl Application {
         } 
     }
 
-    fn handle_keyboard_input(&mut self, input: glutin::KeyboardInput) {
-        match (input.virtual_keycode, input.state) {
-            (Some(keycode), glutin::ElementState::Pressed) => {
-                match keycode {
-                    glutin::VirtualKeyCode::A => self.world.move_camera(Vector3::new(-1., 1., 0.)),
-                    glutin::VirtualKeyCode::D => self.world.move_camera(Vector3::new(1., -1., 0.)),
-                    glutin::VirtualKeyCode::W => self.world.move_camera(Vector3::new(1., 1., 0.)),
-                    glutin::VirtualKeyCode::S => self.world.move_camera(Vector3::new(-1., -1., 0.)),
-                    glutin::VirtualKeyCode::R => self.world.move_camera(Vector3::new(0., 0., 1.)),
-                    glutin::VirtualKeyCode::F => self.world.move_camera(Vector3::new(0., 0., -1.)),
-                    glutin::VirtualKeyCode::P => self.world.toggle_camera_projection(),
-                    _ => {}
-                }
-            },
-            (_, _) => {}
-        }
-    }
+
     fn handle_mousewheel(&mut self, delta: glutin::MouseScrollDelta, phase: glutin::TouchPhase) {
         match phase {
             glutin::TouchPhase::Moved => {
                 match delta {
-                    glutin::MouseScrollDelta::LineDelta(_, dir) if dir > 0. => { self.world.get_camera_mut().zoom(0.9); },
-                    glutin::MouseScrollDelta::LineDelta(_, dir) if dir < 0. => { self.world.get_camera_mut().zoom(1.1); },
+                    glutin::MouseScrollDelta::LineDelta(_, dir) if dir > 0. => { },
+                    glutin::MouseScrollDelta::LineDelta(_, dir) if dir < 0. => { },
                     _ => { warn!("meh."); }
                 }
             },
@@ -122,7 +163,7 @@ impl Application {
         }
     }
 
-    fn handle_sleep_time(&mut self) {
+    fn update_sleep_time(&mut self) {
         const TARGET_FREQ: u32 = 30;
         let diff: i32 = (self.time_passed * TARGET_FREQ) as i32 - 1000;
         if diff.abs() as u32 > TARGET_FREQ {
@@ -145,3 +186,9 @@ impl Application {
     }
 }
 
+fn get_keycode(input: glutin::KeyboardInput) -> Option<glutin::VirtualKeyCode> {
+    match (input.virtual_keycode, input.state) {
+        (Some(keycode), glutin::ElementState::Pressed) => Some(keycode),
+        (_, _) => None
+    }
+}

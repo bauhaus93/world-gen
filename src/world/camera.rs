@@ -20,18 +20,6 @@ impl Camera {
         self.projection_matrix * self.view_matrix * model.get_matrix()
     }
 
-    pub fn zoom(&mut self, factor: Float) {
-        match &mut self.projection {
-            Projection::Orthographic { width, .. } => { 
-                *width = Float::max(Float::min(*width * factor, 1e3), 2e0);
-            },
-            Projection::Perspective { fov, ..} => {
-                *fov = Float::max(Float::min((*fov * factor).to_degrees(), 179.), 1.).to_radians()
-            }
-        }
-        self.update_projection();
-    }
-
     pub fn set_projection(&mut self, new_projection: Projection) {
         self.projection = new_projection;
         self.update_projection();
@@ -39,6 +27,10 @@ impl Camera {
 
     pub fn get_projection(&self) -> Projection {
         self.projection
+    }
+
+    pub fn get_direction(&self) -> Vector3<Float> {
+        create_direction(self.model.get_rotation())
     }
 
     fn update_view(&mut self) {
@@ -68,8 +60,7 @@ impl Default for Camera {
     fn default() -> Camera {
         let mut camera = Camera {
             model: Model::default(),
-            projection:create_default_orthographic(),
-            //projection:  create_default_perspective(),
+            projection:  create_default_perspective(),
             view_matrix: Matrix4::<Float>::one(),
             projection_matrix: Matrix4::<Float>::one()
         };
@@ -91,8 +82,9 @@ impl Translatable for Camera {
 
 impl Rotatable for Camera {
     fn set_rotation(&mut self, new_rotation: Vector3<Float>) {
-        const MAX_Y: Float = std::f32::consts::PI as Float - 0.01;
-        const MIN_Y: Float = 0.01;
+        const THRESHOLD: f32 = 0.01;
+        const MIN_Y: Float = THRESHOLD;
+        const MAX_Y: Float = std::f32::consts::PI as Float - THRESHOLD;
         const DOUBLE_PI: Float = 2. * std::f32::consts::PI as Float;
         let mut fixed_rotation = new_rotation;
         if fixed_rotation.x >= DOUBLE_PI {
@@ -100,11 +92,12 @@ impl Rotatable for Camera {
         } else if fixed_rotation.x < 0. {
             fixed_rotation.x += DOUBLE_PI;
         }
-        if fixed_rotation.y > MAX_Y {
-                fixed_rotation.y = MAX_Y;
-        } else if fixed_rotation.y < MIN_Y {
+        if fixed_rotation.y < MIN_Y {
             fixed_rotation.y = MIN_Y;
+        } else if fixed_rotation.y > MAX_Y {
+            fixed_rotation.y = MAX_Y;
         }
+
         self.model.set_rotation(fixed_rotation);
         self.update_view();
     }

@@ -1,24 +1,37 @@
 use std::fmt;
 
-use glm::{ Vector3, Matrix4 };
+use glm::{ Vector3, Matrix4, GenNum, cross };
 
 use crate::utility::Float;
 use super::Vertex;
 
 #[derive(Copy, Clone)]
 pub struct Triangle {
-  vertex: [Vertex; 3]
+  vertex: [Vertex; 3],
+  normal: Vector3<Float>
+}
+
+fn calculate_normal(vertices: &[Vertex; 3]) -> Vector3<Float> {
+    let vec_a = vertices[1].get_pos() - vertices[0].get_pos();
+    let vec_b = vertices[2].get_pos() - vertices[0].get_pos();
+    cross(vec_a, vec_b)
 }
 
 impl Triangle {
-    pub fn new(vertices: [Vertex; 3]) -> Triangle {
-        Triangle {
-            vertex: vertices
+    pub fn new(vertices: [Vertex; 3]) -> Self {
+        let normal = calculate_normal(&vertices);
+        Self {
+            vertex: vertices,
+            normal: normal
         }
     }
 
     pub fn get_vertices(&self) -> &[Vertex] {
         &self.vertex
+    }
+
+    pub fn get_normal(&self) -> Vector3<Float> {
+        self.normal
     }
 
     pub fn set_vertex(&mut self, vertex: Vertex, index: usize) {
@@ -30,6 +43,10 @@ impl Triangle {
         self.vertex.iter_mut().for_each(|v| v.set_uv_layer(uv_layer));
     }
 
+    pub fn update_normal(&mut self) {
+        self.normal = calculate_normal(&self.vertex);
+    }
+
     pub fn into_vertices(self) -> [Vertex; 3] {
         self.vertex
     }
@@ -37,42 +54,19 @@ impl Triangle {
     pub fn as_vertices(&self) -> &[Vertex; 3] {
         &self.vertex
     }
-
-    pub fn get_sorted_vertices(&self) -> [Vertex; 3] {
-        let mut sorted_vertices = self.vertex.clone();
-        sorted_vertices.sort();
-        sorted_vertices
-    }
-
-    pub fn on_plane(&self, axis: usize, value: Float) -> bool {
-        debug_assert!(axis < 3);
-        self.vertex.iter().all(|v| v.on_plane(axis, value))
-    }
-
-    pub fn move_vertices(&mut self, offset: Vector3<Float>) {
-        self.vertex.iter_mut().for_each(|v| v.move_pos(offset));
-    }
-
-    pub fn rotate(&mut self, rotation_matrix: Matrix4<Float>) {
-        self.vertex.iter_mut().for_each(|v| v.rotate(rotation_matrix));
-    }
-
-    //TODO remove normals from vertices, add normal to triangle
-    pub fn get_normal(&self) -> Vector3<Float> {
-        self.vertex[0].get_normal()
-    }
 }
 
 impl Default for Triangle {
     fn default() -> Self {
         Self {
-            vertex: [Vertex::default(); 3]
+            vertex: [Vertex::default(); 3],
+            normal: Vector3::from_s(0.)
         }
     }
 }
 
 impl fmt::Display for Triangle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "vertices: {}, {}, {}", self.vertex[0], self.vertex[1], self.vertex[2])
+        write!(f, "normal = {:.2}/{:.2}/{:.2}, vertices: {}, {}, {}", self.normal[0], self.normal[1], self.normal[2], self.vertex[0], self.vertex[1], self.vertex[2])
     }
 }

@@ -1,4 +1,5 @@
 pub mod world;
+pub mod chunk;
 pub mod traits;
 pub mod world_error;
 mod model;
@@ -7,6 +8,7 @@ mod object;
 mod noise;
 
 pub use self::world::World;
+pub use self::chunk::Chunk;
 pub use self::model::Model;
 pub use self::camera::Camera;
 pub use self::object::Object;

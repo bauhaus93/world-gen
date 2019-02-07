@@ -83,7 +83,7 @@ impl From<&[Triangle]> for Buffer {
                         let new_index = (position_buffer.len() / 3) as GLuint;
                         position_buffer.extend(vertex.get_pos().as_array());
                         uv_buffer.extend(vertex.get_uv().as_array());
-                        normal_buffer.extend(vertex.get_normal().as_array());
+                        normal_buffer.extend(triangle.get_normal().as_array());
                         index_buffer.push(new_index);
                         v.insert(new_index);
                     }

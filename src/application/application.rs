@@ -21,7 +21,7 @@ pub struct Application {
     quit: bool,
     time_passed: u32,
     sleep_time: time::Duration,
-    movement_keys_down: [bool; 4]
+    movement_keys_down: [bool; 5]
 }
 
 impl Application {
@@ -43,7 +43,7 @@ impl Application {
             quit: false,
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50),
-            movement_keys_down: [false, false, false, false]
+            movement_keys_down: [false; 5]
         };
         Ok(app)
     }
@@ -128,6 +128,9 @@ impl Application {
             let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
             move_offset = move_offset.add(right);
         }
+        if self.movement_keys_down[4] {
+            move_offset = move_offset.add(Vector3::new(0., 0., 1.));
+        }
         if length(move_offset) > 1e-3 {
             const SPEED: Float = 1.;
             self.world.get_camera_mut().mod_translation(normalize(move_offset) * SPEED);
@@ -141,6 +144,7 @@ impl Application {
                 glutin::VirtualKeyCode::A => { self.movement_keys_down[1] = *down; },
                 glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
+                glutin::VirtualKeyCode::Space => { self.movement_keys_down[4] = *down; },
                 glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },
                 _ => {}
             }

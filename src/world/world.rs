@@ -1,20 +1,21 @@
 use std::collections::BTreeSet;
+use std::convert::TryFrom;
 use glm::Vector3;
 
 use crate::application::ApplicationError;
 use crate::graphics::{ Projection, Mesh, ShaderProgram, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::graphics::transformation::create_direction;
-use crate::world::{ Object, Camera, WorldError };
+use crate::utility::Float;
+use crate::world::{ Object, Camera, WorldError, Chunk, chunk::create_chunk_vertices };
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::{ Noise, OctavedNoise };
-
-use crate::utility::Float;
 
 pub struct World {
     texture_array: TextureArray,
     camera: Camera,
-    test_object: Object
+    test_object: Object,
+    chunk: Chunk
 }
 
 const TEXTURE_LAYER_MUD: i32 = 0;
@@ -35,18 +36,19 @@ impl World {
         height_noise.set_octaves(4);
         height_noise.set_scale(8e-3);
         height_noise.set_roughness(1e+3);
-        height_noise.set_range((0., 5.));
+        height_noise.set_range([0., 5.]);
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 0.));
 
-        let camera = Camera::default();
-        let cam_dir = create_direction(camera.get_rotation());
+        let chunk_mesh = Mesh::try_from(create_chunk_vertices([0, 0], &height_noise))?;
+        let chunk = Chunk::new([0, 0], chunk_mesh);
 
         let mut world = World {
             texture_array: texture_array,
-            camera: camera,
-            test_object: test_object
+            camera: Camera::default(),
+            test_object: test_object,
+            chunk: chunk
         };
 
         Ok(world)
@@ -77,6 +79,7 @@ impl World {
         self.texture_array.activate();
 
         self.test_object.render(&self.camera, shader)?;
+        self.chunk.render(&self.camera, shader)?;
 
         self.texture_array.deactivate();
         Ok(())

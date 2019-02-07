@@ -1,22 +1,23 @@
 
+use crate::utility::Float;
 use super::{ Noise, SimplexNoise };
 
 const DEFAULT_OCTAVES: u8 = 4;
-const DEFAULT_ROUGHNESS: f32 = 0.5;
-const DEFAULT_SCALE: f32 = 2.5e-1;
-const DEFAULT_RANGE: (f32, f32) = (-1., 1.);
+const DEFAULT_ROUGHNESS: Float = 0.5;
+const DEFAULT_SCALE: Float = 2.5e-1;
+const DEFAULT_RANGE: [Float; 2]= [-1., 1.];
 
 pub struct OctavedNoise {
     noise: Box<Noise>,
     octaves: u8,
-    roughness: f32,
-    scale: f32,
-    range: (f32, f32)
+    roughness: Float,
+    scale: Float,
+    range: [Float; 2]
 }
 
 impl OctavedNoise {
 
-    pub fn new(octaves: u8, roughness: f32, scale: f32, range: (f32, f32), noise: Box<Noise>) -> Self {
+    pub fn new(octaves: u8, roughness: Float, scale: Float, range: [Float; 2], noise: Box<Noise>) -> Self {
         Self {
             noise: noise,
             octaves: octaves,
@@ -30,44 +31,44 @@ impl OctavedNoise {
         self.octaves = octave_count;
     }
 
-    pub fn set_roughness(&mut self, roughness: f32) {
+    pub fn set_roughness(&mut self, roughness: Float) {
         self.roughness = roughness;
     }
 
-    pub fn set_scale(&mut self, scale: f32) {
+    pub fn set_scale(&mut self, scale: Float) {
         self.scale = scale;
     }
 
-    pub fn set_range(&mut self, new_range: (f32, f32)) {
+    pub fn set_range(&mut self, new_range: [Float; 2]) {
         self.range = new_range;
     }
 }
 
 /*
     Octave calculation based on code by
-    matheus23 @ http://www.java-gaming.org/index.php?topic=31637.0
+    matheus23 @ http://www.java-gaming.org/index.php?topic=31637[0]
 */
 
 impl Noise for OctavedNoise {
-    fn get_noise(&self, p: (f32, f32)) -> f32 {
-        let mut sum: f32 = 0.;
+    fn get_noise(&self, p: [Float; 2]) -> Float {
+        let mut sum: Float = 0.;
         let mut freq = self.scale;
-        let mut weight: f32 = 1.;
-        let mut weight_sum: f32 = 0.;
+        let mut weight: Float = 1.;
+        let mut weight_sum: Float = 0.;
 
         for _oct in 0..self.octaves {
-            sum += self.noise.get_noise((p.0 * freq, p.1 * freq)) * weight;
+            sum += self.noise.get_noise([p[0] * freq, p[1] * freq]) * weight;
             weight_sum += weight;
             freq *= 2.;
             weight *= self.roughness;
         }
         let sub_range = self.noise.get_range();
-        let normalized =  (-sub_range.0 + (sum / weight_sum)) / (sub_range.1 - sub_range.0);
+        let normalized =  (-sub_range[0] + (sum / weight_sum)) / (sub_range[1] - sub_range[0]);
         debug_assert!(normalized >= 0. && normalized <= 1.);
-        self.range.0 + (self.range.1 - self.range.0) * normalized
+        self.range[0] + (self.range[1] - self.range[0]) * normalized
     }
 
-    fn get_range(&self) -> (f32, f32) {
+    fn get_range(&self) -> [Float; 2] {
         self.range
     }
 }

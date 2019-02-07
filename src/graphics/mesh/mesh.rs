@@ -16,16 +16,7 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn from_obj(obj_path: &str) -> Result<Mesh, MeshError> {
-        Self::from_triangles(&read_obj(obj_path)?)
-    }
-
-    pub fn from_triangles(triangles: &[Triangle]) -> Result<Mesh, MeshError> {
-        let buffer = Buffer::from(triangles);
-        let mesh = Self {
-            vao: Some(VAO::try_from(buffer)?)
-        };
-
-        Ok(mesh)
+        Self::try_from((read_obj(obj_path)?).as_slice())
     }
 
     pub fn get_vertex_count(&self) -> u32 {
@@ -48,5 +39,26 @@ impl Default for Mesh {
         Self {
             vao: None
         }
+    }
+}
+
+impl TryFrom<Buffer> for Mesh {
+    type Error = MeshError;
+    fn try_from(buffer: Buffer) -> Result<Self, Self::Error> {
+        let mesh = Self {
+            vao: Some(VAO::try_from(buffer)?)
+        };
+        Ok(mesh)
+    }
+}
+
+impl TryFrom<&[Triangle]> for Mesh {
+    type Error = MeshError;
+    fn try_from(triangles: &[Triangle]) -> Result<Self, Self::Error> {
+        let buffer = Buffer::from(triangles);
+        let mesh = Self {
+            vao: Some(VAO::try_from(buffer)?)
+        };
+        Ok(mesh)
     }
 }

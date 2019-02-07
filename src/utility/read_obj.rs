@@ -14,12 +14,12 @@ pub fn read_obj(obj_path: &str) -> Result<Vec<Triangle>, FileError> {
             let mut vert = Vertex::default();
             let pos = verts[indices[0] - 1];
             let uv = uvs[indices[1] - 1];
-            let normal = normals[indices[2] - 1];
+            //normals get calculated
             vert.set_pos(Vector3::new(pos[0], pos[1], pos[2]));
             vert.set_uv(Vector3::new(uv[0], uv[1], 0.));
-            vert.set_normal(Vector3::new(normal[0], normal[1], normal[2]));
             triangle.set_vertex(vert, i);
         }
+        triangle.update_normal();
         triangles.push(triangle);
     }
 

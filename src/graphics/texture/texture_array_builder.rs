@@ -12,7 +12,7 @@ use super::TextureArray;
 pub struct TextureArrayBuilder {
     atlas_path: String,
     texture_size: [u32; 2],
-    texture_origins: Vec<[u32; 3]>
+    texture_origin_indices: Vec<[u32; 3]>
 }
 
 impl TextureArrayBuilder {
@@ -21,12 +21,12 @@ impl TextureArrayBuilder {
         TextureArrayBuilder {
             atlas_path:  atlas_path.to_string(),
             texture_size: texture_size,
-            texture_origins: Vec::new()
+            texture_origin_indices: Vec::new()
         }
     }
 
-    pub fn add_texture(mut self, origin: [u32; 3]) -> Self {
-        self.texture_origins.push(origin);
+    pub fn add_texture(mut self, origin_index: &[u32; 3]) -> Self {
+        self.texture_origin_indices.push(*origin_index);
         self
     }
 
@@ -36,7 +36,7 @@ impl TextureArrayBuilder {
             let dim = min(self.texture_size[0], self.texture_size[1]) as Float;
             dim.log(2.0) as u32
         };
-        let layer_count: u32 = self.texture_origins.len() as u32;
+        let layer_count: u32 = self.texture_origin_indices.len() as u32;
 
         let texture_id = create_texture(
             (self.texture_size[0] as GLsizei, self.texture_size[1] as GLsizei),
@@ -54,7 +54,7 @@ impl TextureArrayBuilder {
             } 
         };
         debug!("Adding images to texture");
-        match add_subimages(texture_id, img, self.texture_size, &self.texture_origins) {
+        match add_subimages(texture_id, img, self.texture_size, &self.texture_origin_indices) {
             Ok(_) => {},
             Err(e) => {
                 delete_texture(texture_id);
@@ -112,15 +112,15 @@ fn create_texture(size: (GLsizei, GLsizei), layers: GLsizei, mipmaps: GLsizei) -
     Ok(id)
 }
 
-fn add_subimages(texture_id: GLuint, img: image::RgbaImage, sub_size: [u32; 2], sub_origins: &[[u32; 3]])  -> Result<(), GraphicsError>{ 
-    for origin in sub_origins.iter() {
-        trace!("Adding subimage, origin = {}/{}", origin[0], origin[1]);
-        let sub_img = img.view(origin[0], origin[1], sub_size[0], sub_size[1]).to_image();
+fn add_subimages(texture_id: GLuint, img: image::RgbaImage, sub_size: [u32; 2], sub_origin_indices: &[[u32; 3]])  -> Result<(), GraphicsError>{ 
+    for origin_index in sub_origin_indices.iter() {
+        trace!("Adding subimage, origin = {}/{}", origin_index[0] * sub_size[0], origin_index[1] * sub_size[1]);
+        let sub_img = img.view(origin_index[0] * sub_size[0], origin_index[1] * sub_size[1], sub_size[0], sub_size[1]).to_image();
         let pixels: Vec<u8> = sub_img.into_raw();
         add_subimage(
             texture_id,
             [sub_size[0] as GLsizei, sub_size[1] as GLsizei],
-            origin[2] as GLsizei,
+            origin_index[2] as GLsizei,
             &pixels
         )?;
     }

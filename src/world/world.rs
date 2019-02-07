@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use glm::Vector3;
 
@@ -6,7 +6,7 @@ use crate::application::ApplicationError;
 use crate::graphics::{ Projection, Mesh, ShaderProgram, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::graphics::transformation::create_direction;
-use crate::utility::Float;
+use crate::utility::{ Float, format_number };
 use crate::world::{ Object, Camera, WorldError, Chunk, chunk::create_chunk_vertices };
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::{ Noise, OctavedNoise };
@@ -14,44 +14,61 @@ use crate::world::noise::{ Noise, OctavedNoise };
 pub struct World {
     texture_array: TextureArray,
     camera: Camera,
+    height_noise: OctavedNoise,
     test_object: Object,
-    chunk: Chunk
+    chunks: BTreeMap<[i32; 2], Chunk>
 }
 
-const TEXTURE_LAYER_MUD: i32 = 0;
+const TEXTURE_LAYER_MUD: u32 = 0;
+const TEXTURE_LAYER_GRASS: u32 = 1;
 
-const TEXTURES: [[i32; 3]; 1] = [
-    [0, 0, TEXTURE_LAYER_MUD]
+const TEXTURES: [[u32; 3]; 2] = [
+    [0, 0, TEXTURE_LAYER_MUD],
+    [1, 0, TEXTURE_LAYER_GRASS]
 ];
 
 impl World {
-    pub fn new(top_level: i32, layer_size: [i32; 2]) -> Result<World, WorldError> {
-        debug_assert!(top_level > 0);
-        debug_assert!(layer_size[0] > 0 && layer_size[1] > 0);
-        let texture_array = TextureArrayBuilder::new("resources/atlas.png", [32, 32])
-            .add_texture([0, 0, 0])
-            .finish()?;
+    pub fn new() -> Result<World, WorldError> {
+        let mut builder = TextureArrayBuilder::new("resources/atlas.png", [32, 32]);
+        for tex in TEXTURES.iter() {
+            builder = builder.add_texture(tex);
+        }
+        let texture_array = builder.finish()?;
 
         let mut height_noise = OctavedNoise::default();
         height_noise.set_octaves(4);
-        height_noise.set_scale(8e-3);
-        height_noise.set_roughness(1e+3);
-        height_noise.set_range([0., 5.]);
+        height_noise.set_scale(1e-3);
+        height_noise.set_roughness(1.);
+        height_noise.set_range([0., 100.]);
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 0.));
 
-        let chunk_mesh = Mesh::try_from(create_chunk_vertices([0, 0], &height_noise))?;
-        let chunk = Chunk::new([0, 0], chunk_mesh);
-
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
+            height_noise: height_noise,
             test_object: test_object,
-            chunk: chunk
+            chunks: BTreeMap::new()
         };
 
+        world.load_chunks(5)?;
+        info!("Loaded chunks: {}, loaded vertices: {}", world.count_loaded_chunks(), format_number(world.count_loaded_vertices()));
+
         Ok(world)
+    }
+
+    pub fn load_chunks(&mut self, radius: i32) -> Result<(), WorldError> {
+        for y in -radius..radius {
+            for x in -radius..radius {
+                if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
+                    let chunk_mesh = Mesh::try_from(create_chunk_vertices([x, y], &self.height_noise))?;
+                    let chunk = Chunk::new([x, y], chunk_mesh);
+                    self.chunks.insert([x, y], chunk);
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn toggle_camera_projection(&mut self) {
@@ -75,11 +92,23 @@ impl World {
         &mut self.camera
     }
 
+    pub fn count_loaded_chunks(&self) -> u32 {
+        self.chunks.len() as u32
+    }
+
+    pub fn count_loaded_vertices(&self) -> u32 {
+        let mut vertex_count = 0;
+        self.chunks.iter().for_each(|(_, c)| vertex_count += c.get_vertex_count());
+        vertex_count
+    }
+
     pub fn render(&self, shader: &ShaderProgram) -> Result<(), WorldError> {
         self.texture_array.activate();
 
         self.test_object.render(&self.camera, shader)?;
-        self.chunk.render(&self.camera, shader)?;
+        for (_pos, chunk) in self.chunks.iter() {
+            chunk.render(&self.camera, shader)?;
+        }
 
         self.texture_array.deactivate();
         Ok(())

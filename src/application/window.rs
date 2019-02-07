@@ -11,7 +11,7 @@ pub fn init_window(window_size: [f64; 2], events_loop: &glutin::EventsLoop) -> R
     let context_builder = glutin::ContextBuilder::new()
         .with_vsync(true)
         .with_depth_buffer(8);
-    let mut window = glutin::GlWindow::new(window_builder, context_builder, &events_loop)?;
+    let window = glutin::GlWindow::new(window_builder, context_builder, &events_loop)?;
     window.hide_cursor(true);
     info!("Loading opengl functions");
     gl::load_with(|s| window.context().get_proc_address(s) as *const _);

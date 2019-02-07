@@ -1,6 +1,6 @@
 use std::fmt;
 
-use glm::{ Vector3, Matrix4, GenNum, cross };
+use glm::{ Vector3, Matrix4, GenNum, cross, normalize };
 
 use crate::utility::Float;
 use super::Vertex;
@@ -14,7 +14,7 @@ pub struct Triangle {
 fn calculate_normal(vertices: &[Vertex; 3]) -> Vector3<Float> {
     let vec_a = vertices[1].get_pos() - vertices[0].get_pos();
     let vec_b = vertices[2].get_pos() - vertices[0].get_pos();
-    cross(vec_a, vec_b)
+    normalize(cross(vec_a, vec_b))
 }
 
 impl Triangle {

@@ -6,7 +6,7 @@ use crate::world::traits::{ Translatable, Renderable };
 use crate::world::{ Object, Camera, Noise };
 use crate::utility::Float;
 
-const CHUNK_SIZE: [i32; 2] = [512, 512];
+const CHUNK_SIZE: [i32; 2] = [128, 128];
 
 pub struct Chunk {
     object: Object
@@ -15,10 +15,14 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(pos: [i32; 2], mesh: Mesh) -> Self {
         let mut object = Object::new(mesh);
-        object.set_translation(Vector3::new(pos[0] as Float, pos[1] as Float, 0.));
+        object.set_translation(Vector3::new((pos[0] * CHUNK_SIZE[0]) as Float, (pos[1] * CHUNK_SIZE[1]) as Float, 0.));
         Self {
             object: object
         }
+    }
+
+    pub fn get_vertex_count(&self) -> u32 {
+        self.object.get_vertex_count()
     }
 }
 
@@ -55,12 +59,12 @@ pub fn create_chunk_vertices(chunk_pos: [i32; 2], height_noise: &Noise) -> Buffe
                                             height));
                     vert.set_uv(Vector3::new(0.5 + off[0].signum() * 0.5,
                                             0.5 + off[1].signum() * 0.5,
-                                            0.));
+                                            1.));
                 }
                 triangles.push(Triangle::new(vertices));
             }
         }
     }
-    debug!("Created chunk vertices for {}/{}: triangle count = {}", chunk_pos[0], chunk_pos[1], triangles.len());
+    trace!("Created chunk vertices for {}/{}: triangle count = {}", chunk_pos[0], chunk_pos[1], triangles.len());
     Buffer::from(triangles)
 }

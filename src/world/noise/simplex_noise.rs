@@ -4,6 +4,7 @@ use rand::Rng;
 use rand::prelude::{ SmallRng, SliceRandom };
 use rand::{ SeedableRng };
 
+
 use crate::utility::Float;
 use super::Noise;
 
@@ -69,8 +70,11 @@ impl Default for SimplexNoise {
 impl Noise for SimplexNoise {
     fn get_noise(&self, p: [Float; 2]) -> Float {
         let skew = (p[0] + p[1]) * *F2;
-        let skew_coord: [i32; 2] = [(p[0] + skew) as i32,
-                                      (p[1] + skew) as i32];
+        /*  if not floored, noise can have sharp edges on negative coordinates
+            https://stackoverflow.com/questions/10705640/perlin-noise-with-negative-coordinate-input
+        */
+        let skew_coord: [i32; 2] = [Float::floor(p[0] + skew) as i32,   
+                                    Float::floor(p[1] + skew) as i32];
         let unskew = (skew_coord[0] + skew_coord[1]) as Float * *G2;
 
         let cell_origin: [Float; 2] = [skew_coord[0] as Float - unskew,
@@ -78,7 +82,7 @@ impl Noise for SimplexNoise {
 
         let corner = calculate_corners(p, cell_origin);
         
-        let table_base_index: [i32; 2] = [skew_coord[0] & 0xFF, skew_coord[1] & 0xFF];      //maybe try % 256 to work with neg points? (p neg -> i neg -> i & 0xFF ??)
+        let table_base_index: [i32; 2] = [skew_coord[0] & 0xFF, skew_coord[1] & 0xFF];
         let table_offset: [[i32; 2]; 3] =   [[0, 0],
                                              get_second_corner_offset(corner[0]),
                                              [1, 1]];

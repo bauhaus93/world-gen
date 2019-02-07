@@ -18,6 +18,10 @@ impl Object {
             mesh: mesh,
         }
     }
+
+    pub fn get_vertex_count(&self) -> u32 {
+        self.mesh.get_vertex_count()
+    }
 }
 
 impl Renderable for Object {

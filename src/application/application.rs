@@ -54,6 +54,8 @@ impl Application {
         while !self.quit {
             self.handle_events();
             self.handle_movement();
+            self.shader_program.set_resource_vec3("view_pos", &self.world.get_camera().get_translation());
+            self.shader_program.set_resource_vec3("light_pos", &self.world.get_sun_pos());
             self.world.tick(self.time_passed);
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();

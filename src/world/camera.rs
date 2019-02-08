@@ -16,6 +16,7 @@ pub struct Camera {
 }
 
 impl Camera {
+
      pub fn create_mvp_matrix(&self, model: &Model) -> Matrix4<Float> {
         self.projection_matrix * self.view_matrix * model.get_matrix()
     }
@@ -27,6 +28,14 @@ impl Camera {
 
     pub fn get_projection(&self) -> Projection {
         self.projection
+    }
+
+    pub fn get_view_matrix(&self) -> &Matrix4<Float> {
+        &self.view_matrix
+    }
+
+    pub fn get_projection_matrix(&self) -> &Matrix4<Float> {
+        &self.projection_matrix
     }
 
     pub fn get_direction(&self) -> Vector3<Float> {

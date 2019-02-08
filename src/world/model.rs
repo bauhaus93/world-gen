@@ -23,6 +23,9 @@ impl Model {
     pub fn get_matrix(&self) -> Matrix4<Float> {
         self.matrix.clone()
     }
+    pub fn get_matrix_ref(&self) -> &Matrix4<Float> {
+        &self.matrix
+    }
 }
 
 impl Default for Model {

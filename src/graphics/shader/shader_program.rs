@@ -1,6 +1,7 @@
+use std::collections::BTreeMap;
 use gl;
 use gl::types::{ GLint, GLuint };
-use glm::Matrix4;
+use glm::{ Matrix4, Vector3 };
 
 use crate::utility::Float;
 use crate::graphics::{ check_opengl_error };
@@ -8,37 +9,64 @@ use super::ShaderProgramError;
 
 pub struct ShaderProgram {
     id: GLuint, 
-    mvp_handle: GLint,
-    texture_array_handle: GLint
+    handles: BTreeMap<String, GLint> 
 }
 
 impl ShaderProgram {
     
     pub fn new(program_id: GLuint) -> Result<ShaderProgram, ShaderProgramError> {
         debug_assert!(program_id != 0);
-        let program = Self {
+        let mut program = Self {
             id: program_id,
-            mvp_handle: get_resource_handle(program_id, "MVP")?,
-            texture_array_handle: get_resource_handle(program_id, "textureArray")?
+            handles: BTreeMap::new()
         };
         program.use_program();
-        unsafe { gl::Uniform1i(program.texture_array_handle, 0) }
-        check_opengl_error("gl::Uniform1i")?;
+
+        program.load_handle("mvp")?;
+        program.load_handle("texture_array")?;
+        program.load_handle("model")?;
+        program.load_handle("view_pos")?;
+        program.load_handle("light_pos")?;
+
+        match program.handles.get("texture_array") {
+            Some(handle) => {
+                unsafe { gl::Uniform1i(*handle, 0) }
+                check_opengl_error("gl::Uniform1i")?;
+            },
+            _ => { return Err(ShaderProgramError::HandleNotExisting("texture_array".to_string())); }
+        }
+
         Ok(program)
     }
 
-    pub fn use_program(&self) {
-        unsafe {
-            gl::UseProgram(self.id);
-        }
+    fn load_handle(&mut self, name: &str) -> Result<(), ShaderProgramError> {
+        self.handles.insert(name.to_string(), get_resource_handle(self.id, name)?);
+        Ok(())
     }
 
-    pub fn set_mvp_matrix(&self, mvp_matrix: &Matrix4<Float>) -> Result<(), ShaderProgramError> {
-        unsafe {
-            gl::UniformMatrix4fv(self.mvp_handle, 1, gl::FALSE, mvp_matrix.as_array().as_ptr() as * const Float);
+    pub fn use_program(&self) {
+        unsafe { gl::UseProgram(self.id); }
+    }
+
+    pub fn set_resource_mat4(&self, resource_name: &str, matrix: &Matrix4<Float>) -> Result<(), ShaderProgramError> {
+        match self.handles.get(resource_name) {
+            Some(handle) => {
+                unsafe { gl::UniformMatrix4fv(*handle, 1, gl::FALSE, matrix.as_array().as_ptr() as * const Float); }
+                check_opengl_error("gl::UniformMatrix4fv")?;
+                Ok(())
+            },
+            _ => { Err(ShaderProgramError::HandleNotExisting(resource_name.to_string())) }
         }
-        check_opengl_error("gl::UniformMatrix4fv")?;
-        Ok(())
+    }
+    pub fn set_resource_vec3(&self, resource_name: &str, vector: &Vector3<Float>) -> Result<(), ShaderProgramError> {
+        match self.handles.get(resource_name) {
+            Some(handle) => {
+                unsafe { gl::Uniform3fv(*handle, 1, vector.as_array().as_ptr() as * const Float); }
+                check_opengl_error("gl::UniformMatrix4fv")?;
+                Ok(())
+            },
+            _ => { Err(ShaderProgramError::HandleNotExisting(resource_name.to_string())) }
+        }
     }
 }
 
@@ -54,13 +82,13 @@ impl Drop for ShaderProgram {
 }
 
 fn get_resource_handle(program_id: GLuint, resource_name: &str) -> Result<GLint, ShaderProgramError> {
+    debug!("Getting resource handle for '{}'", resource_name);
     let res_name_zero_term = resource_name.to_string() + "\0";
-    let handle: GLint = unsafe {
-        gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _)
-    };
+    let handle: GLint = unsafe { gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _) };
     if handle == -1 {
         check_opengl_error("gl::GetUniformLocation")?;
         return Err(ShaderProgramError::FunctionFailure("gl::GetUniformLocation".to_string()));
     }
+    debug!("Handle = {}", handle);
     Ok(handle)
 }

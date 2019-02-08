@@ -7,7 +7,7 @@ use crate::graphics::{ Projection, Mesh, ShaderProgram, TextureArray, TextureArr
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::graphics::transformation::create_direction;
 use crate::utility::{ Float, format_number };
-use crate::world::{ Object, Camera, WorldError, Chunk, chunk::create_chunk_vertices };
+use crate::world::{ Model, Object, Camera, WorldError, Chunk, chunk::create_chunk_vertices };
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::{ Noise, OctavedNoise };
 
@@ -16,6 +16,7 @@ pub struct World {
     camera: Camera,
     height_noise: OctavedNoise,
     test_object: Object,
+    sun: Model,
     chunks: BTreeMap<[i32; 2], Chunk>
 }
 
@@ -44,11 +45,15 @@ impl World {
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 0.));
 
+        let mut sun = Model::default();
+        sun.set_translation(Vector3::new(0., 0., 500.));
+
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             height_noise: height_noise,
             test_object: test_object,
+            sun: sun,
             chunks: BTreeMap::new()
         };
 
@@ -92,6 +97,10 @@ impl World {
         &mut self.camera
     }
 
+    pub fn get_sun_pos(&self) -> Vector3<Float> {
+        self.sun.get_translation()
+    }
+
     pub fn count_loaded_chunks(&self) -> u32 {
         self.chunks.len() as u32
     }
@@ -117,6 +126,10 @@ impl World {
 
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) {
+        self.sun.mod_translation(Vector3::new(10., 0., 0.));
+        if self.sun.get_translation()[0] > 1000. {
+            self.sun.mod_translation(Vector3::new(-1000., 0., 0.));
+        }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
     }
 }

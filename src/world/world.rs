@@ -7,16 +7,15 @@ use crate::graphics::{ Projection, Mesh, ShaderProgram, TextureArray, TextureArr
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::graphics::transformation::create_direction;
 use crate::utility::{ Float, format_number };
-use crate::world::{ Model, Object, Camera, WorldError, Chunk, chunk::create_chunk_vertices };
+use crate::world::{ Model, Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader } };
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::{ Noise, OctavedNoise };
 
 pub struct World {
     texture_array: TextureArray,
     camera: Camera,
-    height_noise: OctavedNoise,
     test_object: Object,
-    sun: Model,
+    chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>
 }
 
@@ -39,21 +38,20 @@ impl World {
         let mut height_noise = OctavedNoise::default();
         height_noise.set_octaves(4);
         height_noise.set_scale(1e-3);
-        height_noise.set_roughness(1.);
-        height_noise.set_range([0., 100.]);
+        height_noise.set_roughness(10.);
+        height_noise.set_range([0., 20.]);
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
-        test_object.set_translation(Vector3::new(0., 0., 0.));
+        test_object.set_translation(Vector3::new(0., 0., 500.));
+        test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        let mut sun = Model::default();
-        sun.set_translation(Vector3::new(0., 0., 500.));
+        let chunk_loader = ChunkLoader::new(Box::new(height_noise));
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
-            height_noise: height_noise,
             test_object: test_object,
-            sun: sun,
+            chunk_loader: chunk_loader,
             chunks: BTreeMap::new()
         };
 
@@ -67,9 +65,7 @@ impl World {
         for y in -radius..radius {
             for x in -radius..radius {
                 if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
-                    let chunk_mesh = Mesh::try_from(create_chunk_vertices([x, y], &self.height_noise))?;
-                    let chunk = Chunk::new([x, y], chunk_mesh);
-                    self.chunks.insert([x, y], chunk);
+                    // load/request chunks
                 }
             }
         }
@@ -98,7 +94,7 @@ impl World {
     }
 
     pub fn get_sun_pos(&self) -> Vector3<Float> {
-        self.sun.get_translation()
+        self.test_object.get_translation()
     }
 
     pub fn count_loaded_chunks(&self) -> u32 {
@@ -126,9 +122,9 @@ impl World {
 
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) {
-        self.sun.mod_translation(Vector3::new(10., 0., 0.));
-        if self.sun.get_translation()[0] > 1000. {
-            self.sun.mod_translation(Vector3::new(-1000., 0., 0.));
+        self.test_object.mod_translation(Vector3::new(2., 0., 0.));
+        if self.test_object.get_translation()[0] > 1000. {
+            self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
     }

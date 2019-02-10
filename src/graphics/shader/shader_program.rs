@@ -82,13 +82,13 @@ impl Drop for ShaderProgram {
 }
 
 fn get_resource_handle(program_id: GLuint, resource_name: &str) -> Result<GLint, ShaderProgramError> {
-    debug!("Getting resource handle for '{}'", resource_name);
+    trace!("Getting resource handle for '{}'", resource_name);
     let res_name_zero_term = resource_name.to_string() + "\0";
     let handle: GLint = unsafe { gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _) };
     if handle == -1 {
         check_opengl_error("gl::GetUniformLocation")?;
         return Err(ShaderProgramError::FunctionFailure("gl::GetUniformLocation".to_string()));
     }
-    debug!("Handle = {}", handle);
+    trace!("Handle = {}", handle);
     Ok(handle)
 }

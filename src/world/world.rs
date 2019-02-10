@@ -16,7 +16,8 @@ pub struct World {
     camera: Camera,
     test_object: Object,
     chunk_loader: ChunkLoader,
-    chunks: BTreeMap<[i32; 2], Chunk>
+    chunks: BTreeMap<[i32; 2], Chunk>,
+    chunk_update_passed: u32
 }
 
 const TEXTURE_LAYER_MUD: u32 = 0;
@@ -52,22 +53,35 @@ impl World {
             camera: Camera::default(),
             test_object: test_object,
             chunk_loader: chunk_loader,
-            chunks: BTreeMap::new()
+            chunks: BTreeMap::new(),
+            chunk_update_passed: 0
         };
 
-        world.load_chunks(5)?;
+        world.request_chunks(5)?;
         info!("Loaded chunks: {}, loaded vertices: {}", world.count_loaded_chunks(), format_number(world.count_loaded_vertices()));
 
         Ok(world)
     }
 
-    pub fn load_chunks(&mut self, radius: i32) -> Result<(), WorldError> {
+    pub fn request_chunks(&mut self, radius: i32) -> Result<(), WorldError> {
+        let mut request_count = 0;
         for y in -radius..radius {
             for x in -radius..radius {
                 if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
-                    // load/request chunks
+                    self.chunk_loader.request([x, y]);
+                    request_count += 1;
                 }
             }
+        }
+        debug!("Requested chunks: {}", request_count);
+        Ok(())
+    }
+    
+    pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
+        let finished_chunks = self.chunk_loader.get()?;
+        if finished_chunks.len() > 0 {
+            debug!("Finished chunks: {}", finished_chunks.len());
+            self.chunks.extend(finished_chunks);
         }
         Ok(())
     }
@@ -121,12 +135,20 @@ impl World {
 }
 
 impl Updatable for World {
-    fn tick(&mut self, time_passed: u32) {
+    fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
+        self.chunk_update_passed += time_passed;
+
+        if self.chunk_update_passed > 1000 {
+            self.get_finished_chunks()?;
+            self.chunk_update_passed = 0;
+        }
+
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));
         if self.test_object.get_translation()[0] > 1000. {
             self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
+        Ok(())
     }
 }
 

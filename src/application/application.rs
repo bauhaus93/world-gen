@@ -14,7 +14,7 @@ use super::window;
 
 pub struct Application {
     world: world::World,
-    shader_program: graphics::ShaderProgram,
+    shader_program: graphics::ShaderProgram,    //TODO move elswhere
     window: glutin::GlWindow,
     events_loop: glutin::EventsLoop,
     window_size: [f64; 2],
@@ -56,7 +56,7 @@ impl Application {
             self.handle_movement();
             self.shader_program.set_resource_vec3("view_pos", &self.world.get_camera().get_translation());
             self.shader_program.set_resource_vec3("light_pos", &self.world.get_sun_pos());
-            self.world.tick(self.time_passed);
+            self.world.tick(self.time_passed)?;
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
             last_time = time::Instant::now();

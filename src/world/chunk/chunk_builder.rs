@@ -12,7 +12,6 @@ pub struct ChunkBuilder {
     vertex_buffer: Option<Buffer>
 }
 
-
 impl ChunkBuilder {
     pub fn new(pos: [i32; 2]) -> Self {
         Self {

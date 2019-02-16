@@ -14,7 +14,6 @@ use super::window;
 
 pub struct Application {
     world: world::World,
-    shader_program: graphics::ShaderProgram,    //TODO move elswhere
     window: glutin::GlWindow,
     events_loop: glutin::EventsLoop,
     window_size: [f64; 2],
@@ -28,16 +27,11 @@ impl Application {
     pub fn new(window_size: [f64; 2]) -> Result<Application, ApplicationError> {
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
-        let shader_program = graphics::ShaderProgramBuilder::new()
-            .add_vertex_shader("resources/shader/VertexShader.glsl")
-            .add_fragment_shader("resources/shader/FragmentShader.glsl")
-            .finish()?;
         
         let world = world::World::new()?;
         let app = Self {
             events_loop: events_loop,
             window: window,
-            shader_program: shader_program,
             world: world,
             window_size: window_size,
             quit: false,
@@ -49,13 +43,10 @@ impl Application {
     }
 
     pub fn run(mut self) -> Result<(), ApplicationError> {
-        self.shader_program.use_program();
         let mut last_time = time::Instant::now();
         while !self.quit {
             self.handle_events();
             self.handle_movement();
-            self.shader_program.set_resource_vec3("view_pos", &self.world.get_camera().get_translation());
-            self.shader_program.set_resource_vec3("light_pos", &self.world.get_sun_pos());
             self.world.tick(self.time_passed)?;
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
@@ -192,7 +183,7 @@ impl Application {
 
     fn render(&mut self) -> Result<(), ApplicationError> {
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT) }        
-        self.world.render(&self.shader_program)?;
+        self.world.render()?;
         match self.window.swap_buffers() {
             Ok(_) => Ok(()),
             Err(e) => Err(ApplicationError::from(graphics::GraphicsError::from(e)))

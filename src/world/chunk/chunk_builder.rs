@@ -28,7 +28,7 @@ impl ChunkBuilder {
         Ok(Chunk::new(self.pos, mesh))
     }
 
-    pub fn build_surface(&mut self, height_noise: &Noise) {
+    pub fn create_surface_buffer(&mut self, height_noise: &Noise) {
         const OFFSET: Float = 0.5;
         const VERTEX_OFFSETS: [[Float; 2]; 6] = [
             [OFFSET, -OFFSET],

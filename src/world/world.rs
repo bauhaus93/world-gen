@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use glm::Vector3;
 
 use crate::application::ApplicationError;
-use crate::graphics::{ Projection, Mesh, ShaderProgram, TextureArray, TextureArrayBuilder, GraphicsError };
+use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::graphics::transformation::create_direction;
 use crate::utility::{ Float, format_number };
@@ -14,6 +14,7 @@ use crate::world::noise::{ Noise, OctavedNoise };
 pub struct World {
     texture_array: TextureArray,
     camera: Camera,
+    shader_program: ShaderProgram,
     test_object: Object,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
@@ -30,6 +31,11 @@ const TEXTURES: [[u32; 3]; 2] = [
 
 impl World {
     pub fn new() -> Result<World, WorldError> {
+        let shader_program = ShaderProgramBuilder::new()
+            .add_vertex_shader("resources/shader/VertexShader.glsl")
+            .add_fragment_shader("resources/shader/FragmentShader.glsl")
+            .finish()?;
+        shader_program.use_program();
         let mut builder = TextureArrayBuilder::new("resources/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
             builder = builder.add_texture(tex);
@@ -51,6 +57,7 @@ impl World {
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
+            shader_program: shader_program,
             test_object: test_object,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
@@ -64,16 +71,16 @@ impl World {
     }
 
     pub fn request_chunks(&mut self, radius: i32) -> Result<(), WorldError> {
-        let mut request_count = 0;
+        let mut request_list = Vec::new();
         for y in -radius..radius {
             for x in -radius..radius {
                 if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
-                    self.chunk_loader.request([x, y]);
-                    request_count += 1;
+                    request_list.push([x, y]);
                 }
             }
         }
-        debug!("Requested chunks: {}", request_count);
+        self.chunk_loader.request(&request_list)?;
+        debug!("Requested chunks: {}", request_list.len());
         Ok(())
     }
     
@@ -121,12 +128,18 @@ impl World {
         vertex_count
     }
 
-    pub fn render(&self, shader: &ShaderProgram) -> Result<(), WorldError> {
+    fn update_shader_resources(&self) -> Result<(), GraphicsError> {
+        self.shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
+        self.shader_program.set_resource_vec3("light_pos", &self.test_object.get_translation())?;
+        Ok(())
+    }
+
+    pub fn render(&self) -> Result<(), WorldError> {
         self.texture_array.activate();
 
-        self.test_object.render(&self.camera, shader)?;
+        self.test_object.render(&self.camera, &self.shader_program)?;
         for (_pos, chunk) in self.chunks.iter() {
-            chunk.render(&self.camera, shader)?;
+            chunk.render(&self.camera, &self.shader_program)?;
         }
 
         self.texture_array.deactivate();
@@ -148,6 +161,7 @@ impl Updatable for World {
             self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
+        self.update_shader_resources()?;
         Ok(())
     }
 }

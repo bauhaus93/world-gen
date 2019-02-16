@@ -8,6 +8,7 @@ use crate::graphics::projection::{ create_default_orthographic, create_default_p
 use crate::graphics::transformation::create_direction;
 use crate::utility::{ Float, format_number };
 use crate::world::{ Model, Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader } };
+use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::{ Noise, OctavedNoise };
 
@@ -18,7 +19,7 @@ pub struct World {
     test_object: Object,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
-    chunk_update_passed: u32
+    chunk_update_timer: Timer
 }
 
 const TEXTURE_LAYER_MUD: u32 = 0;
@@ -61,7 +62,7 @@ impl World {
             test_object: test_object,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
-            chunk_update_passed: 0
+            chunk_update_timer: Timer::new(1000)
         };
 
         world.request_chunks(5)?;
@@ -149,11 +150,9 @@ impl World {
 
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
-        self.chunk_update_passed += time_passed;
 
-        if self.chunk_update_passed > 1000 {
+        if self.chunk_update_timer.fires() {
             self.get_finished_chunks()?;
-            self.chunk_update_passed = 0;
         }
 
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));
@@ -162,6 +161,7 @@ impl Updatable for World {
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
         self.update_shader_resources()?;
+        self.chunk_update_timer.tick(time_passed)?;
         Ok(())
     }
 }

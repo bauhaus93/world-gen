@@ -6,6 +6,7 @@ mod model;
 mod camera;
 mod object;
 mod noise;
+mod timer;
 
 pub use self::world::World;
 pub use self::chunk::Chunk;

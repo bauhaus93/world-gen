@@ -1,6 +1,5 @@
 use std::fmt;
 use std::error::Error;
-use std::io;
 
 use crate::graphics::{ GraphicsError, mesh::MeshError };
 use super::chunk::ChunkError;

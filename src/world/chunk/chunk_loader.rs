@@ -1,5 +1,5 @@
 use std::sync::{ Arc, Mutex };
-use std::collections::{ BTreeMap, VecDeque };
+use std::collections::{ BTreeSet, BTreeMap, VecDeque };
 use std::time;
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
@@ -8,10 +8,10 @@ use crate::world::noise::Noise;
 use super::{ Chunk, ChunkBuilder, ChunkError };
 
 pub struct ChunkLoader {
-    height_noise: Arc<Noise>,
     stop: Arc<AtomicBool>,
     input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+    handeled_positions: BTreeSet<[i32; 2]>,
     thread_handles: Vec<thread::JoinHandle<()>>
 }
 
@@ -33,10 +33,10 @@ impl ChunkLoader {
             thread_handles.push(handle);
         }
         Self {
-            height_noise: height_noise,
             stop: stop,
             input_queue: input_queue,
             output_queue: output_queue,
+            handeled_positions: BTreeSet::new(),
             thread_handles: thread_handles
         }
     }
@@ -47,9 +47,10 @@ impl ChunkLoader {
             Ok(mut guard) => {
                 while let Some(cb) = (*guard).pop() {
                     let chunk = cb.finish()?;
-                    chunks.insert(chunk.get_pos(), chunk);
+                    let pos = chunk.get_pos();
+                    self.handeled_positions.remove(&pos);
+                    chunks.insert(pos, chunk);
                 }
-
             },
             Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
         }
@@ -60,12 +61,28 @@ impl ChunkLoader {
         match self.input_queue.lock() {
             Ok(mut guard) => {
                 for pos in chunk_pos {
-                    (*guard).push_back(*pos);
+                    if self.handeled_positions.insert(*pos) {
+                        (*guard).push_back(*pos);
+                    }
                 }
                 Ok(())
             },
             Err(_) => Err(ChunkError::MutexPoison)
         }
+    }
+}
+
+impl Drop for ChunkLoader {
+    fn drop(&mut self) {
+        info!("Stopping chunk loader threads...");
+        self.stop.store(true, Ordering::Relaxed);
+        while let Some(handle) = self.thread_handles.pop() {
+            match handle.join() {
+                Ok(_) => {},
+                Err(_) => warn!("Thread to join panicked")
+            }
+        }
+        info!("All threads stopped");
     }
 }
 

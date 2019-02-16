@@ -1,16 +1,13 @@
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use glm::Vector3;
 
-use crate::application::ApplicationError;
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::graphics::transformation::create_direction;
-use crate::utility::{ Float, format_number };
-use crate::world::{ Model, Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader } };
+use crate::utility::{ format_number };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader } };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
-use crate::world::noise::{ Noise, OctavedNoise };
+use crate::world::noise::OctavedNoise;
 
 pub struct World {
     texture_array: TextureArray,
@@ -76,7 +73,10 @@ impl World {
         for y in -radius..radius {
             for x in -radius..radius {
                 if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
-                    request_list.push([x, y]);
+                    let chunk_pos = [x, y];
+                    if !self.chunks.contains_key(&chunk_pos) {
+                        request_list.push(chunk_pos);
+                    }
                 }
             }
         }
@@ -113,10 +113,6 @@ impl World {
 
     pub fn get_camera_mut(&mut self) -> &mut Camera {
         &mut self.camera
-    }
-
-    pub fn get_sun_pos(&self) -> Vector3<Float> {
-        self.test_object.get_translation()
     }
 
     pub fn count_loaded_chunks(&self) -> u32 {

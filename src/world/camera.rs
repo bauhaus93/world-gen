@@ -3,7 +3,7 @@ use glm::{ Vector3, Matrix4 };
 use glm::ext::{ look_at, perspective };
 use num_traits::One;
 
-use crate::graphics::{ Projection, create_direction, create_orthographic_projection, create_orthographic_projection_matrix, projection::{ create_default_orthographic, create_default_perspective } };
+use crate::graphics::{ Projection, create_direction,projection::{ create_orthographic_projection_matrix, create_default_perspective } };
 use crate::world::Model;
 use crate::world::traits::{ Translatable, Rotatable };
 use crate::utility::Float;
@@ -28,14 +28,6 @@ impl Camera {
 
     pub fn get_projection(&self) -> Projection {
         self.projection
-    }
-
-    pub fn get_view_matrix(&self) -> &Matrix4<Float> {
-        &self.view_matrix
-    }
-
-    pub fn get_projection_matrix(&self) -> &Matrix4<Float> {
-        &self.projection_matrix
     }
 
     pub fn get_direction(&self) -> Vector3<Float> {

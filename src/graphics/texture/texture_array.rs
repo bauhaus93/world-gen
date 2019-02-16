@@ -4,16 +4,14 @@ use gl::types::GLuint;
 use crate::graphics::check_opengl_error;
 
 pub struct TextureArray {
-    texture_id: GLuint,
-    size: (u32, u32, u32)
+    texture_id: GLuint
 }
 
 impl TextureArray {
-    pub fn new(texture_id: GLuint, size: (u32, u32, u32)) -> TextureArray {
+    pub fn new(texture_id: GLuint) -> TextureArray {
         debug_assert!(texture_id != 0);
         TextureArray {
             texture_id: texture_id,
-            size: size
         }
     }
     pub fn activate(&self) {

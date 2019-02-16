@@ -1,6 +1,5 @@
 use std::fmt;
 use std::error::Error;
-use std::io;
 
 use crate::utility;
 use crate::graphics;

@@ -1,5 +1,5 @@
 use glm;
-use glm::{ Vector3, Vector4, Matrix4, normalize };
+use glm::{ Vector3, Matrix4, normalize };
 use num_traits::One;
 
 use crate::utility::Float;
@@ -30,9 +30,4 @@ pub fn create_direction(rotation: Vector3<Float>) -> Vector3<Float> {
         rotation.y.cos()))
 }
 
-pub fn create_orthographic_projection_matrix(left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float) -> Matrix4<Float> {
-    let trans_input = Matrix4::<Float>::new(Vector4::<Float>::new(1., 0., 0., 0.), Vector4::<Float>::new(0., 1., 0., 0.),
-                                              Vector4::<Float>::new(0., 0., -1., 0.), Vector4::<Float>::new(0., 0., 0., 1.));
-    create_scale_matrix(Vector3::<Float>::new(2. / (right - left), 2. / (top - bottom), 2. / (far - near))) * 
-    glm::ext::translate(&trans_input, Vector3::<Float>::new(-(left + right) / 2., -(top + bottom) / 2., -(far + near) / 2.))
-}
+

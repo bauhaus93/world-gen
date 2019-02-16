@@ -17,6 +17,7 @@ pub struct OctavedNoise {
 
 impl OctavedNoise {
 
+    #[allow(dead_code)]
     pub fn new(octaves: u8, roughness: Float, scale: Float, range: [Float; 2], noise: Box<Noise>) -> Self {
         Self {
             noise: noise,

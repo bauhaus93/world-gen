@@ -26,7 +26,6 @@ const GRADIENTS: [[i32; 2]; 12] = [
 ];
 
 pub struct SimplexNoise {
-    seed: [u8; 16],
     permutation_table: Vec<u8>,
 }
 
@@ -43,6 +42,7 @@ fn create_permutation_table(seed: [u8; 16]) -> Vec<u8> {
 }
 
 impl SimplexNoise {
+    #[allow(dead_code)]
     pub fn from_str_seed(seed_str: &str) -> Self {
         Self::from_seed(seed_str.as_bytes())
     }
@@ -53,7 +53,6 @@ impl SimplexNoise {
             *v = *s;
         }
         Self {
-            seed: seed,
             permutation_table: create_permutation_table(seed),
         }
     }

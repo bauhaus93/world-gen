@@ -1,6 +1,6 @@
 use std::fmt;
 
-use glm::{ Vector3, Matrix4, GenNum, cross, normalize };
+use glm::{ Vector3, GenNum, cross, normalize };
 
 use crate::utility::Float;
 use super::Vertex;
@@ -26,10 +26,6 @@ impl Triangle {
         }
     }
 
-    pub fn get_vertices(&self) -> &[Vertex] {
-        &self.vertex
-    }
-
     pub fn get_normal(&self) -> Vector3<Float> {
         self.normal
     }
@@ -39,16 +35,13 @@ impl Triangle {
         self.vertex[index] = vertex;
     }
 
+    #[allow(dead_code)]
     pub fn set_uv_layer(&mut self, uv_layer: u32) {
         self.vertex.iter_mut().for_each(|v| v.set_uv_layer(uv_layer));
     }
 
     pub fn update_normal(&mut self) {
         self.normal = calculate_normal(&self.vertex);
-    }
-
-    pub fn into_vertices(self) -> [Vertex; 3] {
-        self.vertex
     }
 
     pub fn as_vertices(&self) -> &[Vertex; 3] {

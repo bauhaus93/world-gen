@@ -1,8 +1,7 @@
 use std::fmt;
 use std::error::Error;
-use std::io;
 
-use gl::types::{ GLuint, GLint };
+use gl::types::{ GLuint };
 
 use crate::graphics::OpenglError;
 use crate::utility::FileError;

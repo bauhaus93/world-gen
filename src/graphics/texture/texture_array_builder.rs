@@ -71,10 +71,7 @@ impl TextureArrayBuilder {
                 }
             }
         }
-        let texture_array = TextureArray::new(
-            texture_id,
-            (self.texture_size[0], self.texture_size[1], layer_count) 
-        );
+        let texture_array = TextureArray::new(texture_id);
         Ok(texture_array)
     }
 }

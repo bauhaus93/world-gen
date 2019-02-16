@@ -1,9 +1,6 @@
 use std::fmt;
 use std::error::Error;
 
-use gl;
-use gl::types::{ GLuint, GLint };
-
 use crate::graphics::OpenglError;
 
 #[derive(Debug)]

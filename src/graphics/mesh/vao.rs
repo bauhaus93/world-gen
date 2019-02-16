@@ -1,13 +1,9 @@
-use std::collections::BTreeMap;
-use std::collections::btree_map::Entry;
+use std::ptr;
 use std::convert::TryFrom;
-use std::{ ptr, io, ffi::c_void, mem::size_of };
 use gl;
-use gl::types::{ GLint, GLuint, GLenum, GLsizeiptr };
-use glm::Matrix4;
+use gl::types::{ GLint, GLuint, GLenum };
 
-use crate::utility::{ Float, read_obj };
-use crate::graphics::{ check_opengl_error, OpenglError, mesh::{ Vertex, Triangle } };
+use crate::graphics::{ check_opengl_error, OpenglError };
 use super::{ MeshError, Buffer };
 
 pub struct VAO {

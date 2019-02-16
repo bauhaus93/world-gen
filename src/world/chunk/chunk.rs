@@ -1,9 +1,9 @@
 
 use glm::Vector3;
 
-use crate::graphics::{ ShaderProgram, GraphicsError, mesh::{ Mesh, Vertex, Triangle, Buffer } };
+use crate::graphics::{ ShaderProgram, GraphicsError, mesh::Mesh };
 use crate::world::traits::{ Translatable, Renderable };
-use crate::world::{ Object, Camera, Noise };
+use crate::world::{ Object, Camera };
 use crate::utility::Float;
 use super::CHUNK_SIZE;
 

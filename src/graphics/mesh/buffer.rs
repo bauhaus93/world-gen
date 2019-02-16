@@ -1,4 +1,4 @@
-use std::{ ptr, io, ffi::c_void, mem::size_of };
+use std::{ ffi::c_void, mem::size_of };
 use std::collections::btree_map::{ BTreeMap, Entry };
 use gl::types::{ GLuint, GLsizeiptr, GLenum };
 
@@ -13,10 +13,6 @@ pub struct Buffer {
 }
 
 impl Buffer {
-
-    pub fn is_empty(&self) -> bool {
-        self.index.len() == 0
-    }
 
     pub fn get_index_count(&self) -> usize {
         self.index.len()

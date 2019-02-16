@@ -1,9 +1,7 @@
-use std::ops::Add;
 use std::cmp::Ordering;
 use std::fmt;
-use glm::{ GenNum, Vector3, Matrix4, builtin::{ normalize } };
+use glm::{ GenNum, Vector3 };
 
-use crate::graphics::{ create_rotation_matrix };
 use crate::utility::{ Float, cmp_vec };
 
 #[derive(Copy, Clone)]

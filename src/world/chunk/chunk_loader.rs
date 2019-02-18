@@ -5,6 +5,7 @@ use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use super::{ Chunk, chunk_builder::ChunkBuilder, architect::Architect, ChunkError };
+use super::tree::Tree;
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
@@ -17,6 +18,7 @@ pub struct ChunkLoader {
 
 impl ChunkLoader {
     pub fn start(&mut self, thread_count: usize) {
+        let t = Tree::new();
         if !self.thread_handles.is_empty() {
             warn!("Starting chunk loader threads, but threads already running");
         }

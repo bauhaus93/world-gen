@@ -9,3 +9,4 @@ pub use self::chunk_builder::ChunkBuilder;
 pub use self::chunk_loader::ChunkLoader;
 pub use self::chunk_error::ChunkError;
 pub use self::chunk_size::CHUNK_SIZE;
+pub use self::chunk_size::get_chunk_pos;

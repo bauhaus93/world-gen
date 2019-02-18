@@ -3,8 +3,7 @@ use glm::Vector3;
 
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::utility::{ format_number };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader } };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos } };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 use crate::world::noise::OctavedNoise;
@@ -16,7 +15,9 @@ pub struct World {
     test_object: Object,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
-    chunk_update_timer: Timer
+    chunk_update_timer: Timer,
+    active_chunk_radius: i32,
+    last_chunk_load: [i32; 2]
 }
 
 const TEXTURE_LAYER_MUD: u32 = 0;
@@ -59,21 +60,24 @@ impl World {
             test_object: test_object,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(1000)
+            chunk_update_timer: Timer::new(1000),
+            active_chunk_radius: 5,
+            last_chunk_load: [0, 0]
         };
 
-        world.request_chunks(5)?;
-        info!("Loaded chunks: {}, loaded vertices: {}", world.count_loaded_chunks(), format_number(world.count_loaded_vertices()));
+        world.request_chunks()?;
 
         Ok(world)
     }
 
-    pub fn request_chunks(&mut self, radius: i32) -> Result<(), WorldError> {
-        let mut request_list = Vec::new();
-        for y in -radius..radius {
-            for x in -radius..radius {
-                if f32::sqrt((x * x + y * y) as f32) < radius as f32 {
-                    let chunk_pos = [x, y];
+    pub fn request_chunks(&mut self) -> Result<(), WorldError> {
+        let mut request_list: Vec<[i32; 2]> = Vec::new();
+        let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
+        for y in -self.active_chunk_radius..self.active_chunk_radius {
+            for x in -self.active_chunk_radius..self.active_chunk_radius {
+                if f32::sqrt((x * x + y * y) as f32) < self.active_chunk_radius as f32 {
+                    let chunk_pos = [cam_chunk_pos[0] + x,
+                                     cam_chunk_pos[1] + y];
                     if !self.chunks.contains_key(&chunk_pos) {
                         request_list.push(chunk_pos);
                     }
@@ -81,14 +85,30 @@ impl World {
             }
         }
         self.chunk_loader.request(&request_list)?;
-        debug!("Requested chunks: {}", request_list.len());
+        self.last_chunk_load = cam_chunk_pos;
+        trace!("Requested chunks: {}", request_list.len());
         Ok(())
+    }
+
+    pub fn unload_distant_chunks(&mut self) {
+        let mut unload_list = Vec::new();;
+        let cam_pos = get_chunk_pos(self.camera.get_translation());
+        for chunk_pos in self.chunks.keys() {
+            let vec = [cam_pos[0] - chunk_pos[0], cam_pos[1] - chunk_pos[1]];
+            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) >= self.active_chunk_radius as f32 {
+                unload_list.push(*chunk_pos);
+            }
+        }
+        trace!("Unloading {} chunks", unload_list.len());
+        for pos in unload_list {
+            self.chunks.remove(&pos);
+        }
     }
     
     pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
         let finished_chunks = self.chunk_loader.get()?;
         if finished_chunks.len() > 0 {
-            debug!("Finished chunks: {}", finished_chunks.len());
+            trace!("Finished chunks: {}", finished_chunks.len());
             self.chunks.extend(finished_chunks);
         }
         Ok(())
@@ -115,10 +135,7 @@ impl World {
         &mut self.camera
     }
 
-    pub fn count_loaded_chunks(&self) -> u32 {
-        self.chunks.len() as u32
-    }
-
+    #[allow(dead_code)]
     pub fn count_loaded_vertices(&self) -> u32 {
         let mut vertex_count = 0;
         self.chunks.iter().for_each(|(_, c)| vertex_count += c.get_vertex_count());
@@ -149,6 +166,12 @@ impl Updatable for World {
 
         if self.chunk_update_timer.fires() {
             self.get_finished_chunks()?;
+            let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
+            let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
+            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > self.active_chunk_radius as f32 / 5. {
+                self.unload_distant_chunks();
+                self.request_chunks()?;
+            }
         }
 
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));

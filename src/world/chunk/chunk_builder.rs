@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use glm::Vector3;
+use glm::{ Vector3 };
 
 use crate::utility::Float;
 use crate::graphics::mesh::{ Vertex, Triangle, Mesh, Buffer };

@@ -18,6 +18,7 @@ impl Object {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_vertex_count(&self) -> u32 {
         self.mesh.get_vertex_count()
     }

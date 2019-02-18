@@ -1,4 +1,3 @@
-
 use glm::Vector3;
 
 use crate::graphics::{ ShaderProgram, GraphicsError, mesh::Mesh };

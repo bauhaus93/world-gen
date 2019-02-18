@@ -1,5 +1,5 @@
 use std::sync::{ Arc, Mutex };
-use std::collections::{ BTreeSet, BTreeMap, VecDeque };
+use std::collections::{ BTreeMap, BTreeSet, VecDeque };
 use std::time;
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };

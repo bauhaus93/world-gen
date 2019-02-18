@@ -1,5 +1,6 @@
 use std;
 
+#[allow(dead_code)]
 pub fn format_number<T>(num: T) -> String
 where T: std::fmt::Display + std::ops::Div + std::cmp::PartialOrd,
       <T as std::ops::Div>::Output: std::fmt::Display,

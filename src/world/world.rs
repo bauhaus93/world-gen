@@ -6,7 +6,6 @@ use crate::graphics::projection::{ create_default_orthographic, create_default_p
 use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos } };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
-use crate::world::noise::OctavedNoise;
 
 pub struct World {
     texture_array: TextureArray,
@@ -41,30 +40,23 @@ impl World {
         }
         let texture_array = builder.finish()?;
 
-        let mut height_noise = OctavedNoise::default();
-        height_noise.set_octaves(4);
-        height_noise.set_scale(1e-3);
-        height_noise.set_roughness(10.);
-        height_noise.set_range([0., 20.]);
-
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
-
-        let chunk_loader = ChunkLoader::new(Box::new(height_noise));
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             shader_program: shader_program,
             test_object: test_object,
-            chunk_loader: chunk_loader,
+            chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(1000),
             active_chunk_radius: 5,
             last_chunk_load: [0, 0]
         };
 
+        world.chunk_loader.start(2);
         world.request_chunks()?;
 
         Ok(world)
@@ -168,7 +160,7 @@ impl Updatable for World {
             self.get_finished_chunks()?;
             let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
             let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
-            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > self.active_chunk_radius as f32 / 5. {
+            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > self.active_chunk_radius as f32 / 10. {
                 self.unload_distant_chunks();
                 self.request_chunks()?;
             }

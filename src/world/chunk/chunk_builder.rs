@@ -4,8 +4,7 @@ use glm::{ Vector3 };
 
 use crate::utility::Float;
 use crate::graphics::mesh::{ Vertex, Triangle, Mesh, Buffer };
-use crate::world::Noise;
-use super::{ Chunk, ChunkError, CHUNK_SIZE };
+use super::{ Chunk, ChunkError, architect::Architect, CHUNK_SIZE };
 
 pub struct ChunkBuilder {
     pos: [i32; 2],
@@ -28,7 +27,7 @@ impl ChunkBuilder {
         Ok(Chunk::new(self.pos, mesh))
     }
 
-    pub fn create_surface_buffer(&mut self, height_noise: &Noise) {
+    pub fn create_surface_buffer(&mut self, architect: &Architect) {
         const OFFSET: Float = 0.5;
         const VERTEX_OFFSETS: [[Float; 2]; 6] = [
             [OFFSET, -OFFSET],
@@ -47,15 +46,16 @@ impl ChunkBuilder {
                     let mut vertices: [Vertex; 3] = [Vertex::default(),
                                                     Vertex::default(),
                                                     Vertex::default()];
+                    let texture_layer = architect.get_ground_texture(absolute_position);
                     for (vert, off) in vertices.iter_mut().zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3)) {
-                        let height = height_noise.get_noise([absolute_position[0] + off[0],
+                        let height = architect.get_height([absolute_position[0] + off[0],
                                                             absolute_position[1] + off[1]]);
                         vert.set_pos(Vector3::new(x as Float + off[0],
-                                                y as Float + off[1],
-                                                height));
+                                                  y as Float + off[1],
+                                                  height));
                         vert.set_uv(Vector3::new(0.5 + off[0].signum() * 0.5,
                                                 0.5 + off[1].signum() * 0.5,
-                                                1.));
+                                                texture_layer as Float));
                     }
                     triangles.push(Triangle::new(vertices));
                 }

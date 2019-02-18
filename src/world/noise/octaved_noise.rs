@@ -3,8 +3,8 @@ use crate::utility::Float;
 use super::{ Noise, SimplexNoise };
 
 const DEFAULT_OCTAVES: u8 = 4;
-const DEFAULT_ROUGHNESS: Float = 0.5;
-const DEFAULT_SCALE: Float = 2.5e-1;
+const DEFAULT_ROUGHNESS: Float = 0.8;
+const DEFAULT_SCALE: Float = 1e-2;
 const DEFAULT_RANGE: [Float; 2]= [-1., 1.];
 
 pub struct OctavedNoise {

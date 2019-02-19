@@ -26,6 +26,7 @@ impl VAO {
                 gl::UNSIGNED_INT,
                 ptr::null()
             );
+            gl::BindVertexArray(0);
         }
         check_opengl_error("Mesh::render")?;
         Ok(())

@@ -3,7 +3,7 @@ use glm::Vector3;
 
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos, tree::Tree } };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos }, tree::Tree };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 

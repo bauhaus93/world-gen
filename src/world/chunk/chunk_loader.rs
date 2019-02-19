@@ -5,7 +5,6 @@ use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use super::{ Chunk, chunk_builder::ChunkBuilder, architect::Architect, ChunkError };
-use super::tree::Tree;
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,

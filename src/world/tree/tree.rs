@@ -1,4 +1,5 @@
-use std::ops::Add;
+use std;
+use std::ops::{ Add, Sub };
 use std::convert::TryFrom;
 
 use num_traits::One;
@@ -31,43 +32,56 @@ impl Branch {
     pub fn new<R: Rng + ?Sized>(ancestor_dir: Vector3<Float>, rng: &mut R) -> Self {
         let mut branch = Self {
             anchor: Vector3::from_s(0.),
-            direction: normalize(ancestor_dir.add(Vector3::new(rng.gen_range(-0.1, 0.1),
-                                                               rng.gen_range(-0.1, 0.1),
+            direction: normalize(ancestor_dir.add(Vector3::new(rng.gen_range(-0.2, 0.2),
+                                                               rng.gen_range(-0.2, 0.2),
                                                                0.))),
             radius_factor: rng.gen_range(0.9, 1.),
             length_factor: rng.gen_range(0.1, 1.),
             next_part: None
         };
-        let extensions = rng.gen_range(2, 6);
+        let extensions = rng.gen_range(10, 20);
         info!("Created root branch: anchor = {:?}, dir = {:?}, r = {}, l = {}, ext = {}", branch.anchor, branch.direction, branch.radius_factor, branch.length_factor, extensions);
-        branch.extend(extensions, rng);
+        branch.grow(extensions, rng);
         branch
     }
 
-    fn extend<R: Rng + ?Sized>(&mut self, extension_count: i32, rng: &mut R) {
+    pub fn build_buffer(&self, point_count: u8) -> Buffer {
+        debug_assert!(point_count >= 3);
+        let ring = self.calculate_ring(point_count);
+        Buffer::from(self.collect_triangles(ring.as_slice(), 1.))
+    }
+
+    fn grow<R: Rng + ?Sized>(&mut self, extension_count: i32, rng: &mut R) {
         let radius_factor = if extension_count == 0 {
             0.
+        } else if extension_count < 3 {
+            rng.gen_range(0.5 * self.radius_factor, 0.7 * self.radius_factor)
+        }  else {
+            rng.gen_range(0.9 * self.radius_factor, 0.95 * self.radius_factor)
+        };
+        let length_factor = if extension_count == 0 {
+            rng.gen_range(0.1, 0.2)
         } else {
-            rng.gen_range(0.9 * self.radius_factor, self.radius_factor)
+            rng.gen_range(0.1, 1.)
         };
         let mut branch = Self {
-            anchor: self.anchor.add(self.direction),
-            direction: normalize(self.direction.add(Vector3::new(rng.gen_range(-0.1, 0.1),
-                                                                 rng.gen_range(-0.1, 0.1),
+            anchor: self.anchor.add(self.direction * self.length_factor),
+            direction: normalize(self.direction.add(Vector3::new(rng.gen_range(-0.2, 0.2),
+                                                                 rng.gen_range(-0.2, 0.2),
                                                                  0.))),
             radius_factor: radius_factor,
-            length_factor: rng.gen_range(0.1, 1.),
+            length_factor: length_factor,
             next_part: None
         };
         
         info!("Created branch: anchor = {:?}, dir = {:?}, r = {}, l = {}", branch.anchor, branch.direction, branch.radius_factor, branch.length_factor);
         if extension_count > 0 {
-            branch.extend(extension_count - 1, rng);
+            branch.grow(extension_count - 1, rng);
         }
         self.next_part = Some(Box::new(branch))
     }
 
-    fn calculate_base_points(&self, count: u8) -> Vec<Vector3<Float>> {
+    fn calculate_ring(&self, count: u8) -> Vec<Vector3<Float>> {
         let right = normalize(cross(self.direction, Vector3::new(0., 0., 1.)));
         let p_base = self.anchor.add(right).extend(1.);
         let one = Matrix4::<Float>::one();
@@ -80,7 +94,19 @@ impl Branch {
         points
     }
 
-    pub fn collect_triangles_by_points(&self, bottom_points: &[Vector3<Float>], top_points: &[Vector3<Float>]) -> Vec<Triangle> {
+    fn collect_triangles(&self, ring: &[Vector3<Float>], prev_radius_factor: Float) -> Vec<Triangle> {
+        let bottom_points: Vec<Vector3<Float>> = ring.iter().map(|p| (*p * prev_radius_factor).add(self.anchor)).collect();
+        if let Some(ref next_branch) = self.next_part {
+            let top_points: Vec<Vector3<Float>> = ring.iter().map(|p| (*p * self.radius_factor).add(self.anchor).add(self.direction * self.length_factor)).collect();
+            let mut triangles = self.create_triangles(bottom_points.as_slice(), top_points.as_slice());
+            triangles.extend(next_branch.collect_triangles(ring, self.radius_factor));
+            triangles
+        } else {
+            self.create_peak_triangles(bottom_points.as_slice())
+        }
+    }
+    
+    fn create_triangles(&self, bottom_points: &[Vector3<Float>], top_points: &[Vector3<Float>]) -> Vec<Triangle> {
         let mut triangles = Vec::new();
         let bottom_iter = bottom_points.iter().zip(bottom_points.iter().cycle().skip(1));
         let top_iter = top_points.iter().zip(top_points.iter().cycle().skip(1));
@@ -117,23 +143,32 @@ impl Branch {
             triangles.push(triangle);
         }
         triangles
-    }
+    } 
 
-    fn collect_triangles_by_bottom_points(&self, bottom_points: &[Vector3<Float>]) -> Vec<Triangle> {
-        let r_factor_vec = Vector3::new(self.radius_factor, self.radius_factor, 1.);
-        let top_points: Vec<Vector3<Float>> = bottom_points.iter().map(|p| p.add(self.direction)).collect();
-        let mut triangles = self.collect_triangles_by_points(bottom_points, top_points.as_slice());
-        if let Some(ref next_branch) = self.next_part {
-            triangles.extend(next_branch.collect_triangles_by_bottom_points(top_points.as_slice()));
+    fn create_peak_triangles(&self, bottom_points: &[Vector3<Float>]) -> Vec<Triangle> {
+        let mut triangles = Vec::new();
+        let bottom_iter = bottom_points.iter().zip(bottom_points.iter().cycle().skip(1));
+        let mut vertex_top = Vertex::default();
+        vertex_top.set_pos(self.anchor.add(self.direction));
+        vertex_top.set_uv(Vector3::new(0., 1., 0.));
+        for (a, b) in bottom_iter {
+            let mut vertex_a = Vertex::default();
+            vertex_a.set_pos(*a);
+            vertex_a.set_uv(Vector3::from_s(0.));
+
+            let mut vertex_b = Vertex::default();
+            vertex_b.set_pos(*b);
+            vertex_b.set_uv(Vector3::new(1., 0., 0.));
+
+            let mut triangle = Triangle::default();
+            triangle.set_vertex(vertex_a, 0);
+            triangle.set_vertex(vertex_b, 1);
+            triangle.set_vertex(vertex_top, 2);
+            triangle.update_normal();
+            triangle.set_uv_layer(1);
+            triangles.push(triangle);
         }
         triangles
-    }
-    
-    pub fn collect_triangles(&self, point_count: u8) -> Vec<Triangle> {
-        debug_assert!(point_count >= 3);
-        let bottom_points = self.calculate_base_points(point_count);
-        self.collect_triangles_by_bottom_points(bottom_points.as_slice())
-      
     }
 }
 
@@ -148,8 +183,8 @@ impl Tree {
     }
 
     pub fn build_mesh(&self) -> Result<Mesh, ChunkError> {
-        let triangles = self.root.collect_triangles(16);
-        let mesh = Mesh::try_from(&triangles[..])?;
+        let buffer = self.root.build_buffer(16);
+        let mesh = Mesh::try_from(buffer)?;
         Ok(mesh)
     }
 }

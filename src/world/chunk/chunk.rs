@@ -1,14 +1,16 @@
+use std::rc::Rc;
+
 use glm::Vector3;
 
 use crate::graphics::{ ShaderProgram, GraphicsError, mesh::Mesh };
 use crate::world::traits::{ Translatable, Renderable };
 use crate::world::{ Object, Camera };
 use crate::utility::Float;
-use super::CHUNK_SIZE;
+use super::{ CHUNK_SIZE };
 
 pub struct Chunk {
     pos: [i32; 2],
-    object: Object
+    object: Object,
 }
 
 impl Chunk {
@@ -17,7 +19,7 @@ impl Chunk {
         object.set_translation(Vector3::new((pos[0] * CHUNK_SIZE[0]) as Float, (pos[1] * CHUNK_SIZE[1]) as Float, 0.));
         Self {
             pos: pos,
-            object: object
+            object: object,
         }
     }
 

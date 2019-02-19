@@ -18,7 +18,6 @@ pub struct ChunkLoader {
 
 impl ChunkLoader {
     pub fn start(&mut self, thread_count: usize) {
-        let t = Tree::new();
         if !self.thread_handles.is_empty() {
             warn!("Starting chunk loader threads, but threads already running");
         }

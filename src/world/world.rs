@@ -3,7 +3,7 @@ use glm::Vector3;
 
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos } };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos, tree::Tree } };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -12,6 +12,7 @@ pub struct World {
     camera: Camera,
     shader_program: ShaderProgram,
     test_object: Object,
+    test_tree: Object,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -44,11 +45,16 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
+        let tree = Tree::new();
+        let mut test_tree = Object::new(tree.build_mesh()?);
+        test_tree.set_scale(Vector3::new(10., 10., 10.));
+
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             shader_program: shader_program,
             test_object: test_object,
+            test_tree: test_tree,
             chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(1000),
@@ -65,8 +71,8 @@ impl World {
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
         let mut request_list: Vec<[i32; 2]> = Vec::new();
         let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
-        for y in -self.active_chunk_radius..self.active_chunk_radius {
-            for x in -self.active_chunk_radius..self.active_chunk_radius {
+        for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
+            for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
                 if f32::sqrt((x * x + y * y) as f32) < self.active_chunk_radius as f32 {
                     let chunk_pos = [cam_chunk_pos[0] + x,
                                      cam_chunk_pos[1] + y];
@@ -136,7 +142,7 @@ impl World {
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
         self.shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
-        self.shader_program.set_resource_vec3("light_pos", &self.test_object.get_translation())?;
+        self.shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
         Ok(())
     }
 
@@ -144,6 +150,7 @@ impl World {
         self.texture_array.activate();
 
         self.test_object.render(&self.camera, &self.shader_program)?;
+        self.test_tree.render(&self.camera, &self.shader_program)?;
         for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.shader_program)?;
         }

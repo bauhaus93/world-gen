@@ -21,6 +21,10 @@ impl Part {
         }
     }
 
+    pub fn is_peak(&self) -> bool {
+        self.radius.abs() < 1e-6
+    }
+
     pub fn create_ring_template(&self, count: u32) -> Vec<Vector3<Float>> {
         let right = normalize(cross(self.direction, Vector3::new(0., 0., 1.))) * self.radius;
         let p_base = right.extend(1.);

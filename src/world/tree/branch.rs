@@ -8,31 +8,48 @@ use crate::utility::Float;
 use super::part::Part;
 
 pub struct Branch {
-    parts: Vec<Part>
+    parts: Vec<Part>,
+    sub_branches: Vec<Branch>
+}
+
+fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, rng: &mut R) -> Vec<Part> {
+    debug_assert!(part_count > 1);
+    let mut parts = Vec::new();
+    let mut direction = initial_dir;
+    let mut radius = 1.;
+    for i in 0..part_count {
+        let variation_vec = Vector3::new(rng.gen_range(-variation, variation),
+                                         rng.gen_range(-variation, variation),
+                                         0.);
+        let length = if i + 1 == part_count {
+            rng.gen_range(0.1, 0.3)
+        } else {
+            rng.gen_range(0.2, 1.)
+        };
+        direction = normalize(direction.add(variation_vec));
+        parts.push(Part::new(direction, radius, length));
+        if i + 2 == part_count {
+            radius = 0.;
+        } else {
+            radius *= 0.9;
+        }
+    }
+    parts
 }
 
 impl Branch {
-    pub fn new<R: Rng + ?Sized>(variation: Float, initial_dir: Vector3<Float>, rng: &mut R) -> Self {
-        let mut parts = Vec::new();
-        let part_count = rng.gen_range(10, 20);
-        let mut direction = initial_dir;
-        let mut radius = 1.;
-        for i in 0..part_count {
-            let variation_vec = Vector3::new(rng.gen_range(-variation, variation),
-                                            rng.gen_range(-variation, variation),
-                                            0.);
-            let length = rng.gen_range(0.2, 1.);
-            direction = normalize(direction.add(variation_vec));
-            parts.push(Part::new(direction, radius, length));
-            radius *= 0.9;
-        }
+    pub fn new<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, rng: &mut R) -> Self {
+        let parts = create_parts(part_count, variation, initial_dir, rng);
+        let sub_branches = Vec::new();
         Self {
-            parts: parts
+            parts: parts,
+            sub_branches: sub_branches
         }
     }
 
     pub fn build_buffer(&self, point_count: u32) -> Buffer {
         debug_assert!(point_count >= 3);
+        debug_assert!(self.parts.len() > 1);
         let ring_template = match self.parts.first() {
             Some(part) => part.create_ring_template(point_count),
             None => unreachable!()
@@ -45,7 +62,11 @@ impl Branch {
             let top_ring = part.align_ring(origin, ring_template.as_slice());
             let new_triangles = match prev_ring {
                 Some(bottom_ring) => {
-                    self.create_triangles(bottom_ring.as_slice(), top_ring.as_slice())
+                    if part.is_peak() {
+                        self.create_peak_triangles(bottom_ring.as_slice(), origin)
+                    } else {
+                        self.create_triangles(bottom_ring.as_slice(), top_ring.as_slice())
+                    }
                 },
                 None => {
                     self.create_triangles(ring_template.as_slice(), top_ring.as_slice())
@@ -96,11 +117,11 @@ impl Branch {
         triangles
     } 
 
-/*    fn create_peak_triangles(&self, bottom_ring: &[Vector3<Float>], top_part: &Part) -> Vec<Triangle> {
+    fn create_peak_triangles(&self, bottom_ring: &[Vector3<Float>], next_origin: Vector3<Float>) -> Vec<Triangle> {
         let mut triangles = Vec::new();
         let bottom_iter = bottom_ring.iter().zip(bottom_ring.iter().cycle().skip(1));
         let mut vertex_top = Vertex::default();
-        vertex_top.set_pos(top_part.get_anchor().add(top_part.get_direction()));
+        vertex_top.set_pos(next_origin);
         vertex_top.set_uv(Vector3::new(0., 1., 0.));
         for (a, b) in bottom_iter {
             let mut vertex_a = Vertex::default();
@@ -120,6 +141,6 @@ impl Branch {
             triangles.push(triangle);
         }
         triangles
-    }*/
+    }
 }
 

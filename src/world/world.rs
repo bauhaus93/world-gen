@@ -1,9 +1,14 @@
 use std::collections::BTreeMap;
+
+use rand;
+use rand::{ Rng, FromEntropy };
+use rand::rngs::StdRng;
 use glm::Vector3;
 
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos }, tree::Tree };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos }, tree::TreeGenerator };
+use crate::utility::Float;
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -11,8 +16,9 @@ pub struct World {
     texture_array: TextureArray,
     camera: Camera,
     shader_program: ShaderProgram,
+    rng: StdRng,
     test_object: Object,
-    test_tree: Object,
+    test_trees: Vec<Object>,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -41,20 +47,30 @@ impl World {
         }
         let texture_array = builder.finish()?;
 
+        let mut rng = StdRng::from_entropy();
+
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        let tree = Tree::new();
-        let mut test_tree = Object::new(tree.build_mesh()?);
-        test_tree.set_scale(Vector3::new(10., 10., 10.));
+        let mut tree_gen = TreeGenerator::new(&mut rng);
+        let mut test_trees = Vec::new();
+        for i in 0..50 {
+            let mut test_tree = Object::new(tree_gen.build_tree(8)?);
+            test_tree.set_translation(Vector3::new(i as Float * 10.,
+                                                   i as Float * 10.,
+                                                   50.));
+            test_tree.set_scale(Vector3::new(3., 3., 3.));
+            test_trees.push(test_tree);
+        }
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             shader_program: shader_program,
+            rng: rng,
             test_object: test_object,
-            test_tree: test_tree,
+            test_trees: test_trees,
             chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(1000),
@@ -150,7 +166,9 @@ impl World {
         self.texture_array.activate();
 
         self.test_object.render(&self.camera, &self.shader_program)?;
-        self.test_tree.render(&self.camera, &self.shader_program)?;
+        for tree in self.test_trees.iter() {
+            tree.render(&self.camera, &self.shader_program)?;
+        }
         for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.shader_program)?;
         }

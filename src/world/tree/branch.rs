@@ -8,15 +8,16 @@ use crate::utility::Float;
 use super::part::Part;
 
 pub struct Branch {
+    origin: Vector3<Float>,
     parts: Vec<Part>,
     sub_branches: Vec<Branch>
 }
 
-fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, rng: &mut R) -> Vec<Part> {
+fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, initial_radius: Float, rng: &mut R) -> Vec<Part> {
     debug_assert!(part_count > 1);
     let mut parts = Vec::new();
     let mut direction = initial_dir;
-    let mut radius = 1.;
+    let mut radius = initial_radius;
     for i in 0..part_count {
         let variation_vec = Vector3::new(rng.gen_range(-variation, variation),
                                          rng.gen_range(-variation, variation),
@@ -38,16 +39,45 @@ fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir:
 }
 
 impl Branch {
-    pub fn new<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, rng: &mut R) -> Self {
-        let parts = create_parts(part_count, variation, initial_dir, rng);
+    pub fn new<R: Rng + ?Sized>(origin: Vector3<Float>, part_count: u32, variation: Float, initial_dir: Vector3<Float>, initial_radius: Float, sub_branch_count: u32, rng: &mut R) -> Self {
+        let parts = create_parts(part_count, variation, initial_dir, initial_radius, rng);
         let sub_branches = Vec::new();
-        Self {
+        let mut branch = Self {
+            origin: origin,
             parts: parts,
             sub_branches: sub_branches
+        };
+        for _ in 0..sub_branch_count {
+            branch.add_sub_branch(part_count / 2, variation, rng);
         }
+        branch
     }
 
-    pub fn build_buffer(&self, point_count: u32) -> Buffer {
+    pub fn set_origin(&mut self, new_origin: Vector3<Float>) {
+        self.origin = new_origin;
+    }
+
+    fn add_sub_branch<R: Rng + ?Sized>(&mut self, part_count: u32, variation: Float, rng: &mut R) {
+        let mut origin = self.origin; 
+        let part_index = rng.gen_range(0, self.parts.len());
+        self.parts.iter()
+            .take(part_index)
+            .for_each(|p| origin = p.next_origin(origin));
+        let offset_factor = rng.gen_range(0., 1.);
+        let ancestor_part = &self.parts[part_index];
+        origin = ancestor_part.next_origin_factored(origin, offset_factor);
+        let initial_variation = Vector3::new(rng.gen_range(-variation, variation),
+                                             rng.gen_range(-variation, variation),
+                                             0.);
+        let sub_dir = normalize(ancestor_part.create_sub_dir(rng.gen_range(0., 360f32.to_radians()))
+            .add(initial_variation));
+        let sub_radius = ancestor_part.get_radius() * rng.gen_range(0.5, 0.6);
+        info!("sub radius = {}", sub_radius);
+        let mut sub = Branch::new(origin, part_count, variation, sub_dir, sub_radius, 0, rng);
+        self.sub_branches.push(sub);
+    }
+
+    fn build_triangles(&self, point_count: u32) -> Vec<Triangle> {
         debug_assert!(point_count >= 3);
         debug_assert!(self.parts.len() > 1);
         let ring_template = match self.parts.first() {
@@ -56,7 +86,7 @@ impl Branch {
         };
         let mut triangles = Vec::new();
         let mut prev_ring: Option<Vec<Vector3<Float>>> = None;
-        let mut origin = Vector3::from_s(0.);
+        let mut origin = self.origin;
         for part in self.parts.iter() {
             origin = part.next_origin(origin);
             let top_ring = part.align_ring(origin, ring_template.as_slice());
@@ -75,7 +105,14 @@ impl Branch {
             triangles.extend(new_triangles);
             prev_ring = Some(top_ring);
         }
-        Buffer::from(triangles.as_slice())
+        for sub in self.sub_branches.iter() {
+            triangles.extend(sub.build_triangles(point_count));
+        }
+        triangles
+    }
+
+    pub fn build_buffer(&self, point_count: u32) -> Buffer {
+        Buffer::from(self.build_triangles(point_count).as_slice())
     }
 
     fn create_triangles(&self, bottom_ring: &[Vector3<Float>], top_ring: &[Vector3<Float>]) -> Vec<Triangle> {

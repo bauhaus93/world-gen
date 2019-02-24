@@ -21,8 +21,24 @@ impl Part {
         }
     }
 
+    pub fn get_direction(&self) -> Vector3<Float> {
+        self.direction
+    }
+
+    pub fn get_radius(&self) -> Float {
+        self.radius
+    }
+
     pub fn is_peak(&self) -> bool {
         self.radius.abs() < 1e-6
+    }
+
+    pub fn create_sub_dir(&self, angle: Float) -> Vector3<Float> {
+        let right = normalize(cross(self.direction, Vector3::new(0., 0., 1.)));
+        let one = Matrix4::<Float>::one();
+        let rot_mat = rotate(&one, angle, self.direction);
+        let sub_dir = (rot_mat * right.extend(1.)).truncate(3);
+        normalize(sub_dir)
     }
 
     pub fn create_ring_template(&self, count: u32) -> Vec<Vector3<Float>> {
@@ -40,6 +56,10 @@ impl Part {
 
     pub fn next_origin(&self, prev_origin: Vector3<Float>) -> Vector3<Float> {
         prev_origin.add(self.direction * self.length)
+    }
+
+    pub fn next_origin_factored(&self, prev_origin: Vector3<Float>, factor: Float) -> Vector3<Float> {
+        prev_origin.add(self.direction * self.length * factor)
     }
 
     pub fn align_ring(&self, origin: Vector3<Float>, ring_template: &[Vector3<Float>]) -> Vec<Vector3<Float>> {

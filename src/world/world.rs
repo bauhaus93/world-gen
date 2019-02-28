@@ -8,7 +8,7 @@ use glm::Vector3;
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
 use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos }, tree::TreeGenerator };
-use crate::utility::Float;
+use crate::utility::{ Float, format_number };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -55,10 +55,10 @@ impl World {
 
         let mut tree_gen = TreeGenerator::new(&mut rng);
         let mut test_trees = Vec::new();
-        for i in 0..50 {
+        for i in 0..10 {
             let mut test_tree = Object::new(tree_gen.build_tree(8)?);
             test_tree.set_translation(Vector3::new(i as Float * 10.,
-                                                   i as Float * 10.,
+                                                   0.,
                                                    50.));
             test_tree.set_scale(Vector3::new(3., 3., 3.));
             test_trees.push(test_tree);
@@ -78,7 +78,7 @@ impl World {
             last_chunk_load: [0, 0]
         };
 
-        world.chunk_loader.start(2);
+        world.chunk_loader.start(8);
         world.request_chunks()?;
 
         Ok(world)

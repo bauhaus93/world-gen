@@ -39,7 +39,13 @@ fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir:
 }
 
 impl Branch {
-    pub fn new<R: Rng + ?Sized>(origin: Vector3<Float>, part_count: u32, variation: Float, initial_dir: Vector3<Float>, initial_radius: Float, sub_branch_count: u32, rng: &mut R) -> Self {
+    pub fn new<R: Rng + ?Sized>(origin: Vector3<Float>,
+                                part_count: u32,
+                                variation: Float,
+                                initial_dir: Vector3<Float>,
+                                initial_radius: Float,
+                                sub_branch_count: u32,
+                                rng: &mut R) -> Self {
         let parts = create_parts(part_count, variation, initial_dir, initial_radius, rng);
         let sub_branches = Vec::new();
         let mut branch = Self {
@@ -69,10 +75,11 @@ impl Branch {
         let initial_variation = Vector3::new(rng.gen_range(-variation, variation),
                                              rng.gen_range(-variation, variation),
                                              0.);
-        let sub_dir = normalize(ancestor_part.create_sub_dir(rng.gen_range(0., 360f32.to_radians()))
-            .add(initial_variation));
-        let sub_radius = ancestor_part.get_radius() * rng.gen_range(0.5, 0.6);
-        info!("sub radius = {}", sub_radius);
+        let sub_dir = normalize(
+            ancestor_part.create_sub_dir(rng.gen_range(0., 360f32.to_radians()))
+            .add(initial_variation)
+        );
+        let sub_radius = ancestor_part.get_radius() * rng.gen_range(0.6, 0.8);
         let mut sub = Branch::new(origin, part_count, variation, sub_dir, sub_radius, 0, rng);
         self.sub_branches.push(sub);
     }
@@ -99,10 +106,12 @@ impl Branch {
                     }
                 },
                 None => {
-                    self.create_triangles(ring_template.as_slice(), top_ring.as_slice())
+                    let bottom_ring = part.align_ring(self.origin, ring_template.as_slice());
+                    self.create_triangles(bottom_ring.as_slice(), top_ring.as_slice())
                 }
             };
             triangles.extend(new_triangles);
+
             prev_ring = Some(top_ring);
         }
         for sub in self.sub_branches.iter() {

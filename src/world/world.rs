@@ -15,10 +15,10 @@ use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Render
 pub struct World {
     texture_array: TextureArray,
     camera: Camera,
-    shader_program: ShaderProgram,
+    surface_shader_program: ShaderProgram,
     rng: StdRng,
     test_object: Object,
-    test_trees: Vec<Object>,
+    //test_trees: Vec<Object>,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -34,13 +34,26 @@ const TEXTURES: [[u32; 3]; 2] = [
     [1, 0, TEXTURE_LAYER_GRASS]
 ];
 
+const SURFACE_SHADER_RESOURCES: [&str; 5] = [
+    "mvp",
+    "texture_array",
+    "model",
+    "view_pos",
+    "light_pos"
+];
+
 impl World {
     pub fn new() -> Result<World, WorldError> {
-        let shader_program = ShaderProgramBuilder::new()
-            .add_vertex_shader("resources/shader/VertexShader.glsl")
-            .add_fragment_shader("resources/shader/FragmentShader.glsl")
+        let surface_shader_program = ShaderProgramBuilder::new()
+            .add_vertex_shader("resources/shader/surface/VertexShader.glsl")
+            .add_fragment_shader("resources/shader/surface/FragmentShader.glsl")
+            .add_resource("mvp")
+            .add_resource("texture_array")
+            .add_resource("model")
+            .add_resource("view_pos")
+            .add_resource("light_pos")
             .finish()?;
-        shader_program.use_program();
+
         let mut builder = TextureArrayBuilder::new("resources/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
             builder = builder.add_texture(tex);
@@ -53,7 +66,7 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        let mut tree_gen = TreeGenerator::new(&mut rng);
+        /*let mut tree_gen = TreeGenerator::new(&mut rng);
         let mut test_trees = Vec::new();
         for i in 0..10 {
             let mut test_tree = Object::new(tree_gen.build_tree(8)?);
@@ -62,19 +75,19 @@ impl World {
                                                    50.));
             test_tree.set_scale(Vector3::new(3., 3., 3.));
             test_trees.push(test_tree);
-        }
+        }*/
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
-            shader_program: shader_program,
+            surface_shader_program: surface_shader_program,
             rng: rng,
             test_object: test_object,
-            test_trees: test_trees,
+            //test_trees: test_trees,
             chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(1000),
-            active_chunk_radius: 5,
+            chunk_update_timer: Timer::new(200),
+            active_chunk_radius: 10,
             last_chunk_load: [0, 0]
         };
 
@@ -100,7 +113,7 @@ impl World {
         }
         self.chunk_loader.request(&request_list)?;
         self.last_chunk_load = cam_chunk_pos;
-        trace!("Requested chunks: {}", request_list.len());
+        debug!("Requested chunks: {}", request_list.len());
         Ok(())
     }
 
@@ -122,7 +135,7 @@ impl World {
     pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
         let finished_chunks = self.chunk_loader.get()?;
         if finished_chunks.len() > 0 {
-            trace!("Finished chunks: {}", finished_chunks.len());
+            debug!("Finished chunks: {}", finished_chunks.len());
             self.chunks.extend(finished_chunks);
         }
         Ok(())
@@ -157,20 +170,21 @@ impl World {
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
-        self.shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
-        self.shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
+        self.surface_shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
+        self.surface_shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
         Ok(())
     }
 
     pub fn render(&self) -> Result<(), WorldError> {
         self.texture_array.activate();
+        self.surface_shader_program.use_program();
 
-        self.test_object.render(&self.camera, &self.shader_program)?;
-        for tree in self.test_trees.iter() {
+        self.test_object.render(&self.camera, &self.surface_shader_program)?;
+        /*for tree in self.test_trees.iter() {
             tree.render(&self.camera, &self.shader_program)?;
-        }
+        }*/
         for (_pos, chunk) in self.chunks.iter() {
-            chunk.render(&self.camera, &self.shader_program)?;
+            chunk.render(&self.camera, &self.surface_shader_program)?;
         }
 
         self.texture_array.deactivate();

@@ -14,26 +14,26 @@ pub struct ShaderProgram {
 
 impl ShaderProgram {
     
-    pub fn new(program_id: GLuint) -> Result<ShaderProgram, ShaderProgramError> {
+    pub fn new(program_id: GLuint, resource_names: &[String]) -> Result<ShaderProgram, ShaderProgramError> {
         debug_assert!(program_id != 0);
         let mut program = Self {
             id: program_id,
             handles: BTreeMap::new()
         };
+
         program.use_program();
 
-        program.load_handle("mvp")?;
-        program.load_handle("texture_array")?;
-        program.load_handle("model")?;
-        program.load_handle("view_pos")?;
-        program.load_handle("light_pos")?;
+        for res_name in resource_names.iter() {
+            program.load_handle(res_name)?;
+        }
 
+        //defaults texture array slot to 0 (only if resource texture array is loaded)
         match program.handles.get("texture_array") {
             Some(handle) => {
                 unsafe { gl::Uniform1i(*handle, 0) }
                 check_opengl_error("gl::Uniform1i")?;
             },
-            _ => { return Err(ShaderProgramError::HandleNotExisting("texture_array".to_string())); }
+            _ => {}
         }
 
         Ok(program)
@@ -87,7 +87,7 @@ fn get_resource_handle(program_id: GLuint, resource_name: &str) -> Result<GLint,
     let handle: GLint = unsafe { gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _) };
     if handle == -1 {
         check_opengl_error("gl::GetUniformLocation")?;
-        return Err(ShaderProgramError::FunctionFailure("gl::GetUniformLocation".to_string()));
+        return Err(ShaderProgramError::FunctionFailure(format!("gl::GetUniformLocation('{}')", resource_name)));
     }
     trace!("Handle = {}", handle);
     Ok(handle)

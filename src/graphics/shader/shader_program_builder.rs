@@ -8,14 +8,15 @@ use super::{ ShaderProgram, ShaderError, ShaderProgramError };
 
 pub struct ShaderProgramBuilder {
     shader_list: Vec<Shader>,
+    resource_list: Vec<String>
 }
 
 struct Shader {
     shader_type: GLenum,
-    shader_file_path: String
+    shader_file_path: String,
 }
 
-struct Resources {
+struct BuildResources {
     program_id: GLuint,
     shader_ids: Vec<GLuint>
 }
@@ -24,16 +25,27 @@ impl ShaderProgramBuilder {
 
     pub fn new() -> ShaderProgramBuilder {
         ShaderProgramBuilder {
-            shader_list: Vec::new()
+            shader_list: Vec::new(),
+            resource_list: Vec::new()
         }
     }
 
+    //Also must add category in compile_shader() for new shader types!
     pub fn add_vertex_shader(self, shader_file_path: &str) -> Self {
         self.add_shader(gl::VERTEX_SHADER, shader_file_path)
     }
 
     pub fn add_fragment_shader(self, shader_file_path: &str) -> Self {
         self.add_shader(gl::FRAGMENT_SHADER, shader_file_path)
+    }
+
+    pub fn add_geometry_shader(self, shader_file_path: &str) -> Self {
+        self.add_shader(gl::GEOMETRY_SHADER, shader_file_path)
+    }
+
+    pub fn add_resource(mut self, name: &str) -> Self {
+        self.resource_list.push(name.to_string());
+        self
     }
 
     fn add_shader(mut self, shader_type: GLenum, shader_file_path: &str) -> Self {
@@ -44,16 +56,18 @@ impl ShaderProgramBuilder {
         self.shader_list.push(shader);
         self
     }
+
+
     pub fn finish(self) -> Result<ShaderProgram, GraphicsError> {
-        let resources = Resources::new(&self.shader_list)?;
+        let resources = BuildResources::new(&self.shader_list)?;
         let program_id = resources.build()?;
-        let program = ShaderProgram::new(program_id)?;
+        let program = ShaderProgram::new(program_id, self.resource_list.as_slice())?;
         Ok(program)
     }
 }
 
-impl Resources {
-    pub fn new(shader_list: &[Shader]) -> Result<Resources, GraphicsError> {
+impl BuildResources {
+    pub fn new(shader_list: &[Shader]) -> Result<BuildResources, GraphicsError> {
         debug!("Creating new shader program");
         let shader_ids: Vec<GLuint> = compile_shaders(shader_list)?;
         let program_id: GLuint = unsafe { gl::CreateProgram() };
@@ -63,7 +77,7 @@ impl Resources {
             return Err(GraphicsError::from(ShaderProgramError::FunctionFailure("gl::CreateProgram".to_string())));
         }
 
-       Ok(Resources {
+       Ok(BuildResources {
             program_id: program_id,
             shader_ids: shader_ids
         })
@@ -128,7 +142,7 @@ impl Resources {
     }
 }
 
-impl Drop for Resources {
+impl Drop for BuildResources {
     fn drop(&mut self) {
         if self.program_id > 0 {
             detach_attached_shaders(self.program_id);
@@ -159,6 +173,7 @@ fn compile_shader(shader: &Shader) -> Result<GLuint, ShaderError> {
     let shader_name = match shader.shader_type {
         gl::FRAGMENT_SHADER => "fragment shader",
         gl::VERTEX_SHADER => "vertex shader",
+        gl::GEOMETRY_SHADER => "geometry shader",
         unknown_type => { return Err(ShaderError::UnknownShaderType(unknown_type)); }
     };
     debug!("Compiling {}", shader_name);

@@ -5,7 +5,7 @@ use glutin::GlContext;
 use crate::graphics;
 
 pub fn init_window(window_size: [f64; 2], events_loop: &glutin::EventsLoop) -> Result<glutin::GlWindow, graphics::GraphicsError> {
-    info!("Creating window, size {}x{}", window_size[0], window_size[0]);
+    info!("Creating window, size {}x{}", window_size[0], window_size[1]);
     let window_builder = glutin::WindowBuilder::new()
         .with_dimensions(glutin::dpi::LogicalSize::new(window_size[0], window_size[1]));
     let context_builder = glutin::ContextBuilder::new()

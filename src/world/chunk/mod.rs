@@ -4,6 +4,7 @@ pub mod chunk_error;
 pub mod chunk_size;
 mod chunk_builder;
 mod architect;
+mod height_map;
 
 pub use self::chunk::Chunk;
 pub use self::chunk_loader::ChunkLoader;

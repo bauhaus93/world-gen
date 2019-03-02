@@ -5,6 +5,7 @@ use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use super::{ Chunk, chunk_builder::ChunkBuilder, architect::Architect, ChunkError };
+use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
@@ -96,7 +97,10 @@ impl Drop for ChunkLoader {
     }
 }
 
-fn worker(architect: Arc<Architect>, stop: Arc<AtomicBool>, input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>, output_queue: Arc<Mutex<Vec<ChunkBuilder>>>) {
+fn worker(architect: Arc<Architect>,
+          stop: Arc<AtomicBool>,
+          input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
+          output_queue: Arc<Mutex<Vec<ChunkBuilder>>>) {
     let sleep_time = time::Duration::from_millis(500);
     'exit: while !stop.load(Ordering::Relaxed) {
         let pos_opt = match input_queue.lock() {
@@ -105,7 +109,8 @@ fn worker(architect: Arc<Architect>, stop: Arc<AtomicBool>, input_queue: Arc<Mut
         };
         if let Some(pos) = pos_opt {
             let mut builder = ChunkBuilder::new(pos);
-            builder.create_surface_buffer(architect.as_ref());
+            let height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
+            builder.create_surface_buffer(&height_map);
             match output_queue.lock() {
                 Ok(mut guard) => (*guard).push(builder),
                 Err(_poisoned) => { break 'exit; }

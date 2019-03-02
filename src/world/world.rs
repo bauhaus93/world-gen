@@ -34,14 +34,6 @@ const TEXTURES: [[u32; 3]; 2] = [
     [1, 0, TEXTURE_LAYER_GRASS]
 ];
 
-const SURFACE_SHADER_RESOURCES: [&str; 5] = [
-    "mvp",
-    "texture_array",
-    "model",
-    "view_pos",
-    "light_pos"
-];
-
 impl World {
     pub fn new() -> Result<World, WorldError> {
         let surface_shader_program = ShaderProgramBuilder::new()

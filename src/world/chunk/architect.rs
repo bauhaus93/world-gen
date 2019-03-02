@@ -1,5 +1,7 @@
 use crate::utility::Float;
 use crate::world::noise::{ Noise, OctavedNoise };
+use super::height_map::HeightMap;
+use super::chunk_size::CHUNK_SIZE;
 
 pub struct Architect {
     height_noise: OctavedNoise,
@@ -10,7 +12,21 @@ pub struct Architect {
 
 impl Architect {
 
-    pub fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
+    pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: [i32; 2], resolution: Float) -> HeightMap {
+        let size = [chunk_size[0] + 1,
+                    chunk_size[1] + 1];
+        let mut height_map = HeightMap::new(size);
+        for y in 0..size[1] {
+            for x in 0..size[0] {
+                let abs_pos = [(chunk_pos[0] * CHUNK_SIZE[1]) as Float + (x as Float * resolution),
+                               (chunk_pos[1] * CHUNK_SIZE[0]) as Float + (y as Float * resolution)];
+                height_map.set(&[x, y], self.get_height(abs_pos));
+            }
+        }
+        height_map
+    }
+
+    fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
         let raw_height = self.height_noise.get_noise(absolute_pos);
         let hill_val = self.hill_noise.get_noise(absolute_pos);
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);

@@ -54,7 +54,7 @@ fn add_quad_triangles(chunk_pos: &[i32; 2], offset: &[i32; 2], height_map: &Heig
         let mut vertices: [Vertex; 3] = [Vertex::default(),
                                          Vertex::default(),
                                          Vertex::default()];
-        let texture_layer = 0.;
+        let texture_layer = 1.;
         for (vert, off) in vertices.iter_mut().zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3)) {
                 let map_pos = [offset[0] + max(0, min(1, off[0] as i32)),
                                offset[1] + max(0, min(1, off[1] as i32))];

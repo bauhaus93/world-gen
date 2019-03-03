@@ -125,7 +125,7 @@ impl Application {
             move_offset = move_offset.add(Vector3::new(0., 0., 1.));
         }
         if length(move_offset) > 1e-3 {
-            const SPEED: Float = 1.;
+            const SPEED: Float = 10.;
             self.world.get_camera_mut().mod_translation(normalize(move_offset) * SPEED);
         }
     }

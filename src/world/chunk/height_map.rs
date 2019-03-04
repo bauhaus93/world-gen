@@ -34,6 +34,11 @@ impl HeightMap {
         self.height_list[self.calculate_index(pos)]
     }
 
+    pub fn get_by_index(&self, index: uisze) -> Float {
+        debug_assert!(index < self.height_list.len());
+        self.height_list[index]
+    }
+
     fn erode<R: Rng + ?Sized>(&mut self, rng: &mut R) {
         let pos = [rng.gen_range(0., size[0] as Float),
                    rng.gen_range(0., size[1] as Float)];

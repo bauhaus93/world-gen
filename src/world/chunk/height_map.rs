@@ -34,41 +34,30 @@ impl HeightMap {
         self.height_list[self.calculate_index(pos)]
     }
 
-    pub fn get_by_index(&self, index: uisze) -> Float {
+    pub fn get_by_index(&self, index: usize) -> Float {
         debug_assert!(index < self.height_list.len());
         self.height_list[index]
     }
-
-    fn erode<R: Rng + ?Sized>(&mut self, rng: &mut R) {
-        let pos = [rng.gen_range(0., size[0] as Float),
-                   rng.gen_range(0., size[1] as Float)];
-        let mut height = self.interpolate_height(pos);
-        for _lifetime in 0..20 {
-
-        }
-    }
-
+    
     fn interpolate_height(&self, p: [Float; 2]) -> Float {
         let anchor = [p[0].floor() as i32,
                       p[1].floor() as i32];
         let heights = self.get_quad_heights(anchor);
-        let a = anchor[0] + 1 - p[0];
-        let b = p[0] - anchor[0];
+        let a = anchor[0] as Float + 1. - p[0];
+        let b = p[0] - anchor[0] as Float;
         let r_1 = a * heights[0] + b * heights[1];
         let r_2 = a * heights[2] + b * heights[3];
-        let c = anchor[1] + 1 - p[1];
-        let d = p[1] - anchor[1];
+        let c = anchor[1] as Float + 1. - p[1];
+        let d = p[1] - anchor[1] as Float;
         c * r_1 + d * r_2
     }
 
     fn get_quad_heights(&self, anchor: [i32; 2]) -> [Float; 4] {
-        [self.get(anchor),
-         self.get([anchor[0] + 1, anchor[1]]),
-         self.get([anchor[0], anchor[1] + 1]),
-         self.get([anchor[0] + 1, anchor[1] + 1])]
+        [self.get(&anchor),
+         self.get(&[anchor[0] + 1, anchor[1]]),
+         self.get(&[anchor[0], anchor[1] + 1]),
+         self.get(&[anchor[0] + 1, anchor[1] + 1])]
     }
-
-
 
     fn calculate_index(&self, pos: &[i32; 2]) -> usize {
         debug_assert!(pos[0] >= 0 && pos[1] >= 0);

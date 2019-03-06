@@ -8,6 +8,7 @@ mod object;
 mod noise;
 mod timer;
 mod tree;
+mod erosion;
 
 pub use self::world::World;
 pub use self::chunk::Chunk;

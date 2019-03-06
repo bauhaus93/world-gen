@@ -38,19 +38,6 @@ impl HeightMap {
         debug_assert!(index < self.height_list.len());
         self.height_list[index]
     }
-    
-    fn interpolate_height(&self, p: [Float; 2]) -> Float {
-        let anchor = [p[0].floor() as i32,
-                      p[1].floor() as i32];
-        let heights = self.get_quad_heights(anchor);
-        let a = anchor[0] as Float + 1. - p[0];
-        let b = p[0] - anchor[0] as Float;
-        let r_1 = a * heights[0] + b * heights[1];
-        let r_2 = a * heights[2] + b * heights[3];
-        let c = anchor[1] as Float + 1. - p[1];
-        let d = p[1] - anchor[1] as Float;
-        c * r_1 + d * r_2
-    }
 
     fn get_quad_heights(&self, anchor: [i32; 2]) -> [Float; 4] {
         [self.get(&anchor),

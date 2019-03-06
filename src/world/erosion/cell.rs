@@ -11,10 +11,9 @@ pub struct Cell {
     velocity: [Float; 2],
     transport_capacacity: Float,
     suspended_sediment: Float,
+    transported_sediment: Float,
     neighbours: [Option<Weak<RefCell<Cell>>>; 4]
 }
-
-
 
 impl Cell {
     pub fn set_neighbours(&mut self, neighbours: [Option<Weak<RefCell<Cell>>>; 4]) {
@@ -100,6 +99,22 @@ impl Cell {
             (self.velocity[0].powf(2.) + self.velocity[1].powf(2.)).powf(0.5);
     }
 
+    pub fn apply_erosion_deposition(&mut self, dissolving_factor: Float, deposition_factor: Float) {
+        if self.transport_capacacity > self.suspended_sediment {
+            let delta = dissolving_factor * (self.transport_capacacity - self.suspended_sediment);
+            self.terrain_height -= delta;
+            self.suspended_sediment += delta;
+        } else {
+            let delta = deposition_factor * (self.suspended_sediment - self.transport_capacacity);
+            self.terrain_height += delta;
+            self.suspended_sediment -= delta;
+        }
+    }
+
+    pub fn update_transported_sediment(&mut self) {
+
+    }
+   
     fn get_tilt_sinus(&mut self) -> Float {
         let delta = [self.get_neighbour_terrain_delta(0),
                      self.get_neighbour_terrain_delta(1)];
@@ -153,6 +168,7 @@ impl Default for Cell {
             velocity: [0., 0.],
             transport_capacacity: 0.,
             suspended_sediment: 0.,
+            transported_sediment: 0.,
             neighbours: [None, None, None, None]
         }
     }
@@ -161,3 +177,16 @@ impl Default for Cell {
 fn get_opposite_dir(dir: u8) -> u8 {
     (dir + 2) % 4
 }
+
+/*fn interpolate_height(p: [Float; 2]) -> Float {
+    let anchor = [p[0].floor() as i32,
+                    p[1].floor() as i32];
+    let heights = self.get_quad_heights(anchor);
+    let a = anchor[0] as Float + 1. - p[0];
+    let b = p[0] - anchor[0] as Float;
+    let r_1 = a * heights[0] + b * heights[1];
+    let r_2 = a * heights[2] + b * heights[3];
+    let c = anchor[1] as Float + 1. - p[1];
+    let d = p[1] - anchor[1] as Float;
+    c * r_1 + d * r_2
+}*/

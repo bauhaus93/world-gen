@@ -11,6 +11,8 @@ use super::cell::Cell;
 
 const GRAVITY: Float = 1.;
 const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
+const DISSOLVING_CONSTANT: Float = 1.;
+const DEPOSITION_CONSTANT: Float = 1.;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -54,6 +56,8 @@ impl HydraulicErosion {
             self.update_flux();
             self.apply_flow();
             self.update_transport_capacity();
+            self.apply_erosion_deposition();
+            self.update_transported_sediment();
         }
     }
 
@@ -80,6 +84,19 @@ impl HydraulicErosion {
         for cell_index in 0..self.cell_list.len() {
             self.cell_list[cell_index].borrow_mut().update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
         }
+    }
+
+    fn apply_erosion_deposition(&mut self) {
+        for cell_index in 0..self.cell_list.len() {
+            self.cell_list[cell_index].borrow_mut().apply_erosion_deposition(DISSOLVING_CONSTANT,
+                                                                             DEPOSITION_CONSTANT);
+        }
+    }
+
+    fn update_transported_sediment(&mut self) {
+        for cell_index in 0..self.cell_list.len() {
+            self.cell_list[cell_index].borrow_mut().update_transported_sediment();
+        } 
     }
 
     fn get_neighbour(&self, index: usize, dir: u8) -> Option<usize> {

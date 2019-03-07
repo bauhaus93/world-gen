@@ -10,6 +10,7 @@ use super::cell::Cell;
 // http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Inproceedings@117681e94b6_fff75c/FastErosion_PG07.pdf
 
 const GRAVITY: Float = 1.;
+const TIME_DELTA: Float = 1.;
 const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
 const DISSOLVING_CONSTANT: Float = 1.;
 const DEPOSITION_CONSTANT: Float = 1.;
@@ -54,10 +55,11 @@ impl HydraulicErosion {
 
         for _i in 0..30 {
             self.update_flux();
-            self.apply_flow();
+            self.apply_flux();
             self.update_transport_capacity();
             self.apply_erosion_deposition();
             self.update_transported_sediment();
+            self.apply_transported_sediment();
         }
     }
 
@@ -74,9 +76,9 @@ impl HydraulicErosion {
         }
     }
 
-    fn apply_flow(&mut self) {
+    fn apply_flux(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_flow();
+            self.cell_list[cell_index].borrow_mut().apply_flux();
         }
     }
 
@@ -95,7 +97,13 @@ impl HydraulicErosion {
 
     fn update_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().update_transported_sediment();
+            self.cell_list[cell_index].borrow_mut().update_transported_sediment(TIME_DELTA);
+        } 
+    }
+
+    fn apply_transported_sediment(&mut self) {
+        for cell_index in 0..self.cell_list.len() {
+            self.cell_list[cell_index].borrow_mut().apply_transported_sediment();
         } 
     }
 

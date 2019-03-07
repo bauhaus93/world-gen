@@ -22,6 +22,7 @@ pub struct World {
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
+    chunk_build_stats_timer: Timer,
     active_chunk_radius: i32,
     last_chunk_load: [i32; 2]
 }
@@ -79,6 +80,7 @@ impl World {
             chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(200),
+            chunk_build_stats_timer: Timer::new(5000),
             active_chunk_radius: 10,
             last_chunk_load: [0, 0]
         };
@@ -105,7 +107,7 @@ impl World {
         }
         self.chunk_loader.request(&request_list)?;
         self.last_chunk_load = cam_chunk_pos;
-        debug!("Requested chunks: {}", request_list.len());
+        trace!("Requested chunks: {}", request_list.len());
         Ok(())
     }
 
@@ -127,7 +129,7 @@ impl World {
     pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
         let finished_chunks = self.chunk_loader.get()?;
         if finished_chunks.len() > 0 {
-            debug!("Finished chunks: {}", finished_chunks.len());
+            trace!("Finished chunks: {}", finished_chunks.len());
             self.chunks.extend(finished_chunks);
         }
         Ok(())
@@ -196,6 +198,10 @@ impl Updatable for World {
                 self.request_chunks()?;
             }
         }
+        if self.chunk_build_stats_timer.fires() {
+            info!("Avg chunk build time: {:.2} ms", self.chunk_loader.get_avg_build_time());
+        }
+
 
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));
         if self.test_object.get_translation()[0] > 1000. {
@@ -204,6 +210,7 @@ impl Updatable for World {
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;
+        self.chunk_build_stats_timer.tick(time_passed)?;
         Ok(())
     }
 }

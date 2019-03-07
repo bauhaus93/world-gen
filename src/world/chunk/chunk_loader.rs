@@ -12,8 +12,14 @@ pub struct ChunkLoader {
     architect: Arc<Architect>,
     input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+    build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<[i32; 2]>,
     thread_handles: Vec<thread::JoinHandle<()>>
+}
+
+struct BuildStats {
+    build_time_accumulated: u32,
+    build_count: u32,
 }
 
 impl ChunkLoader {
@@ -27,8 +33,9 @@ impl ChunkLoader {
             let stop = self.stop.clone();
             let input = self.input_queue.clone();
             let output = self.output_queue.clone();
+            let build_stats = self.build_stats.clone();
             let handle = thread::spawn(move || {
-                worker(architect, stop, input, output);
+                worker(architect, stop, input, output, build_stats);
             });
             self.thread_handles.push(handle);
         }
@@ -45,7 +52,7 @@ impl ChunkLoader {
                 Err(_) => warn!("Thread to join panicked")
             }
         }
-        info!("{} chunk loader threads stopped", stop_count);
+        info!("Stopped {} chunk loader threads", stop_count);
     }
 
     pub fn get(&mut self) -> Result<BTreeMap<[i32; 2], Chunk>, ChunkError> {
@@ -77,6 +84,15 @@ impl ChunkLoader {
             Err(_) => Err(ChunkError::MutexPoison)
         }
     }
+
+    pub fn get_avg_build_time(&self) -> f64 {
+        match self.build_stats.lock() {
+            Ok(mut guard) => {
+              (*guard).get_avg_time()
+            },
+            Err(_poisoned) => 0.
+        }
+    }
 }
 impl Default for ChunkLoader {
     fn default() -> Self {
@@ -85,6 +101,7 @@ impl Default for ChunkLoader {
             architect: Arc::new(Architect::default()),
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),
+            build_stats: Arc::new(Mutex::new(BuildStats::default())),
             handeled_positions: BTreeSet::new(),
             thread_handles: Vec::new()
         }
@@ -97,10 +114,34 @@ impl Drop for ChunkLoader {
     }
 }
 
+impl Default for BuildStats {
+    fn default() -> Self {
+        Self {
+            build_time_accumulated: 0,
+            build_count: 0,
+        }
+    }
+}
+
+impl BuildStats {
+    pub fn add_time(&mut self, build_time: u32) {
+        self.build_time_accumulated += build_time;
+        self.build_count += 1;
+    }
+    pub fn get_avg_time(&mut self) -> f64 {
+        if self.build_count > 0 {
+            self.build_time_accumulated as f64 / self.build_count as f64
+        } else {
+            0.
+        }
+    }
+}
+
 fn worker(architect: Arc<Architect>,
           stop: Arc<AtomicBool>,
           input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
-          output_queue: Arc<Mutex<Vec<ChunkBuilder>>>) {
+          output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+          build_stats: Arc<Mutex<BuildStats>>) {
     let sleep_time = time::Duration::from_millis(500);
     'exit: while !stop.load(Ordering::Relaxed) {
         let pos_opt = match input_queue.lock() {
@@ -108,9 +149,16 @@ fn worker(architect: Arc<Architect>,
             Err(_poisoned) => { break 'exit; }
         };
         if let Some(pos) = pos_opt {
+            let mut build_start = time::Instant::now();
             let mut builder = ChunkBuilder::new(pos);
             let height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
             builder.create_surface_buffer(&height_map);
+
+            let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
+            match build_stats.lock() {
+                Ok(mut guard) => (*guard).add_time(build_time),
+                Err(_poisoned) => { break 'exit; }
+            }
             match output_queue.lock() {
                 Ok(mut guard) => (*guard).push(builder),
                 Err(_poisoned) => { break 'exit; }

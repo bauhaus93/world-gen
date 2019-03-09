@@ -14,6 +14,7 @@ const TIME_DELTA: Float = 1.;
 const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
 const DISSOLVING_CONSTANT: Float = 1.;
 const DEPOSITION_CONSTANT: Float = 1.;
+const EVAPORATION_CONSTANT: Float = 0.2;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -60,6 +61,7 @@ impl HydraulicErosion {
             self.apply_erosion_deposition();
             self.update_transported_sediment();
             self.apply_transported_sediment();
+            self.apply_evaporation();
         }
     }
 
@@ -72,13 +74,13 @@ impl HydraulicErosion {
 
     fn update_flux(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().update_flux(GRAVITY);
+            self.cell_list[cell_index].borrow_mut().update_flux(GRAVITY, TIME_DELTA);
         }
     }
 
     fn apply_flux(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_flux();
+            self.cell_list[cell_index].borrow_mut().apply_flux(TIME_DELTA);
         }
     }
 
@@ -104,6 +106,12 @@ impl HydraulicErosion {
     fn apply_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
             self.cell_list[cell_index].borrow_mut().apply_transported_sediment();
+        } 
+    }
+
+    fn apply_evaporation(&mut self) {
+        for cell_index in 0..self.cell_list.len() {
+            self.cell_list[cell_index].borrow_mut().apply_evaporation(EVAPORATION_CONSTANT, TIME_DELTA);
         } 
     }
 

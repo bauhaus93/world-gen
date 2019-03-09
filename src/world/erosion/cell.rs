@@ -28,14 +28,14 @@ impl Cell {
         self.water_height += height_mod;
     }
 
-    pub fn update_flux(&mut self, gravity: Float) {
+    pub fn update_flux(&mut self, gravity: Float, time_delta: Float) {
         let mut new_flux: [Float; 4] = [0., 0., 0., 0.];
         let mut flux_sum = 0.;
         for dir in 0..4 {
             if let Some(nb) = &self.neighbours[dir] {
                 if let Some(nb) = nb.upgrade() {
                     let terrain_delta = self.get_terrain_delta(&nb.borrow());
-                    new_flux[dir] = Float::max(0., self.flux[dir] + gravity * terrain_delta);
+                    new_flux[dir] = Float::max(0., self.flux[dir] + time_delta * gravity * terrain_delta);
                     flux_sum += new_flux[dir];
                 } else {
                     error!("Could not upgrade weak ptr @ update_flux");
@@ -48,7 +48,7 @@ impl Cell {
             self.flux[dir] = new_flux[dir] * k;
         }
     }
-    pub fn apply_flux(&mut self) {
+    pub fn apply_flux(&mut self, time_delta: Float) {
         let mut water_delta = 0.;
         let mut new_velocity: [Float; 2] = [0., 0.];
         for dir in 0..4 {
@@ -64,7 +64,7 @@ impl Cell {
                 }
             }
         }
-        self.water_height += water_delta;
+        self.water_height += water_delta * time_delta;
         self.velocity = [new_velocity[0] / 2.,
                          new_velocity[1] / 2.];
     }
@@ -96,6 +96,10 @@ impl Cell {
 
     pub fn apply_transported_sediment(&mut self) {
         self.suspended_sediment = self.transported_sediment;
+    }
+
+    pub fn apply_evaporation(&mut self, evaporation_factor: Float, time_delta: Float) {
+        self.water_height *= (1. - evaporation_factor * time_delta);
     }
 
     fn retrieve_transported_sediment(&self, mut offset: [Float; 2]) -> Float {

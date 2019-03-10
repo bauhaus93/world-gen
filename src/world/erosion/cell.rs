@@ -1,4 +1,4 @@
-use std::rc::Weak;
+use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
 
 use crate::utility::Float;
@@ -27,6 +27,9 @@ impl Cell {
     pub fn mod_water_height(&mut self, height_mod: Float) {
         self.water_height += height_mod;
     }
+    pub fn get_terrain_height(&self) -> Float {
+        self.terrain_height
+    }
 
     pub fn update_flux(&mut self, gravity: Float, time_delta: Float) {
         let mut new_flux: [Float; 4] = [0., 0., 0., 0.];
@@ -43,9 +46,11 @@ impl Cell {
                 }
             }
         }
-        let mut k = Float::min(1., self.water_height / flux_sum);
-        for dir in 0..4 {
-            self.flux[dir] = new_flux[dir] * k;
+        if flux_sum > 0. {
+            let mut k = Float::min(1., self.water_height / flux_sum);
+            for dir in 0..4 {
+                self.flux[dir] = new_flux[dir] * k;
+            }
         }
     }
     pub fn apply_flux(&mut self, time_delta: Float) {
@@ -67,6 +72,7 @@ impl Cell {
         self.water_height += water_delta * time_delta;
         self.velocity = [new_velocity[0] / 2.,
                          new_velocity[1] / 2.];
+        debug_assert!(!self.velocity[0].is_nan() && !self.velocity[1].is_nan());
     }
 
     pub fn update_transport_capacity(&mut self, sediment_capacity: Float) {
@@ -88,10 +94,14 @@ impl Cell {
         }
     }
 
-    pub fn update_transported_sediment(&mut self, time_delta: Float) {
+    pub fn calculate_transported_sediment(&self, time_delta: Float) -> Float {
         let prev_offset = [-self.velocity[0] * time_delta,
                            -self.velocity[1] * time_delta];
-        self.transported_sediment = self.retrieve_transported_sediment(prev_offset);
+        self.retrieve_transported_sediment(prev_offset)
+    }
+
+    pub fn set_transported_sediment(&mut self, transported_sediment: Float) {
+        self.transported_sediment = transported_sediment;
     }
 
     pub fn apply_transported_sediment(&mut self) {
@@ -100,6 +110,19 @@ impl Cell {
 
     pub fn apply_evaporation(&mut self, evaporation_factor: Float, time_delta: Float) {
         self.water_height *= (1. - evaporation_factor * time_delta);
+    }
+
+    pub fn get_neighbour(&self, dir: u8) -> Option<Rc<RefCell<Cell>>> {
+        if let Some(nb_weak) = &self.neighbours[dir as usize] {
+            if let Some(nb) = nb_weak.upgrade() {
+                Some(nb)
+            } else {
+                error!("Could not upgrade weak ptr @ get_neighbour");
+                unreachable!();
+            }
+        } else {
+            None
+        }
     }
 
     fn retrieve_transported_sediment(&self, mut offset: [Float; 2]) -> Float {
@@ -136,6 +159,7 @@ impl Cell {
                 }
             }
         }
+        info!("offset = {:?}", offset);
         unreachable!();
     }
 
@@ -161,7 +185,6 @@ impl Cell {
     fn get_tilt_sinus(&mut self) -> Float {
         let delta = [self.get_neighbour_terrain_delta(0),
                      self.get_neighbour_terrain_delta(1)];
-
         let a = delta[0].powf(2.) + delta[1].powf(2.);
         a.powf(0.5) / (1. + a).powf(0.5)
     }

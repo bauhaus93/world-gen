@@ -34,6 +34,10 @@ impl HeightMap {
         self.height_list[self.calculate_index(pos)]
     }
 
+    pub fn set_by_index(&mut self, index: usize, height: Float) {
+        self.height_list[index] = height;
+    }
+
     pub fn get_by_index(&self, index: usize) -> Float {
         debug_assert!(index < self.height_list.len());
         self.height_list[index]

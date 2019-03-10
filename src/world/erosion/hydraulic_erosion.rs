@@ -13,8 +13,8 @@ const GRAVITY: Float = 1.;
 const TIME_DELTA: Float = 1.;
 const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
 const DISSOLVING_CONSTANT: Float = 1.;
-const DEPOSITION_CONSTANT: Float = 1.;
-const EVAPORATION_CONSTANT: Float = 0.2;
+const DEPOSITION_CONSTANT: Float = 0.7;
+const EVAPORATION_CONSTANT: Float = 0.1;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -32,11 +32,13 @@ impl HydraulicErosion {
             cell_list.push(Rc::new(RefCell::new(cell)));
         }
 
-        Self {
+        let mut erosion = Self {
             rng: SmallRng::from_rng(rng_input).unwrap(),
             size: [size[0] as usize, size[1] as usize],
             cell_list: cell_list
-        }
+        };
+        erosion.load_cell_neighbours();
+        erosion
     }
 
     fn load_cell_neighbours(&mut self) {
@@ -52,7 +54,7 @@ impl HydraulicErosion {
     }
 
     pub fn erode(&mut self) {
-        self.add_water(10);
+        self.add_water(1000);
 
         for _i in 0..30 {
             self.update_flux();
@@ -65,10 +67,24 @@ impl HydraulicErosion {
         }
     }
 
+    pub fn create_heightmap(&self) -> HeightMap {
+        let mut height_map = HeightMap::new([self.size[0] as i32, self.size[1] as i32]);
+        for i in 0..self.size[0] * self.size[1] {
+            height_map.set_by_index(i, self.cell_list[i].borrow().get_terrain_height());
+        }
+        height_map
+    }
+
     fn add_water(&mut self, drop_count: u32) {
         for _i in 0..drop_count {
             let drop_index = self.rng.gen_range(0, self.cell_list.len());
-            self.cell_list[drop_index].borrow_mut().mod_water_height(1.);
+            let mut cell = self.cell_list[drop_index].borrow_mut();
+            cell.mod_water_height(1.);
+            for dir in 0..4 {
+                if let Some(nb) =  cell.get_neighbour(dir) {
+                    nb.borrow_mut().mod_water_height(1.);
+                }
+            }
         }
     }
 
@@ -99,7 +115,8 @@ impl HydraulicErosion {
 
     fn update_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().update_transported_sediment(TIME_DELTA);
+            let sediment = self.cell_list[cell_index].borrow().calculate_transported_sediment(TIME_DELTA);
+            self.cell_list[cell_index].borrow_mut().set_transported_sediment(sediment);
         } 
     }
 

@@ -1,4 +1,6 @@
 
+use rand::Rng;
+
 use crate::utility::Float;
 use super::{ Noise, SimplexNoise };
 
@@ -18,13 +20,13 @@ pub struct OctavedNoise {
 impl OctavedNoise {
 
     #[allow(dead_code)]
-    pub fn new(octaves: u8, roughness: Float, scale: Float, range: [Float; 2], noise: Box<Noise>) -> Self {
+    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self {
-            noise: noise,
-            octaves: octaves,
-            roughness: roughness,
-            scale: scale,
-            range: range
+            noise: Box::new(SimplexNoise::from_rng(rng)),
+            octaves: DEFAULT_OCTAVES,
+            roughness: DEFAULT_ROUGHNESS,
+            scale: DEFAULT_SCALE,
+            range: DEFAULT_RANGE
         }
     }
 
@@ -71,17 +73,5 @@ impl Noise for OctavedNoise {
 
     fn get_range(&self) -> [Float; 2] {
         self.range
-    }
-}
-
-impl Default for OctavedNoise {
-    fn default() -> Self {
-        Self {
-            noise: Box::new(SimplexNoise::default()),
-            octaves: DEFAULT_OCTAVES,
-            roughness: DEFAULT_ROUGHNESS,
-            scale: DEFAULT_SCALE,
-            range: DEFAULT_RANGE
-        }
     }
 }

@@ -1,3 +1,5 @@
+use rand::{ Rng, rngs::SmallRng, SeedableRng };
+
 use crate::utility::Float;
 use crate::world::noise::{ Noise, OctavedNoise };
 use super::height_map::HeightMap;
@@ -11,6 +13,27 @@ pub struct Architect {
 
 
 impl Architect {
+    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Architect {
+        let mut local_rng = SmallRng::from_rng(rng).unwrap();
+
+        let mut height_noise = OctavedNoise::from_rng(&mut local_rng);
+        height_noise.set_octaves(6);
+        height_noise.set_scale(1e-3);
+        height_noise.set_roughness(0.5);
+        height_noise.set_range([0., 100.]);
+
+        let mut hill_noise = OctavedNoise::from_rng(&mut local_rng);
+        let mut mountain_noise = OctavedNoise::from_rng(&mut local_rng);
+        mountain_noise.set_octaves(4);
+        mountain_noise.set_scale(1e-4);
+        mountain_noise.set_roughness(2.);
+        mountain_noise.set_range([0./*-2.*/, 1.]);
+        Self {
+            height_noise: height_noise,
+            hill_noise: hill_noise,
+            mountain_noise: mountain_noise
+        }
+    }
 
     pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: [i32; 2], resolution: Float) -> HeightMap {
         let size = [chunk_size[0] + 1,
@@ -45,27 +68,4 @@ impl Architect {
             1
         }
     } 
-}
-
-impl Default for Architect {
-    fn default() -> Self {
-        let mut height_noise = OctavedNoise::default();
-        height_noise.set_octaves(6);
-        height_noise.set_scale(1e-3);
-        height_noise.set_roughness(0.5);
-        height_noise.set_range([0., 100.]);
-
-        let mut hill_noise = OctavedNoise::default();
-        let mut mountain_noise = OctavedNoise::default();
-        mountain_noise.set_octaves(4);
-        mountain_noise.set_scale(1e-4);
-        mountain_noise.set_roughness(2.);
-        mountain_noise.set_range([0./*-2.*/, 1.]);
-
-        Self {
-            height_noise: height_noise,
-            hill_noise: hill_noise,
-            mountain_noise: mountain_noise
-        }
-    }
 }

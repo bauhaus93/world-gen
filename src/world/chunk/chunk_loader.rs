@@ -4,7 +4,7 @@ use std::time;
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
-use rand;
+use rand::{ Rng };
 
 use crate::world::erosion::hydraulic_erosion::HydraulicErosion;
 use super::{ Chunk, chunk_builder::ChunkBuilder, architect::Architect, ChunkError };
@@ -26,6 +26,17 @@ struct BuildStats {
 }
 
 impl ChunkLoader {
+    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self {
+            stop: Arc::new(AtomicBool::new(false)),
+            architect: Arc::new(Architect::from_rng(rng)),
+            input_queue: Arc::new(Mutex::new(VecDeque::new())),
+            output_queue: Arc::new(Mutex::new(Vec::new())),
+            build_stats: Arc::new(Mutex::new(BuildStats::default())),
+            handeled_positions: BTreeSet::new(),
+            thread_handles: Vec::new()
+        }
+    }
     pub fn start(&mut self, thread_count: usize) {
         if !self.thread_handles.is_empty() {
             warn!("Starting chunk loader threads, but threads already running");
@@ -94,19 +105,6 @@ impl ChunkLoader {
               (*guard).get_avg_time()
             },
             Err(_poisoned) => 0.
-        }
-    }
-}
-impl Default for ChunkLoader {
-    fn default() -> Self {
-        Self {
-            stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(Architect::default()),
-            input_queue: Arc::new(Mutex::new(VecDeque::new())),
-            output_queue: Arc::new(Mutex::new(Vec::new())),
-            build_stats: Arc::new(Mutex::new(BuildStats::default())),
-            handeled_positions: BTreeSet::new(),
-            thread_handles: Vec::new()
         }
     }
 }

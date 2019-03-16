@@ -29,10 +29,9 @@ pub struct SimplexNoise {
     permutation_table: Vec<u8>,
 }
 
-fn create_permutation_table(seed: [u8; 16]) -> Vec<u8> {
-    let mut rng = SmallRng::from_seed(seed);
+fn create_permutation_table<R: Rng + ?Sized>(rng: &mut R) -> Vec<u8> {
     let mut permutation: Vec<u8> = (0u8..255).chain(iter::once(255u8)).collect();
-    permutation.shuffle(&mut rng);
+    permutation.shuffle(rng);
     let perm_clone = permutation.clone();
     permutation.extend(perm_clone);
     for v in permutation.iter_mut().skip(256) {
@@ -42,27 +41,10 @@ fn create_permutation_table(seed: [u8; 16]) -> Vec<u8> {
 }
 
 impl SimplexNoise {
-    #[allow(dead_code)]
-    pub fn from_str_seed(seed_str: &str) -> Self {
-        Self::from_seed(seed_str.as_bytes())
-    }
-
-    pub fn from_seed(input_seed: &[u8]) -> Self {
-        let mut seed: [u8; 16] = [0; 16];
-        for (v, s) in seed.iter_mut().zip(input_seed.iter()) {
-            *v = *s;
-        }
+    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self {
-            permutation_table: create_permutation_table(seed),
+            permutation_table: create_permutation_table(rng)
         }
-    }
-}
-
-impl Default for SimplexNoise {
-    fn default() -> Self {
-        let mut seed_rng = rand::thread_rng();
-        let seed: Vec<u8> = iter::repeat_with(|| seed_rng.gen()).take(16).collect();
-        Self::from_seed(&seed)
     }
 }
 

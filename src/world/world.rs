@@ -56,19 +56,23 @@ impl World {
         let texture_array = builder.finish()?;
 
         let mut rng = StdRng::seed_from_u64(2);//StdRng::from_entropy();
+        
+        let chunk_loader = ChunkLoader::from_rng(&mut rng);
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
         let mut builder = ChunkBuilder::new([0, 0]);
-        let architect = Architect::default();
+        let architect = Architect::from_rng(&mut rng);
         let raw_height_map = architect.create_height_map([0, 0], CHUNK_SIZE, 1.);
         let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
         erosion.add_water(1000);
         let height_map = erosion.create_heightmap();
         builder.create_surface_buffer(&height_map);
         let test_chunk = builder.finish()?;
+
+
 
         let mut world = World {
             texture_array: texture_array,
@@ -78,7 +82,7 @@ impl World {
             test_object: test_object,
             test_chunk: Box::new(test_chunk),
             test_erosion: erosion,
-            chunk_loader: ChunkLoader::default(),
+            chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),

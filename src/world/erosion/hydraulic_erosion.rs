@@ -11,10 +11,10 @@ use super::cell::Cell;
 
 const GRAVITY: Float = 1.;
 const TIME_DELTA: Float = 1.;
-const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
-const DISSOLVING_CONSTANT: Float = 1.;
-const DEPOSITION_CONSTANT: Float = 0.7;
-const EVAPORATION_CONSTANT: Float = 0.1;
+const SEDIMENT_CAPACITY_CONSTANT: Float = 0.6;
+const DISSOLVING_CONSTANT: Float = 0.5;
+const DEPOSITION_CONSTANT: Float = 0.5;
+const EVAPORATION_CONSTANT: Float = 0.01;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -55,16 +55,19 @@ impl HydraulicErosion {
 
     pub fn erode(&mut self) {
         self.add_water(1000);
-
         for _i in 0..30 {
-            self.update_flux();
-            self.apply_flux();
-            self.update_transport_capacity();
-            self.apply_erosion_deposition();
-            self.update_transported_sediment();
-            self.apply_transported_sediment();
-            self.apply_evaporation();
+            self.tick();
         }
+    }
+
+    pub fn tick(&mut self) {
+        self.update_flux();
+        self.apply_flux();
+        self.update_transport_capacity();
+        self.apply_erosion_deposition();
+        self.update_transported_sediment();
+        self.apply_transported_sediment();
+        self.apply_evaporation();
     }
 
     pub fn create_heightmap(&self) -> HeightMap {
@@ -75,16 +78,11 @@ impl HydraulicErosion {
         height_map
     }
 
-    fn add_water(&mut self, drop_count: u32) {
+    pub fn add_water(&mut self, drop_count: u32) {
         for _i in 0..drop_count {
             let drop_index = self.rng.gen_range(0, self.cell_list.len());
             let mut cell = self.cell_list[drop_index].borrow_mut();
-            cell.mod_water_height(1.);
-            for dir in 0..4 {
-                if let Some(nb) =  cell.get_neighbour(dir) {
-                    nb.borrow_mut().mod_water_height(1.);
-                }
-            }
+            cell.mod_water_height(5.);
         }
     }
 

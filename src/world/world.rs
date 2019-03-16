@@ -1,13 +1,14 @@
 use std::collections::BTreeMap;
 
 use rand;
-use rand::{ Rng, FromEntropy };
+use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::Vector3;
 
 use crate::graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use crate::graphics::projection::{ create_default_orthographic, create_default_perspective };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos }, tree::TreeGenerator };
+use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos } };
+use crate::world::{ chunk::{ chunk_builder::ChunkBuilder, CHUNK_SIZE, architect::Architect }, erosion::hydraulic_erosion::HydraulicErosion };
 use crate::utility::{ Float, format_number };
 use crate::world::timer::Timer;
 use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
@@ -18,7 +19,8 @@ pub struct World {
     surface_shader_program: ShaderProgram,
     rng: StdRng,
     test_object: Object,
-    //test_trees: Vec<Object>,
+    test_chunk: Box<Chunk>,
+    test_erosion: HydraulicErosion,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -53,22 +55,20 @@ impl World {
         }
         let texture_array = builder.finish()?;
 
-        let mut rng = StdRng::from_entropy();
+        let mut rng = StdRng::seed_from_u64(2);//StdRng::from_entropy();
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        /*let mut tree_gen = TreeGenerator::new(&mut rng);
-        let mut test_trees = Vec::new();
-        for i in 0..10 {
-            let mut test_tree = Object::new(tree_gen.build_tree(8)?);
-            test_tree.set_translation(Vector3::new(i as Float * 10.,
-                                                   0.,
-                                                   50.));
-            test_tree.set_scale(Vector3::new(3., 3., 3.));
-            test_trees.push(test_tree);
-        }*/
+        let mut builder = ChunkBuilder::new([0, 0]);
+        let architect = Architect::default();
+        let raw_height_map = architect.create_height_map([0, 0], CHUNK_SIZE, 1.);
+        let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
+        erosion.add_water(1000);
+        let height_map = erosion.create_heightmap();
+        builder.create_surface_buffer(&height_map);
+        let test_chunk = builder.finish()?;
 
         let mut world = World {
             texture_array: texture_array,
@@ -76,17 +76,20 @@ impl World {
             surface_shader_program: surface_shader_program,
             rng: rng,
             test_object: test_object,
-            //test_trees: test_trees,
+            test_chunk: Box::new(test_chunk),
+            test_erosion: erosion,
             chunk_loader: ChunkLoader::default(),
             chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(200),
+            chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
             active_chunk_radius: 10,
             last_chunk_load: [0, 0]
         };
 
-        world.chunk_loader.start(8);
-        world.request_chunks()?;
+        world.camera.set_translation(Vector3::new(0., 0., 200.));
+
+        //world.chunk_loader.start(8);
+        //world.request_chunks()?;
 
         Ok(world)
     }
@@ -174,9 +177,7 @@ impl World {
         self.surface_shader_program.use_program();
 
         self.test_object.render(&self.camera, &self.surface_shader_program)?;
-        /*for tree in self.test_trees.iter() {
-            tree.render(&self.camera, &self.shader_program)?;
-        }*/
+        self.test_chunk.render(&self.camera, &self.surface_shader_program)?;
         for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.surface_shader_program)?;
         }
@@ -189,7 +190,17 @@ impl World {
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
 
+
+
         if self.chunk_update_timer.fires() {
+            self.test_erosion.add_water(100);
+            self.test_erosion.tick();
+            let height_map = self.test_erosion.create_heightmap();
+            let mut builder = ChunkBuilder::new([0, 0]);
+            builder.create_surface_buffer(&height_map);
+            self.test_chunk = Box::new(builder.finish()?);
+
+
             self.get_finished_chunks()?;
             let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
             let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
@@ -201,7 +212,6 @@ impl Updatable for World {
         if self.chunk_build_stats_timer.fires() {
             info!("Avg chunk build time: {:.2} ms", self.chunk_loader.get_avg_build_time());
         }
-
 
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));
         if self.test_object.get_translation()[0] > 1000. {

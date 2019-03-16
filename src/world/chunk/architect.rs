@@ -31,7 +31,7 @@ impl Architect {
         let hill_val = self.hill_noise.get_noise(absolute_pos);
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);
         if mountain_val > 0. {
-            raw_height * (1. +  (30. * mountain_val.powf(2.)))
+            raw_height * (1. +  (/*30.*/ 10. * mountain_val.powf(2.)))
         } else {
             raw_height
         }
@@ -60,7 +60,7 @@ impl Default for Architect {
         mountain_noise.set_octaves(4);
         mountain_noise.set_scale(1e-4);
         mountain_noise.set_roughness(2.);
-        mountain_noise.set_range([-2., 1.]);
+        mountain_noise.set_range([0./*-2.*/, 1.]);
 
         Self {
             height_noise: height_noise,

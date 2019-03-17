@@ -1,5 +1,6 @@
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
+use std::ptr;
 
 use crate::utility::Float;
 
@@ -11,11 +12,11 @@ pub struct Cell {
     transport_capacacity: Float,
     suspended_sediment: Float,
     transported_sediment: Float,
-    neighbours: [Option<Weak<RefCell<Cell>>>; 4]
+    neighbours: [*const Cell; 4]
 }
 
 impl Cell {
-    pub fn set_neighbours(&mut self, neighbours: [Option<Weak<RefCell<Cell>>>; 4]) {
+    pub fn set_neighbours(&mut self, neighbours: [*const Cell; 4]) {
         self.neighbours = neighbours;
     }
     pub fn set_terrain_height(&mut self, new_height: Float) {
@@ -35,14 +36,11 @@ impl Cell {
         let mut new_flux: [Float; 4] = [0., 0., 0., 0.];
         let mut flux_sum = 0.;
         for dir in 0..4 {
-            if let Some(nb) = &self.neighbours[dir] {
-                if let Some(nb) = nb.upgrade() {
-                    let terrain_delta = self.get_terrain_delta(&nb.borrow());
+            unsafe {
+                if let Some(nb) = self.neighbours[dir].as_ref() {
+                    let terrain_delta = self.get_terrain_delta(nb);
                     new_flux[dir] = Float::max(0., self.flux[dir] + time_delta * gravity * terrain_delta);
                     flux_sum += new_flux[dir];
-                } else {
-                    error!("Could not upgrade weak ptr @ update_flux");
-                    unreachable!();
                 }
             }
         }
@@ -57,15 +55,12 @@ impl Cell {
         let mut water_delta = 0.;
         let mut new_velocity: [Float; 2] = [0., 0.];
         for dir in 0..4 {
-            if let Some(nb) = &self.neighbours[dir] {
-                if let Some(nb) = nb.upgrade() {
+            unsafe {
+                if let Some(nb) = self.neighbours[dir].as_ref() {
                     let opp_dir = get_opposite_dir(dir as u8);
-                    let flow_delta = nb.borrow().get_flux(opp_dir) - self.get_flux(dir as u8); // inflow - outflow with certain neighbour
+                    let flow_delta = nb.get_flux(opp_dir) - self.get_flux(dir as u8); // inflow - outflow with certain neighbour
                     water_delta += flow_delta;
                     new_velocity[((dir + 1) % 2) as usize] += flow_delta;
-                } else {
-                    error!("Could not upgrade weak ptr @ apply_flow");
-                    unreachable!();
                 }
             }
         }
@@ -112,55 +107,52 @@ impl Cell {
         self.water_height *= (1. - evaporation_factor * time_delta);
     }
 
-    pub fn get_neighbour(&self, dir: u8) -> Option<Rc<RefCell<Cell>>> {
-        if let Some(nb_weak) = &self.neighbours[dir as usize] {
-            if let Some(nb) = nb_weak.upgrade() {
-                Some(nb)
-            } else {
-                error!("Could not upgrade weak ptr @ get_neighbour");
-                unreachable!();
-            }
+    pub fn get_neighbour(&self, dir: u8) -> Option<*const Cell> {
+        if !self.neighbours[dir as usize].is_null() {
+            Some(self.neighbours[dir as usize])
         } else {
             None
         }
     }
 
     fn retrieve_transported_sediment(&self, mut offset: [Float; 2]) -> Float {
+        if let Some(cell) = self.get_cell(offset) {
+            let neighbour_sediments = cell.get_neighbour_sediments();
+            interpolate(offset, neighbour_sediments)
+        } else {
+            info!("offset = {:?}", offset);
+            unreachable!();
+        }
+    }
+
+    fn get_cell(&self, mut offset: [Float; 2]) -> Option<&Cell> {
         if offset[0] >= 0. && offset[1] >= 0. && offset[0] < 1. && offset[1] < 1. {
-            let neighbour_sediments = self.get_neighbour_sediments();
-            return interpolate(offset, neighbour_sediments);
+            return Some(&self)
         }
         for axis in 0..2 {
             if offset[axis] >= 1. {
-                if let Some(nb_weak) = &self.neighbours[1 + axis] {  // 1/2 right/bottom
-                    if let Some(nb) = nb_weak.upgrade() {
+                unsafe {
+                    if let Some(nb) = self.neighbours[1 + axis].as_ref() {  // 1/2 right/bottom
                         offset[axis] -= 1.;
-                        return nb.borrow().retrieve_transported_sediment(offset);
-                    } else {
-                        error!("Could not upgrade weak ptr @ retrieve_transported_sediment");
-                        unreachable!();
+                        return nb.get_cell(offset);
+                    } else {    // point is out of upper grid boundary
+                        offset[axis] = 0.;  // shift point to current point for axis
+                        return self.get_cell(offset);  // try again with fixed point
                     }
-                } else {    // point is out of upper grid boundary
-                    offset[axis] = 0.;  // shift point to current point for axis
-                    return self.retrieve_transported_sediment(offset);  // try again with fixed point
                 }
             } else if offset[axis] < 0. {
-                if let Some(nb_weak) = &self.neighbours[3 * axis] {  // 0/3 top/left
-                    if let Some(nb) = nb_weak.upgrade() {
+                unsafe {
+                    if let Some(nb) = self.neighbours[3 * axis].as_ref() {  // 0/3 top/left
                         offset[axis] += 1.;
-                        return nb.borrow().retrieve_transported_sediment(offset);
-                    } else {
-                        error!("Could not upgrade weak ptr @ retrieve_transported_sediment");
-                        unreachable!();
+                        return nb.get_cell(offset);
+                    } else {    // point is out of lower grid boundary
+                        offset[axis] = 0.;
+                        return self.get_cell(offset);
                     }
-                } else {    // point is out of lower grid boundary
-                    offset[axis] = 0.;
-                    return self.retrieve_transported_sediment(offset);
                 }
             }
         }
-        info!("offset = {:?}", offset);
-        unreachable!();
+        None
     }
 
     fn set_flux(&mut self, new_flux: [Float; 4]) {
@@ -191,49 +183,33 @@ impl Cell {
     fn get_neighbour_sediments(&self) -> [Float; 4] {
         let mut sediments = [0., 0., 0., 0.];
         for dir in 0..4 {
-            if let Some(nb_weak) = &self.neighbours[dir] {
-                if let Some(nb) = nb_weak.upgrade() {
-                    sediments[dir] = nb.borrow().get_sediment();
-                } else {
-                    error!("Could not upgrade weak ptr @ get_neighbour_sediments");
-                    unreachable!();
+            unsafe {
+                if let Some(nb) = self.neighbours[dir].as_ref() {
+                    sediments[dir] = nb.get_sediment();
                 }
             }
         }
         sediments
     }
     fn get_neighbour_terrain_delta(&mut self, axis: u8) -> Float {
-        let neighbours = match axis {
-            0 => (&self.neighbours[1], &self.neighbours[3]),  // X axis
-            1 => (&self.neighbours[0], &self.neighbours[2]),  // Y axis
-            _ => unreachable!()
+        let neighbours = unsafe {
+            match axis {
+                0 => (self.neighbours[1].as_ref(), self.neighbours[3].as_ref()),  // X axis
+                1 => (self.neighbours[0].as_ref(), self.neighbours[2].as_ref()),  // Y axis
+                _ => unreachable!()
+            }
         };
         match neighbours {
             (Some(a), Some(b)) => {
-                if let (Some(a), Some(b)) = (a.upgrade(), b.upgrade()) {
-                    self.get_terrain_delta(&a.borrow()) - self.get_terrain_delta(&b.borrow())
-                } else {
-                    error!("Could not upgrade weak ptr @ get_tilt_sinus");
-                    unreachable!();
-                }
+                self.get_terrain_delta(a) - self.get_terrain_delta(b)
             },
-            (Some(a), None) => {
-                if let Some(a) = a.upgrade() {
-                    self.get_terrain_delta(&a.borrow())
-                } else {
-                    error!("Could not upgrade weak ptr @ get_tilt_sinus");
-                    unreachable!();
-                }
+            (Some(a), None_) => {
+                self.get_terrain_delta(a)
             },
-            (None, Some(b)) => {
-                if let Some(b) = b.upgrade() {
-                    -self.get_terrain_delta(&b.borrow())
-                } else {
-                    error!("Could not upgrade weak ptr @ get_tilt_sinus");
-                    unreachable!();
-                }
+            (None_, Some(b)) => {
+                -self.get_terrain_delta(b)
             },
-            (None, None) => 0.
+            (None_, None) => 0.
         }
     }
 }
@@ -248,7 +224,7 @@ impl Default for Cell {
             transport_capacacity: 0.,
             suspended_sediment: 0.,
             transported_sediment: 0.,
-            neighbours: [None, None, None, None]
+            neighbours: [ptr::null(), ptr::null(), ptr::null(), ptr::null()]
         }
     }
 }

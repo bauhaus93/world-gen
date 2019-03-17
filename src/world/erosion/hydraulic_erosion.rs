@@ -1,5 +1,6 @@
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
+use std::ptr;
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
 
@@ -19,7 +20,7 @@ const EVAPORATION_CONSTANT: Float = 0.01;
 pub struct HydraulicErosion {
     rng: SmallRng,
     size: [usize; 2],
-    cell_list: Vec<Rc<RefCell<Cell>>>
+    cell_list: Vec<Cell>
 }
 
 impl HydraulicErosion {
@@ -29,7 +30,7 @@ impl HydraulicErosion {
         for i in 0..size[0] * size[1] {
             let mut cell = Cell::default();
             cell.set_terrain_height(height_map.get_by_index(i as usize));
-            cell_list.push(Rc::new(RefCell::new(cell)));
+            cell_list.push(cell);
         }
 
         let mut erosion = Self {
@@ -43,13 +44,13 @@ impl HydraulicErosion {
 
     fn load_cell_neighbours(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            let mut nb_cells: [Option<Weak<RefCell<Cell>>>; 4] = [None, None, None, None];
+            let mut nb_cells: [*const Cell; 4] = [ptr::null(), ptr::null(), ptr::null(), ptr::null()];
             for dir in 0..4 {
                 if let Some(nb_index) = self.get_neighbour(cell_index, dir) {
-                    nb_cells[dir as usize] = Some(Rc::downgrade(&self.cell_list[nb_index]));
+                    nb_cells[dir as usize] = &self.cell_list[nb_index];
                 }
             }
-            self.cell_list[cell_index].borrow_mut().set_neighbours(nb_cells);
+            self.cell_list[cell_index].set_neighbours(nb_cells);
         }
     }
 
@@ -73,7 +74,7 @@ impl HydraulicErosion {
     pub fn create_heightmap(&self) -> HeightMap {
         let mut height_map = HeightMap::new([self.size[0] as i32, self.size[1] as i32]);
         for i in 0..self.size[0] * self.size[1] {
-            height_map.set_by_index(i, self.cell_list[i].borrow().get_terrain_height());
+            height_map.set_by_index(i, self.cell_list[i].get_terrain_height());
         }
         height_map
     }
@@ -81,52 +82,51 @@ impl HydraulicErosion {
     pub fn add_water(&mut self, drop_count: u32) {
         for _i in 0..drop_count {
             let drop_index = self.rng.gen_range(0, self.cell_list.len());
-            let mut cell = self.cell_list[drop_index].borrow_mut();
-            cell.mod_water_height(5.);
+            self.cell_list[drop_index].mod_water_height(5.);
         }
     }
 
     fn update_flux(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().update_flux(GRAVITY, TIME_DELTA);
+            self.cell_list[cell_index].update_flux(GRAVITY, TIME_DELTA);
         }
     }
 
     fn apply_flux(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_flux(TIME_DELTA);
+            self.cell_list[cell_index].apply_flux(TIME_DELTA);
         }
     }
 
     fn update_transport_capacity(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
+            self.cell_list[cell_index].update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
         }
     }
 
     fn apply_erosion_deposition(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_erosion_deposition(DISSOLVING_CONSTANT,
+            self.cell_list[cell_index].apply_erosion_deposition(DISSOLVING_CONSTANT,
                                                                              DEPOSITION_CONSTANT);
         }
     }
 
     fn update_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            let sediment = self.cell_list[cell_index].borrow().calculate_transported_sediment(TIME_DELTA);
-            self.cell_list[cell_index].borrow_mut().set_transported_sediment(sediment);
+            let sediment = self.cell_list[cell_index].calculate_transported_sediment(TIME_DELTA);
+            self.cell_list[cell_index].set_transported_sediment(sediment);
         } 
     }
 
     fn apply_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_transported_sediment();
+            self.cell_list[cell_index].apply_transported_sediment();
         } 
     }
 
     fn apply_evaporation(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].borrow_mut().apply_evaporation(EVAPORATION_CONSTANT, TIME_DELTA);
+            self.cell_list[cell_index].apply_evaporation(EVAPORATION_CONSTANT, TIME_DELTA);
         } 
     }
 

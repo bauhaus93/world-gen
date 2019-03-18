@@ -154,7 +154,7 @@ fn worker(architect: Arc<Architect>,
             let mut builder = ChunkBuilder::new(pos);
             let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
             let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
-            erosion.erode();
+            erosion.erode(1000, 30);
             let height_map = erosion.create_heightmap();
             builder.create_surface_buffer(&height_map);
 

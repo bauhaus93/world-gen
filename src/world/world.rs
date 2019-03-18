@@ -196,8 +196,7 @@ impl Updatable for World {
 
 
         if self.chunk_update_timer.fires() {
-            self.test_erosion.add_water(10);
-            self.test_erosion.tick();
+            self.test_erosion.erode(100, 10);
             let height_map = self.test_erosion.create_heightmap();
             let mut builder = ChunkBuilder::new([0, 0]);
             builder.create_surface_buffer(&height_map);

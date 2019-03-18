@@ -1,6 +1,7 @@
 use std::rc::{ Rc, Weak };
 use std::cell::RefCell;
 use std::ptr;
+use std::f32::{ NAN };
 
 use crate::utility::Float;
 
@@ -77,13 +78,28 @@ impl Cell {
             (self.velocity[0].powf(2.) + self.velocity[1].powf(2.)).powf(0.5);
     }
 
-    pub fn apply_erosion_deposition(&mut self, dissolving_factor: Float, deposition_factor: Float) {
+    pub fn apply_erosion_deposition(&mut self, time_delta: Float, dissolving_factor: Float, deposition_factor: Float) {
         if self.transport_capacacity > self.suspended_sediment {
-            let delta = dissolving_factor * (self.transport_capacacity - self.suspended_sediment);
+            let mut delta = dissolving_factor * (self.transport_capacacity - self.suspended_sediment);
+            let source_height = self.calculate_source_height(time_delta);
+            if delta > source_height - self.terrain_height {
+                delta = source_height - self.terrain_height;
+                if delta < 0. {
+                    delta = 0.;
+                }
+            }
             self.terrain_height -= delta;
             self.suspended_sediment += delta;
         } else {
-            let delta = deposition_factor * (self.suspended_sediment - self.transport_capacacity);
+            let mut delta = deposition_factor * (self.suspended_sediment - self.transport_capacacity);
+
+            let source_height = self.calculate_source_height(time_delta);
+            if delta > source_height - self.terrain_height {
+                delta = source_height - self.terrain_height;
+                if delta < 0. {
+                    delta = 0.;
+                }
+            }
             self.terrain_height += delta;
             self.suspended_sediment -= delta;
         }
@@ -93,6 +109,12 @@ impl Cell {
         let prev_offset = [-self.velocity[0] * time_delta,
                            -self.velocity[1] * time_delta];
         self.retrieve_transported_sediment(prev_offset)
+    }
+
+    pub fn calculate_source_height(&self, time_delta: Float) -> Float {
+        let prev_offset = [-self.velocity[0] * time_delta,
+                           -self.velocity[1] * time_delta];
+        self.interpolate_height(prev_offset)
     }
 
     pub fn set_transported_sediment(&mut self, transported_sediment: Float) {
@@ -112,6 +134,16 @@ impl Cell {
             Some(self.neighbours[dir as usize])
         } else {
             None
+        }
+    }
+
+    fn interpolate_height(&self, mut offset: [Float; 2]) -> Float {
+        if let Some(cell) = self.get_cell(offset) {
+            let neighbour_heights = cell.get_neighbour_heights();
+            interpolate(offset, neighbour_heights)
+        } else {
+            info!("offset = {:?}", offset);
+            unreachable!();
         }
     }
 
@@ -191,6 +223,27 @@ impl Cell {
         }
         sediments
     }
+    fn get_neighbour_heights(&self) -> [Float; 4] {
+        let mut heights = [NAN, NAN, NAN, NAN];
+        let mut sum = 0.;
+        let mut c = 0;
+        for dir in 0..4 {
+            unsafe {
+                if let Some(nb) = self.neighbours[dir].as_ref() {
+                    heights[dir] = nb.get_terrain_height();
+                    sum += heights[dir];
+                    c += 1;
+                }
+            }
+        }
+        let avg = sum / c as Float;
+        for dir in 0..4 {
+            if heights[dir].is_nan() {
+                heights[dir] = avg;
+            }
+        }
+        heights  
+    }
     fn get_neighbour_terrain_delta(&mut self, axis: u8) -> Float {
         let neighbours = unsafe {
             match axis {
@@ -203,13 +256,13 @@ impl Cell {
             (Some(a), Some(b)) => {
                 self.get_terrain_delta(a) - self.get_terrain_delta(b)
             },
-            (Some(a), None_) => {
+            (Some(a), None) => {
                 self.get_terrain_delta(a)
             },
-            (None_, Some(b)) => {
+            (None, Some(b)) => {
                 -self.get_terrain_delta(b)
             },
-            (None_, None) => 0.
+            (None, None) => 0.
         }
     }
 }

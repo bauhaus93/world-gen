@@ -10,12 +10,12 @@ use super::cell::Cell;
 
 // http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Inproceedings@117681e94b6_fff75c/FastErosion_PG07.pdf
 
-const GRAVITY: Float = 1.;
+const GRAVITY: Float = 0.1;
 const TIME_DELTA: Float = 1.;
 const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
 const DISSOLVING_CONSTANT: Float = 1.;
 const DEPOSITION_CONSTANT: Float = 1.;
-const EVAPORATION_CONSTANT: Float = 0.2;
+const EVAPORATION_CONSTANT: Float = 0.1;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -71,6 +71,7 @@ impl HydraulicErosion {
         self.update_transported_sediment();
         self.apply_transported_sediment();
         self.apply_evaporation();
+        self.check_sanity();
     }
 
     pub fn create_heightmap(&self) -> HeightMap {
@@ -79,6 +80,12 @@ impl HydraulicErosion {
             height_map.set_by_index(i, self.cell_list[i].get_terrain_height());
         }
         height_map
+    }
+
+    pub fn check_sanity(&self) {
+        for cell_index in 0..self.cell_list.len() {
+            self.cell_list[cell_index].check_sanity();
+        }  
     }
 
     pub fn add_water(&mut self, drop_count: u32) {
@@ -116,8 +123,7 @@ impl HydraulicErosion {
 
     fn update_transported_sediment(&mut self) {
         for cell_index in 0..self.cell_list.len() {
-            let sediment = self.cell_list[cell_index].calculate_transported_sediment(TIME_DELTA);
-            self.cell_list[cell_index].set_transported_sediment(sediment);
+            let sediment = self.cell_list[cell_index].update_transported_sediment(TIME_DELTA);
         } 
     }
 

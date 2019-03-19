@@ -192,11 +192,8 @@ impl World {
 
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
-
-
-
         if self.chunk_update_timer.fires() {
-            self.test_erosion.erode(100, 10);
+            self.test_erosion.erode(10, 10);
             let height_map = self.test_erosion.create_heightmap();
             let mut builder = ChunkBuilder::new([0, 0]);
             builder.create_surface_buffer(&height_map);

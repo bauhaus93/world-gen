@@ -39,14 +39,14 @@ impl Cell {
         for dir in 0..4 {
             unsafe {
                 if let Some(nb) = self.neighbours[dir].as_ref() {
-                    let terrain_delta = self.get_terrain_delta(nb);
-                    new_flux[dir] = Float::max(0., self.flux[dir] + time_delta * gravity * terrain_delta);
+                    let water_level_delta = self.get_water_level_delta(nb);
+                    new_flux[dir] = Float::max(0., self.flux[dir] + time_delta * gravity * water_level_delta);
                     flux_sum += new_flux[dir];
                 }
             }
         }
         if flux_sum > 0. {
-            let mut k = Float::min(1., self.water_height / flux_sum);
+            let mut k = Float::min(1., self.water_height / (flux_sum * time_delta));
             for dir in 0..4 {
                 self.flux[dir] = new_flux[dir] * k;
             }
@@ -66,6 +66,10 @@ impl Cell {
             }
         }
         self.water_height += water_delta * time_delta;
+        if self.water_height < 0. {
+            self.water_height = 0.;
+        }
+        debug_assert!(self.water_height >= 0.);
         self.velocity = [new_velocity[0] / 2.,
                          new_velocity[1] / 2.];
         debug_assert!(!self.velocity[0].is_nan() && !self.velocity[1].is_nan());
@@ -81,44 +85,31 @@ impl Cell {
     pub fn apply_erosion_deposition(&mut self, time_delta: Float, dissolving_factor: Float, deposition_factor: Float) {
         if self.transport_capacacity > self.suspended_sediment {
             let mut delta = dissolving_factor * (self.transport_capacacity - self.suspended_sediment);
-            let source_height = self.calculate_source_height(time_delta);
+            /*let source_height = self.calculate_source_height(time_delta);
             if delta > source_height - self.terrain_height {
                 delta = source_height - self.terrain_height;
                 if delta < 0. {
                     delta = 0.;
                 }
-            }
+            }*/
             self.terrain_height -= delta;
             self.suspended_sediment += delta;
         } else {
             let mut delta = deposition_factor * (self.suspended_sediment - self.transport_capacacity);
-
-            let source_height = self.calculate_source_height(time_delta);
+            /*let source_height = self.calculate_source_height(time_delta);
             if delta > source_height - self.terrain_height {
                 delta = source_height - self.terrain_height;
                 if delta < 0. {
                     delta = 0.;
                 }
-            }
+            }*/
             self.terrain_height += delta;
             self.suspended_sediment -= delta;
         }
     }
 
-    pub fn calculate_transported_sediment(&self, time_delta: Float) -> Float {
-        let prev_offset = [-self.velocity[0] * time_delta,
-                           -self.velocity[1] * time_delta];
-        self.retrieve_transported_sediment(prev_offset)
-    }
-
-    pub fn calculate_source_height(&self, time_delta: Float) -> Float {
-        let prev_offset = [-self.velocity[0] * time_delta,
-                           -self.velocity[1] * time_delta];
-        self.interpolate_height(prev_offset)
-    }
-
-    pub fn set_transported_sediment(&mut self, transported_sediment: Float) {
-        self.transported_sediment = transported_sediment;
+    pub fn update_transported_sediment(&mut self, time_delta: Float) {
+        self.transported_sediment = self.calculate_transported_sediment(time_delta);
     }
 
     pub fn apply_transported_sediment(&mut self) {
@@ -126,6 +117,7 @@ impl Cell {
     }
 
     pub fn apply_evaporation(&mut self, evaporation_factor: Float, time_delta: Float) {
+        debug_assert!(evaporation_factor * time_delta <= 1.);
         self.water_height *= (1. - evaporation_factor * time_delta);
     }
 
@@ -145,6 +137,18 @@ impl Cell {
             info!("offset = {:?}", offset);
             unreachable!();
         }
+    }
+
+    fn calculate_transported_sediment(&self, time_delta: Float) -> Float {
+        let prev_offset = [-self.velocity[0] * time_delta,
+                           -self.velocity[1] * time_delta];
+        self.retrieve_transported_sediment(prev_offset)
+    }
+
+    fn calculate_source_height(&self, time_delta: Float) -> Float {
+        let prev_offset = [-self.velocity[0] * time_delta,
+                           -self.velocity[1] * time_delta];
+        self.interpolate_height(prev_offset)
     }
 
     fn retrieve_transported_sediment(&self, mut offset: [Float; 2]) -> Float {
@@ -187,9 +191,6 @@ impl Cell {
         None
     }
 
-    fn set_flux(&mut self, new_flux: [Float; 4]) {
-        self.flux = new_flux;
-    }
     fn get_flux(&self, dir: u8) -> Float {
         debug_assert!(dir < 4);
         self.flux[dir as usize]
@@ -197,8 +198,8 @@ impl Cell {
     fn get_water_height(&self) -> Float {
         self.water_height
     }
-    fn get_water_delta(&self, neighbour_cell: &Cell) -> Float {
-        self.water_height - neighbour_cell.water_height
+    fn get_water_level_delta(&self, neighbour_cell: &Cell) -> Float {
+        self.terrain_height + self.water_height - (neighbour_cell.terrain_height + neighbour_cell.water_height)
     }
     fn get_terrain_delta(&self, neighbour_cell: &Cell) -> Float {
         self.terrain_height - neighbour_cell.terrain_height
@@ -263,6 +264,30 @@ impl Cell {
                 -self.get_terrain_delta(b)
             },
             (None, None) => 0.
+        }
+    }
+    pub fn check_sanity(&self) {
+        if self.water_height < 0. {
+            error!("cell sanity check: water_height = {}", self.water_height);
+            unreachable!();
+        }
+        for dir in 0..4 {
+            if self.flux[dir] < 0. {
+                error!("cell sanity check: flux = {:?}, ", self.flux);
+                unreachable!();
+            }
+        }
+        if self.transport_capacacity < 0. {
+            error!("cell sanity check: transport_capacity = {}", self.transport_capacacity);
+            unreachable!();
+        }
+        if self.suspended_sediment < 0. {
+            error!("cell sanity check: suspended_sediment = {}", self.suspended_sediment);
+            unreachable!();
+        }
+        if self.transported_sediment < 0. {
+            error!("cell sanity check: transported_sediment = {}", self.transported_sediment);
+            unreachable!();
         }
     }
 }

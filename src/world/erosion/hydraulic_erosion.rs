@@ -1,153 +1,156 @@
-use std::rc::{ Rc, Weak };
-use std::cell::RefCell;
-use std::ptr;
+use std::collections::BTreeMap;
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
 
 use crate::utility::Float;
 use crate::world::chunk::height_map::HeightMap;
 use super::cell::Cell;
+use super::direction::{ Direction, get_neighbour_pos };
 
 // http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Inproceedings@117681e94b6_fff75c/FastErosion_PG07.pdf
 
-const GRAVITY: Float = 0.1;
+const GRAVITY: Float = 9.81;
 const TIME_DELTA: Float = 1.;
-const PIPE_ARA: Float = 0.001;
+const PIPE_AREA: Float = 0.001;
+const PIPE_LENGTH: Float = 1.;
+const GRID_DISTANCE: [Float; 2] = [1., 1.];
 const SEDIMENT_CAPACITY_CONSTANT: Float = 35.;
 const DISSOLVING_CONSTANT: Float = 0.0012;
 const DEPOSITION_CONSTANT: Float = 0.0012;
 const EVAPORATION_CONSTANT: Float = 0.001;
 
+const NEIGHBOURS: [Direction; 4] = [Direction::TOP,
+                                    Direction::RIGHT,
+                                    Direction::BOTTOM,
+                                    Direction::LEFT];
+
+
 pub struct HydraulicErosion {
     rng: SmallRng,
-    size: [usize; 2],
-    cell_list: Vec<Cell>
+    size: [i32; 2],
+    cells: Vec<Cell>,
+    pipe_area: Float,
+    pipe_length: Float,
+    grid_distance: [Float; 2],
+    gravity: Float
 }
 
 impl HydraulicErosion {
     pub fn new<R: Rng + ?Sized>(height_map: &HeightMap, rng_input: &mut R) -> Self {
         let size = height_map.get_size();
-        let mut cell_list = Vec::with_capacity((size[0] * size[1]) as usize);
-        for i in 0..size[0] * size[1] {
-            let mut cell = Cell::default();
-            cell.set_terrain_height(height_map.get_by_index(i as usize));
-            cell_list.push(cell);
+        let mut cells = Vec::with_capacity((size[0] * size[1]) as usize);
+        for y in 0..size[1] {
+            for x in 0..size[0] {
+                let pos = [x, y];
+                let mut cell = Cell::default();
+                cell.set_terrain_height(height_map.get(&pos));
+                cells.push(cell);
+            }
         }
 
         let mut erosion = Self {
             rng: SmallRng::from_rng(rng_input).unwrap(),
-            size: [size[0] as usize, size[1] as usize],
-            cell_list: cell_list
+            size: size,
+            cells: cells,
+            pipe_area: PIPE_AREA,
+            pipe_length: PIPE_LENGTH,
+            grid_distance: GRID_DISTANCE,
+            gravity: GRAVITY
         };
-        erosion.load_cell_neighbours();
         erosion
     }
 
-    fn load_cell_neighbours(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            let mut nb_cells: [*const Cell; 4] = [ptr::null(), ptr::null(), ptr::null(), ptr::null()];
-            for dir in 0..4 {
-                if let Some(nb_index) = self.get_neighbour(cell_index, dir) {
-                    nb_cells[dir as usize] = &self.cell_list[nb_index];
-                }
-            }
-            self.cell_list[cell_index].set_neighbours(nb_cells);
+    pub fn rain(&mut self, drop_count: u32, drop_size: Float) {
+        for _ in 0..drop_count {
+            self.add_water_drop(drop_size);
         }
-    }
-
-    pub fn erode(&mut self, water_count: u32, tick_count: u32) {
-        // let len = self.cell_list.len();
-        // self.cell_list[len / 2].mod_water_height(1.);
-        self.add_water(water_count);
-        for _i in 0..tick_count {
-            self.tick();
-        }
-    }
-
-    pub fn tick(&mut self) {
-        self.update_flux();
-        self.apply_flux();
-        self.update_transport_capacity();
-        self.apply_erosion_deposition();
-        self.update_transported_sediment();
-        self.apply_transported_sediment();
-        self.apply_evaporation();
-        self.check_sanity();
     }
 
     pub fn create_heightmap(&self) -> HeightMap {
         let mut height_map = HeightMap::new([self.size[0] as i32, self.size[1] as i32]);
-        for i in 0..self.size[0] * self.size[1] {
-            height_map.set_by_index(i, self.cell_list[i].get_terrain_height());
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                let pos = [x, y];
+                let height = self.get_cell(&pos).get_terrain_height();
+                height_map.set(&pos, height);
+            }
         }
         height_map
     }
 
-    pub fn check_sanity(&self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].check_sanity();
-        }  
-    }
-
-    pub fn add_water(&mut self, drop_count: u32) {
-        for _i in 0..drop_count {
-            let drop_index = self.rng.gen_range(0, self.cell_list.len());
-            self.cell_list[drop_index].mod_water_height(5.);
+    fn calculate_outflow(&mut self, time_delta: Float) {
+        let flow_factor = (time_delta * self.pipe_area * self.gravity) / self.pipe_length;
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                self.calculate_cell_outflow(&[x, y], flow_factor, time_delta);
+            }
         }
     }
 
-    fn update_flux(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].update_flux(GRAVITY, TIME_DELTA);
+    fn calculate_cell_outflow(&mut self, pos: &[i32; 2], flow_factor: Float, time_delta: Float) {
+        let cell = self.get_cell(pos);
+        let mut new_flow = [0., 0., 0., 0.];
+        let mut flow_sum = 0.;
+        for dir in &NEIGHBOURS {
+            if let Some(nb) = self.get_neighbour(pos, *dir) {
+                let water_delta = cell.get_water_level() - nb.get_water_level();
+                let index: usize = Direction::into(*dir);
+                new_flow[index] = Float::max(0., cell.get_flow(*dir) + flow_factor * water_delta);
+                flow_sum += new_flow[index];
+            }
+        }
+        let k = Float::min(1., (cell.get_water_height() * self.grid_distance[0] * self.grid_distance[1]) / (flow_sum * time_delta));
+        let cell = self.get_cell_mut(pos);
+        for dir in &NEIGHBOURS {
+            let index: usize = Direction::into(*dir);
+            let scaled_flow = k * new_flow[index];
+            cell.set_flow(*dir, scaled_flow);
         }
     }
 
-    fn apply_flux(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].apply_flux(TIME_DELTA);
+    fn add_water_drop(&mut self, size: Float) {
+        let pos = self.get_random_pos();
+        let cell = self.get_cell_mut(&pos);
+        cell.mod_water(size);
+        for dir in &NEIGHBOURS {
+            if let Some(nb) = self.get_neighbour_mut(&pos, *dir) {
+                nb.mod_water(size / 4.);
+            }
         }
     }
 
-    fn update_transport_capacity(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
+    fn get_random_pos(&mut self) -> [i32; 2] {
+        [self.rng.gen_range(0, self.size[0]),
+         self.rng.gen_range(0, self.size[1])]
+    }
+
+    fn get_cell(&self, pos: &[i32; 2]) -> &Cell {
+        let index = (pos[1] * self.size[0] + pos[0]) as usize;
+        &self.cells[index]
+    }
+    fn get_cell_mut(&mut self, pos: &[i32; 2]) -> &mut Cell {
+        let index = (pos[1] * self.size[0] + pos[0]) as usize;
+        &mut self.cells[index]
+    }
+
+    fn get_neighbour(&self, pos: &[i32; 2], dir: Direction) -> Option<&Cell> {
+        let nb_pos = get_neighbour_pos(pos, dir);
+        let nb_index = (nb_pos[1] * self.size[0] + nb_pos[0]) as usize;
+        if nb_index < 0 || nb_index >= self.cells.len() {
+            None
+        } else {
+            Some(&self.cells[nb_index])
         }
     }
-
-    fn apply_erosion_deposition(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].apply_erosion_deposition(TIME_DELTA,
-                                                                DISSOLVING_CONSTANT,
-                                                                DEPOSITION_CONSTANT);
-        }
-    }
-
-    fn update_transported_sediment(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            let sediment = self.cell_list[cell_index].update_transported_sediment(TIME_DELTA);
-        } 
-    }
-
-    fn apply_transported_sediment(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].apply_transported_sediment();
-        } 
-    }
-
-    fn apply_evaporation(&mut self) {
-        for cell_index in 0..self.cell_list.len() {
-            self.cell_list[cell_index].apply_evaporation(EVAPORATION_CONSTANT, TIME_DELTA);
-        } 
-    }
-
-    fn get_neighbour(&self, index: usize, dir: u8) -> Option<usize> {
-        match dir {
-            0 if index >= self.size[0] => Some(index - self.size[0]),                        // TOP
-            1 if (index + 1) % self.size[0] != 0 => Some(index + 1),                         // RIGHT
-            2 if index + self.size[0] < self.cell_list.len() => Some(index + self.size[0]),  // BOTTOM
-            3 if index % self.size[0] != 0 => Some(index - 1),                               // LEFT
-            _ => None
+    fn get_neighbour_mut(&mut self, pos: &[i32; 2], dir: Direction) -> Option<&mut Cell> {
+        let nb_pos = get_neighbour_pos(pos, dir);
+        let nb_index = (nb_pos[1] * self.size[0] + nb_pos[0]) as usize;
+        if nb_index < 0 || nb_index >= self.cells.len() {
+            None
+        } else {
+            Some(&mut self.cells[nb_index])
         }
     }
 }
+
 

@@ -38,7 +38,7 @@ pub fn get_neighbour_pos(pos: &[i32; 2], dir: Direction) -> [i32; 2] {
     }
 }
 
-fn get_opposite_direction(dir: Direction) -> Direction {
+pub fn get_opposite_direction(dir: Direction) -> Direction {
     match dir {
         Direction::TOP => Direction::BOTTOM,
         Direction::RIGHT => Direction::LEFT,

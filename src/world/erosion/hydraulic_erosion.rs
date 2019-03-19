@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
+use glm::{ Vector2, Vector3, GenNum };
 
 use crate::utility::Float;
 use crate::world::chunk::height_map::HeightMap;
 use super::cell::Cell;
-use super::direction::{ Direction, get_neighbour_pos };
+use super::direction::{ Direction, get_neighbour_pos, get_opposite_direction };
 
 // http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Inproceedings@117681e94b6_fff75c/FastErosion_PG07.pdf
 
@@ -60,6 +61,11 @@ impl HydraulicErosion {
         erosion
     }
 
+    pub fn tick(&mut self) {
+        self.update_outflow();
+        self.apply_waterflow();
+    }
+
     pub fn rain(&mut self, drop_count: u32, drop_size: Float) {
         for _ in 0..drop_count {
             self.add_water_drop(drop_size);
@@ -78,16 +84,24 @@ impl HydraulicErosion {
         height_map
     }
 
-    fn calculate_outflow(&mut self, time_delta: Float) {
+    fn update_outflow(&mut self, time_delta: Float) {
         let flow_factor = (time_delta * self.pipe_area * self.gravity) / self.pipe_length;
         for y in 0..self.size[1] {
             for x in 0..self.size[0] {
-                self.calculate_cell_outflow(&[x, y], flow_factor, time_delta);
+                self.update_cell_outflow(&[x, y], flow_factor, time_delta);
             }
         }
     }
 
-    fn calculate_cell_outflow(&mut self, pos: &[i32; 2], flow_factor: Float, time_delta: Float) {
+    fn apply_waterflow(&mut self, time_delta: Float) {
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                self.apply_cell_waterflow(&[x, y], time_delta);
+            }
+        }
+    }
+
+    fn update_cell_outflow(&mut self, pos: &[i32; 2], flow_factor: Float, time_delta: Float) {
         let cell = self.get_cell(pos);
         let mut new_flow = [0., 0., 0., 0.];
         let mut flow_sum = 0.;
@@ -106,6 +120,31 @@ impl HydraulicErosion {
             let scaled_flow = k * new_flow[index];
             cell.set_flow(*dir, scaled_flow);
         }
+    }
+
+    fn apply_cell_waterflow(&mut self, pos: &[i32; 2], time_delta: Float) {
+        let cell = self.get_cell(pos);
+        let mut flow_delta: [Float; 2] = [0., 0.];
+        for dir in &NEIGHBOURS {
+            if let Some(nb) = self.get_neighbour(pos, *dir) {
+                let inflow = nb.get_flow(get_opposite_direction(*dir));
+                let outflow = cell.get_flow(*dir);
+                match dir {
+                    Direction::TOP | Direction::BOTTOM => flow_delta[1] += inflow - outflow,
+                    Direction::LEFT | Direction::RIGHT => flow_delta[0] += inflow - outflow
+                }
+            }
+        }
+        let water_delta = (time_delta * (flow_delta[0] + flow_delta[1])) / (self.grid_distance[0] * self.grid_distance[1]);
+        let mut new_velocity = Vector2::from_s(0.);
+        for axis in 0..2 {
+            let flow_avg = flow_delta[axis] / 2.;
+            let d = water_delta / 2.;
+            new_velocity[axis] = flow_avg[axis] / (d * self.grid_distance[(axis + 1 % 2)]);
+        }
+        let cell = self.get_cell_mut(pos);
+        cell.mod_water(water_delta);
+        cell.set_velocity(new_velocity);
     }
 
     fn add_water_drop(&mut self, size: Float) {

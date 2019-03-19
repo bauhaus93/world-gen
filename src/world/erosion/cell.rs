@@ -37,6 +37,9 @@ impl Cell {
         let index: usize = dir.into();
         self.outflow[index] = new_flow;
     }
+    pub fn set_velocity(&mut self, new_velocity: Vector2<Float>) {
+        self.velocity = new_velocity;
+    }
 }
 
 impl Default for Cell {

@@ -40,7 +40,7 @@ impl Cell {
             unsafe {
                 if let Some(nb) = self.neighbours[dir].as_ref() {
                     let water_level_delta = self.get_water_level_delta(nb);
-                    new_flux[dir] = Float::max(0., self.flux[dir] + time_delta * gravity * water_level_delta);
+                    new_flux[dir] = Float::max(0., self.flux[dir] + 0.0005 * time_delta * gravity * water_level_delta);
                     flux_sum += new_flux[dir];
                 }
             }
@@ -54,14 +54,14 @@ impl Cell {
     }
     pub fn apply_flux(&mut self, time_delta: Float) {
         let mut water_delta = 0.;
-        let mut new_velocity: [Float; 2] = [0., 0.];
+        let mut total_flow_delta: [Float; 2] = [0., 0.];
         for dir in 0..4 {
             unsafe {
                 if let Some(nb) = self.neighbours[dir].as_ref() {
                     let opp_dir = get_opposite_dir(dir as u8);
                     let flow_delta = nb.get_flux(opp_dir) - self.get_flux(dir as u8); // inflow - outflow with certain neighbour
                     water_delta += flow_delta;
-                    new_velocity[((dir + 1) % 2) as usize] += flow_delta;
+                    total_flow_delta[((dir + 1) % 2) as usize] += flow_delta;
                 }
             }
         }
@@ -69,9 +69,15 @@ impl Cell {
         if self.water_height < 0. {
             self.water_height = 0.;
         }
-        debug_assert!(self.water_height >= 0.);
-        self.velocity = [new_velocity[0] / 2.,
-                         new_velocity[1] / 2.];
+        if water_delta > 0. {
+            for axis in 0..2 {
+                self.velocity[axis] = total_flow_delta[axis] / 2.;
+            }
+        } else {
+            for axis in 0..2 {
+                self.velocity[axis] = 0.;
+            }
+        }
         debug_assert!(!self.velocity[0].is_nan() && !self.velocity[1].is_nan());
     }
 
@@ -92,17 +98,20 @@ impl Cell {
                     delta = 0.;
                 }
             }*/
+            /*if delta > 1e-3 {
+                info!("water_level = {}, suspended_sediment = {}, transport_capacity = {}, delta = {}", self.water_height, self.suspended_sediment, self.transport_capacacity, delta);
+            }*/
             self.terrain_height -= delta;
             self.suspended_sediment += delta;
         } else {
             let mut delta = deposition_factor * (self.suspended_sediment - self.transport_capacacity);
-            /*let source_height = self.calculate_source_height(time_delta);
+            let source_height = self.calculate_source_height(time_delta);
             if delta > source_height - self.terrain_height {
                 delta = source_height - self.terrain_height;
                 if delta < 0. {
                     delta = 0.;
                 }
-            }*/
+            }
             self.terrain_height += delta;
             self.suspended_sediment -= delta;
         }

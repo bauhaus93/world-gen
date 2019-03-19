@@ -12,10 +12,11 @@ use super::cell::Cell;
 
 const GRAVITY: Float = 0.1;
 const TIME_DELTA: Float = 1.;
-const SEDIMENT_CAPACITY_CONSTANT: Float = 1.;
-const DISSOLVING_CONSTANT: Float = 1.;
-const DEPOSITION_CONSTANT: Float = 1.;
-const EVAPORATION_CONSTANT: Float = 0.1;
+const PIPE_ARA: Float = 0.001;
+const SEDIMENT_CAPACITY_CONSTANT: Float = 35.;
+const DISSOLVING_CONSTANT: Float = 0.0012;
+const DEPOSITION_CONSTANT: Float = 0.0012;
+const EVAPORATION_CONSTANT: Float = 0.001;
 
 pub struct HydraulicErosion {
     rng: SmallRng,
@@ -55,9 +56,9 @@ impl HydraulicErosion {
     }
 
     pub fn erode(&mut self, water_count: u32, tick_count: u32) {
-        let len = self.cell_list.len();
-        self.cell_list[len / 2].mod_water_height(1.);
-        //self.add_water(water_count);
+        // let len = self.cell_list.len();
+        // self.cell_list[len / 2].mod_water_height(1.);
+        self.add_water(water_count);
         for _i in 0..tick_count {
             self.tick();
         }

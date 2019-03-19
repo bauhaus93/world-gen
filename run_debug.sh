@@ -1,1 +1,1 @@
-RUST_LOG="app,world_gen=debug" cargo run --bin app
+RUST_LOG="application,graphics,world_gen=debug" cargo run

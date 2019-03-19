@@ -1,1 +1,1 @@
-RUST_LOG="app,world_gen=debug" cargo run --bin app --release
+RUST_LOG="application,graphics,utility,world_gen=info" cargo run --release

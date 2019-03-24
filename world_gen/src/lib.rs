@@ -18,8 +18,8 @@ pub use self::world::World;
 pub use self::world_error::WorldError;
 
 pub mod world;
-pub mod traits;
 pub mod world_error;
+mod traits;
 mod chunk;
 mod camera;
 mod model;

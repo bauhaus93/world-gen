@@ -180,6 +180,10 @@ impl World {
         Ok(())
     }
 
+    pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
+        self.tick(time_passed)
+    }
+
     pub fn render(&self) -> Result<(), WorldError> {
         self.texture_array.activate();
         self.surface_shader_program.use_program();

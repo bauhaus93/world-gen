@@ -7,7 +7,6 @@ use glm::{ GenNum, Vector3, normalize, length, cross };
 
 use graphics;
 use world_gen;
-use world_gen::traits::{ Updatable, Translatable, Rotatable };
 use utility::Float;
 use crate::application_error::ApplicationError;
 use crate::window;
@@ -47,7 +46,7 @@ impl Application {
         while !self.quit {
             self.handle_events();
             self.handle_movement();
-            self.world.tick(self.time_passed)?;
+            self.world.update(self.time_passed)?;
             self.render()?;
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
             last_time = time::Instant::now();

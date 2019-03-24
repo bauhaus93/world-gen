@@ -2,7 +2,7 @@ use std::fmt;
 use std::error::Error;
 
 use graphics::{ GraphicsError, mesh::MeshError };
-use super::chunk::ChunkError;
+use super::chunk::chunk_error::ChunkError;
 
 #[derive(Debug)]
 pub enum WorldError {

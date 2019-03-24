@@ -1,7 +1,7 @@
 use glm::{ Vector2, Vector3, GenNum };
 
 use utility::Float;
-use super::direction::{ Direction };
+use super::direction::Direction;
 
 pub struct Cell {
     terrain_height: Float,

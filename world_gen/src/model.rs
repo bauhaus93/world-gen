@@ -7,7 +7,7 @@ use glm::{ Vector3, Matrix4 };
 
 use graphics::{ create_transformation_matrix };
 use utility::Float;
-use crate::world::traits::{ Translatable, Rotatable, Scalable };
+use crate::traits::{ Translatable, Rotatable, Scalable };
 
 
 pub struct Model {

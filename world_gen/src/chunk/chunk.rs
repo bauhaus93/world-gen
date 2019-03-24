@@ -4,9 +4,9 @@ use glm::Vector3;
 
 use graphics::{ ShaderProgram, GraphicsError, mesh::Mesh };
 use utility::Float;
-use crate::world::traits::{ Translatable, Renderable };
-use crate::world::{ Object, Camera };
-use super::{ CHUNK_SIZE };
+use crate::traits::{ Translatable, Renderable };
+use crate::{ object::Object, camera::Camera };
+use super::chunk_size::CHUNK_SIZE;
 
 pub struct Chunk {
     pos: [i32; 2],

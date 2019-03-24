@@ -7,7 +7,7 @@ use glm::{ Vector3, GenNum };
 
 use utility::Float;
 use graphics::mesh::{ Buffer, Mesh };
-use crate::world::chunk::ChunkError;
+use crate::chunk::chunk_error::ChunkError;
 use super::branch::Branch;
 
 

@@ -4,7 +4,7 @@ use rand::rngs::SmallRng;
 use glm::{ Vector2, Vector3, GenNum };
 
 use utility::Float;
-use crate::world::chunk::height_map::HeightMap;
+use crate::chunk::height_map::HeightMap;
 use super::cell::Cell;
 use super::direction::{ Direction, get_neighbour_pos, get_opposite_direction };
 

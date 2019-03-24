@@ -5,8 +5,8 @@ use num_traits::One;
 
 use graphics::{ Projection, create_direction,projection::{ create_orthographic_projection_matrix, create_default_perspective } };
 use utility::Float;
-use crate::world::Model;
-use crate::world::traits::{ Translatable, Rotatable };
+use crate::model::Model;
+use crate::traits::{ Translatable, Rotatable };
 
 
 pub struct Camera {

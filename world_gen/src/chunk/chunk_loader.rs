@@ -6,8 +6,8 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use crate::world::erosion::hydraulic_erosion::HydraulicErosion;
-use super::{ Chunk, chunk_builder::ChunkBuilder, architect::Architect, ChunkError };
+use crate::erosion::hydraulic_erosion::HydraulicErosion;
+use super::{ chunk::Chunk, chunk_builder::ChunkBuilder, architect::Architect, chunk_error::ChunkError };
 use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkLoader {

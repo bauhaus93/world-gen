@@ -8,10 +8,11 @@ use glm::Vector3;
 use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::{ Float, format_number };
-use crate::world::{ Object, Camera, WorldError, chunk::{ Chunk, ChunkLoader, get_chunk_pos } };
-use crate::world::{ chunk::{ chunk_builder::ChunkBuilder, CHUNK_SIZE, architect::Architect }, erosion::hydraulic_erosion::HydraulicErosion };
-use crate::world::timer::Timer;
-use crate::world::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
+use crate::{ object::Object, camera::Camera, world_error::WorldError, };
+use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_builder::ChunkBuilder, architect::Architect, chunk_size::{ get_chunk_pos, CHUNK_SIZE } };
+use crate::erosion::hydraulic_erosion::HydraulicErosion;
+use crate::timer::Timer;
+use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
     texture_array: TextureArray,
@@ -97,6 +98,18 @@ impl World {
         Ok(world)
     }
 
+    pub fn get_camera_direction(&self) -> Vector3<Float> {
+        self.camera.get_direction()
+    }
+
+    pub fn move_camera(&mut self, offset: Vector3<Float>) {
+        self.camera.mod_translation(offset);
+    }
+
+    pub fn rotate_camera(&mut self, rotation: Vector3<Float>) {
+        self.camera.mod_rotation(rotation);
+    }
+
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
         let mut request_list: Vec<[i32; 2]> = Vec::new();
         let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
@@ -152,14 +165,6 @@ impl World {
                 self.camera.set_translation(Vector3::new(-5., -5., 5.));
             }
         }
-    }
-
-    pub fn get_camera(&self) -> &Camera {
-        &self.camera
-    }
-
-    pub fn get_camera_mut(&mut self) -> &mut Camera {
-        &mut self.camera
     }
 
     #[allow(dead_code)]

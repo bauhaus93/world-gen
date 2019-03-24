@@ -1,5 +1,5 @@
 use graphics::{ ShaderProgram, GraphicsError };
-use crate::world::Camera;
+use crate::camera::Camera;
 
 pub trait Renderable {
     fn render(&self, camera: &Camera, shader: &ShaderProgram) -> Result<(), GraphicsError>;

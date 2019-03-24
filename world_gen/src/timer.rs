@@ -1,5 +1,5 @@
-use crate::world::traits::Updatable;
-use crate::world::WorldError;
+use crate::traits::Updatable;
+use crate::world_error::WorldError;
 
 pub struct Timer {
     accumulator: u32,

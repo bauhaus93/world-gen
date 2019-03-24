@@ -1,7 +1,7 @@
 use rand::{ Rng, rngs::SmallRng, SeedableRng };
 
 use utility::Float;
-use crate::world::noise::{ Noise, OctavedNoise };
+use crate::noise::{ Noise, OctavedNoise };
 use super::height_map::HeightMap;
 use super::chunk_size::CHUNK_SIZE;
 

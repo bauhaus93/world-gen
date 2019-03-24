@@ -6,14 +6,14 @@ use gl::types::GLsizei;
 use glm::{ GenNum, Vector3, normalize, length, cross };
 
 use graphics;
-use world_gen::world;
-use world_gen::world::traits::{ Updatable, Translatable, Rotatable };
+use world_gen;
+use world_gen::traits::{ Updatable, Translatable, Rotatable };
 use utility::Float;
 use crate::application_error::ApplicationError;
 use crate::window;
 
 pub struct Application {
-    world: world::World,
+    world: world_gen::World,
     window: glutin::GlWindow,
     events_loop: glutin::EventsLoop,
     window_size: [f64; 2],
@@ -28,7 +28,7 @@ impl Application {
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
         
-        let world = world::World::new()?;
+        let world = world_gen::World::new()?;
         let app = Self {
             events_loop: events_loop,
             window: window,
@@ -102,23 +102,24 @@ impl Application {
             warn!("window.set_cursor position: {}", msg);
         }
         let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
-        self.world.get_camera_mut().mod_rotation(offset * 0.025 * (self.time_passed as Float / 1000.));
+        self.world.rotate_camera(offset * 0.025 * (self.time_passed as Float / 1000.));
     }
 
     fn handle_movement(&mut self) {
+        let cam_dir = self.world.get_camera_direction();
         let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
         if self.movement_keys_down[0] {
-            move_offset = move_offset.add(self.world.get_camera().get_direction());
+            move_offset = move_offset.add(cam_dir);
         }
         if self.movement_keys_down[1] {
-            let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+            let right = cross(cam_dir, Vector3::new(0., 0., 1.));
             move_offset = move_offset.sub(right);
         }
         if self.movement_keys_down[2] {
-            move_offset = move_offset.sub(self.world.get_camera().get_direction());
+            move_offset = move_offset.sub(cam_dir);
         }
         if self.movement_keys_down[3] {
-            let right = cross(self.world.get_camera().get_direction(), Vector3::new(0., 0., 1.));
+            let right = cross(cam_dir, Vector3::new(0., 0., 1.));
             move_offset = move_offset.add(right);
         }
         if self.movement_keys_down[4] {
@@ -126,7 +127,7 @@ impl Application {
         }
         if length(move_offset) > 1e-3 {
             const SPEED: Float = 1.;
-            self.world.get_camera_mut().mod_translation(normalize(move_offset) * SPEED);
+            self.world.move_camera(normalize(move_offset) * SPEED);
         }
     }
 

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error;
 
-use graphics::{ mesh::MeshError };
+use graphics::mesh::MeshError;
 
 #[derive(Debug)]
 pub enum ChunkError {

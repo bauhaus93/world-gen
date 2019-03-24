@@ -3,12 +3,12 @@ use std::error::Error;
 
 use utility;
 use graphics;
-use world_gen::world;
+use world_gen;
 
 #[derive(Debug)]
 pub enum ApplicationError {
     Graphics(graphics::GraphicsError),
-    World(world::WorldError),
+    World(world_gen::WorldError),
     File(utility::FileError)
 }
 
@@ -18,8 +18,8 @@ impl From<graphics::GraphicsError> for ApplicationError {
     }
 }
 
-impl From<world::WorldError> for ApplicationError {
-    fn from(err: world::WorldError) -> Self {
+impl From<world_gen::WorldError> for ApplicationError {
+    fn from(err: world_gen::WorldError) -> Self {
         ApplicationError::World(err)
     }
 }

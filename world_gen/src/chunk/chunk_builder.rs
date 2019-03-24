@@ -5,7 +5,7 @@ use glm::{ Vector3 };
 
 use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, Buffer };
-use super::{ Chunk, ChunkError, height_map::HeightMap };
+use super::{ chunk::Chunk, chunk_error::ChunkError, height_map::HeightMap };
 use super::chunk_size::{ CHUNK_SIZE, get_world_pos };
 
 pub struct ChunkBuilder {

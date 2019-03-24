@@ -2,8 +2,8 @@ use glm::{ Vector3 };
 
 use graphics::{ Mesh, ShaderProgram, GraphicsError };
 use utility::Float;
-use crate::world::{ Camera, Model };
-use crate::world::traits::{ Rotatable, Translatable, Scalable, Renderable };
+use crate::{ camera::Camera, model::Model };
+use crate::traits::{ Rotatable, Translatable, Scalable, Renderable };
 
 
 pub struct Object {

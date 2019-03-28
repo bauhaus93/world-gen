@@ -67,7 +67,7 @@ impl World {
         let mut builder = ChunkBuilder::new([0, 0]);
         let architect = Architect::from_rng(&mut rng);
         let raw_height_map = architect.create_height_map([0, 0], CHUNK_SIZE, 1.);
-        let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
+        let erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
         let height_map = erosion.create_heightmap();
         builder.create_surface_buffer(&height_map);
         let test_chunk = builder.finish()?;

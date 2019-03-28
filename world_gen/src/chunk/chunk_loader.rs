@@ -150,7 +150,7 @@ fn worker(architect: Arc<Architect>,
             Err(_poisoned) => { break 'exit; }
         };
         if let Some(pos) = pos_opt {
-            let mut build_start = time::Instant::now();
+            let build_start = time::Instant::now();
             let mut builder = ChunkBuilder::new(pos);
             let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
             let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());

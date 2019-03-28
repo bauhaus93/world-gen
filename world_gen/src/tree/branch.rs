@@ -7,12 +7,14 @@ use graphics::mesh::{ Vertex, Triangle, Buffer };
 use utility::Float;
 use super::part::Part;
 
+#[allow(dead_code)]
 pub struct Branch {
     origin: Vector3<Float>,
     parts: Vec<Part>,
     sub_branches: Vec<Branch>
 }
 
+#[allow(dead_code)]
 fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir: Vector3<Float>, initial_radius: Float, rng: &mut R) -> Vec<Part> {
     debug_assert!(part_count > 1);
     let mut parts = Vec::new();
@@ -38,6 +40,7 @@ fn create_parts<R: Rng + ?Sized>(part_count: u32, variation: Float, initial_dir:
     parts
 }
 
+#[allow(dead_code)]
 impl Branch {
     pub fn new<R: Rng + ?Sized>(origin: Vector3<Float>,
                                 part_count: u32,
@@ -80,7 +83,7 @@ impl Branch {
             .add(initial_variation)
         );
         let sub_radius = ancestor_part.get_radius() * rng.gen_range(0.6, 0.8);
-        let mut sub = Branch::new(origin, part_count, variation, sub_dir, sub_radius, 0, rng);
+        let sub = Branch::new(origin, part_count, variation, sub_dir, sub_radius, 0, rng);
         self.sub_branches.push(sub);
     }
 

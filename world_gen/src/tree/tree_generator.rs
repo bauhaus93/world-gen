@@ -10,7 +10,7 @@ use graphics::mesh::Mesh;
 use crate::chunk::chunk_error::ChunkError;
 use super::branch::Branch;
 
-
+#[allow(dead_code)]
 pub struct TreeGenerator {
     rng: SmallRng,
     part_range: [u32; 2],
@@ -18,6 +18,7 @@ pub struct TreeGenerator {
     sub_branch_range: [u32; 2]
 }
 
+#[allow(dead_code)]
 impl TreeGenerator {
     pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self {

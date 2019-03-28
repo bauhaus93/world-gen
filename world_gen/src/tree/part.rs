@@ -5,13 +5,14 @@ use glm::{ Vector3, Matrix4, normalize, cross, ext::rotate };
 
 use graphics::transformation::create_rotation_matrix;
 use utility::Float;
-
+#[allow(dead_code)]
 pub struct Part {
     direction: Vector3<Float>,
     radius: Float,
     length: Float
 }
 
+#[allow(dead_code)]
 impl Part {
     pub fn new(direction: Vector3<Float>, radius: Float, length: Float) -> Self {
         Self {

@@ -48,7 +48,7 @@ impl HydraulicErosion {
             }
         }
 
-        let mut erosion = Self {
+        let erosion = Self {
             rng: SmallRng::from_rng(rng_input).unwrap(),
             size: size,
             cells: cells,
@@ -174,7 +174,7 @@ impl HydraulicErosion {
     fn get_neighbour(&self, pos: &[i32; 2], dir: Direction) -> Option<&Cell> {
         let nb_pos = get_neighbour_pos(pos, dir);
         let nb_index = (nb_pos[1] * self.size[0] + nb_pos[0]) as usize;
-        if nb_index < 0 || nb_index >= self.cells.len() {
+        if nb_index >= self.cells.len() {
             None
         } else {
             Some(&self.cells[nb_index])
@@ -183,7 +183,7 @@ impl HydraulicErosion {
     fn get_neighbour_mut(&mut self, pos: &[i32; 2], dir: Direction) -> Option<&mut Cell> {
         let nb_pos = get_neighbour_pos(pos, dir);
         let nb_index = (nb_pos[1] * self.size[0] + nb_pos[0]) as usize;
-        if nb_index < 0 || nb_index >= self.cells.len() {
+        if nb_index >= self.cells.len() {
             None
         } else {
             Some(&mut self.cells[nb_index])

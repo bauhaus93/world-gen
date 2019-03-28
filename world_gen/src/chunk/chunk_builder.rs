@@ -6,7 +6,7 @@ use glm::{ Vector3 };
 use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, Buffer };
 use super::{ chunk::Chunk, chunk_error::ChunkError, height_map::HeightMap };
-use super::chunk_size::{ CHUNK_SIZE, get_world_pos };
+use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkBuilder {
     pos: [i32; 2],
@@ -33,7 +33,7 @@ impl ChunkBuilder {
         let mut triangles: Vec<Triangle> = Vec::with_capacity((CHUNK_SIZE[0] * CHUNK_SIZE[1] * 2) as usize);
         for y in 0..CHUNK_SIZE[1] {
             for x in 0..CHUNK_SIZE[0] {
-                triangles.extend(&add_quad_triangles(&self.pos, &[x, y], height_map));
+                triangles.extend(&add_quad_triangles(&[x, y], height_map));
             }
         }
         trace!("Created chunk vertices for {}/{}: triangle count = {}", self.pos[0], self.pos[1], triangles.len());
@@ -41,7 +41,7 @@ impl ChunkBuilder {
     }
 }
 
-fn add_quad_triangles(chunk_pos: &[i32; 2], offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2] {
+fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2] {
     const OFFSET: Float = 1.;
     const VERTEX_OFFSETS: [[Float; 2]; 6] = [
         [0., 0.],         [OFFSET, OFFSET], [0., OFFSET],

@@ -1,7 +1,7 @@
-use std::ops::{ Add, Sub };
+use std::ops::Add;
 use num_traits::One;
 
-use glm::{ Vector3, Vector4, Matrix4, normalize, cross, ext::rotate };
+use glm::{ Vector3, Matrix4, normalize, cross, ext::rotate };
 
 use graphics::transformation::create_rotation_matrix;
 use utility::Float;

@@ -1,7 +1,4 @@
-use rand::Rng;
-
 use utility::Float;
-use super::chunk_size::CHUNK_SIZE;
 
 pub struct HeightMap {
     size: [i32; 2],

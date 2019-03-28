@@ -1,7 +1,6 @@
-use std::collections::BTreeMap;
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
-use glm::{ Vector2, Vector3, GenNum };
+use glm::{ Vector2, GenNum };
 
 use utility::Float;
 use crate::chunk::height_map::HeightMap;

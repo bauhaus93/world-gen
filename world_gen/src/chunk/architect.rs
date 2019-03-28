@@ -22,7 +22,7 @@ impl Architect {
         height_noise.set_roughness(0.5);
         height_noise.set_range([0., 100.]);
 
-        let mut hill_noise = OctavedNoise::from_rng(&mut local_rng);
+        let hill_noise = OctavedNoise::from_rng(&mut local_rng);
         let mut mountain_noise = OctavedNoise::from_rng(&mut local_rng);
         mountain_noise.set_octaves(4);
         mountain_noise.set_scale(1e-4);
@@ -51,7 +51,7 @@ impl Architect {
 
     fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
         let raw_height = self.height_noise.get_noise(absolute_pos);
-        let hill_val = self.hill_noise.get_noise(absolute_pos);
+        let _hill_val = self.hill_noise.get_noise(absolute_pos);
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);
         if mountain_val > 0. {
             raw_height * (1. +  (/*30.*/ 10. * mountain_val.powf(2.)))
@@ -59,7 +59,7 @@ impl Architect {
             raw_height
         }
     }
-
+    #[allow(dead_code)]
     pub fn get_ground_texture(&self, absolute_pos: [Float; 2]) -> i32 {
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);
         if mountain_val > 0. {

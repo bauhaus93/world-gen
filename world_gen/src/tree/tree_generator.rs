@@ -6,7 +6,7 @@ use rand::rngs::SmallRng;
 use glm::{ Vector3, GenNum };
 
 use utility::Float;
-use graphics::mesh::{ Buffer, Mesh };
+use graphics::mesh::Mesh;
 use crate::chunk::chunk_error::ChunkError;
 use super::branch::Branch;
 

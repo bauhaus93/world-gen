@@ -1,8 +1,7 @@
 use std::iter;
 use rand;
 use rand::Rng;
-use rand::prelude::{ SmallRng, SliceRandom };
-use rand::{ SeedableRng };
+use rand::prelude::SliceRandom;
 
 use utility::Float;
 use super::Noise;

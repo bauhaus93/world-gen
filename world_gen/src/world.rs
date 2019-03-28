@@ -7,7 +7,7 @@ use glm::Vector3;
 
 use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
-use utility::{ Float, format_number };
+use utility::Float;
 use crate::{ object::Object, camera::Camera, world_error::WorldError, };
 use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_builder::ChunkBuilder, architect::Architect, chunk_size::{ get_chunk_pos, CHUNK_SIZE } };
 use crate::erosion::hydraulic_erosion::HydraulicErosion;

@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "run_release",
+            "type": "shell",
+            "command": "RUST_LOG=\"application=debug,utility=debug,world_gen=debug,graphics=debug\" cargo run --release",
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "label": "run_debug",
+            "type": "shell",
+            "command": "RUST_LOG=\"application=debug,utility=debug,world_gen=debug,graphics=debug\" cargo run",
+            "problemMatcher": [
+                "$rustc"
+            ]
+        }
+    ]
+}

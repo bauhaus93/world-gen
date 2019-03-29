@@ -4,18 +4,40 @@
         {
             "label": "run_release",
             "type": "shell",
-            "command": "RUST_LOG=\"application=debug,utility=debug,world_gen=debug,graphics=debug\" cargo run --release",
+            "options": {
+                "env": {
+                    "RUST_LOG":"application=debug,utility=debug,world_gen=debug,graphics=debug"
+                }
+            },
+            "command": "cargo",
+            "args": [
+                "run",
+                "--release"
+            ],
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
+
         {
             "label": "run_debug",
             "type": "shell",
-            "command": "RUST_LOG=\"application=debug,utility=debug,world_gen=debug,graphics=debug\" cargo run",
+            "options": {
+                "env": {
+                    "RUST_LOG":"application=debug,utility=debug,world_gen=debug,graphics=debug"
+                }
+            },
+            "command": "cargo",
+            "args": [
+                "run",
+            ],
             "problemMatcher": [
                 "$rustc"
-            ]
-        }
+            ],
+        },
     ]
 }

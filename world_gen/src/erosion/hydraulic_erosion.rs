@@ -1,6 +1,6 @@
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
-use glm::{ Vector2, GenNum };
+use glm::{ Vector2, Vector3, GenNum, normalize };
 
 use utility::Float;
 use crate::chunk::height_map::HeightMap;
@@ -10,7 +10,7 @@ use super::direction::{ Direction, get_neighbour_pos, get_opposite_direction };
 // http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Inproceedings@117681e94b6_fff75c/FastErosion_PG07.pdf
 
 const GRAVITY: Float = 9.81;
-const TIME_DELTA: Float = 1.;
+const TIME_DELTA: Float = 0.01;
 const PIPE_AREA: Float = 0.001;
 const PIPE_LENGTH: Float = 1.;
 const GRID_DISTANCE: [Float; 2] = [1., 1.];
@@ -60,10 +60,17 @@ impl HydraulicErosion {
         erosion
     }
 
-    pub fn tick(&mut self) {
-        const TIME_DELTA: Float = 1.;
+    pub fn simulate(&mut self, count: u32) {
+        for _i in 0..count {
+            self.tick();
+        }
+    }
+
+    fn tick(&mut self) {
         self.update_outflow(TIME_DELTA);
         self.apply_waterflow(TIME_DELTA);
+        self.apply_erosion_deposition();
+        self.update_transported_sediment(TIME_DELTA);
     }
 
     pub fn rain(&mut self, drop_count: u32, drop_size: Float) {
@@ -140,11 +147,51 @@ impl HydraulicErosion {
         for axis in 0..2 {
             let flow_avg = flow_delta[axis] / 2.;
             let d = water_delta / 2.;
-            new_velocity[axis] = flow_avg / (d * self.grid_distance[(axis + 1 % 2)]);
+            new_velocity[axis] = flow_avg / (d * self.grid_distance[(axis + 1) % 2]);
+            if new_velocity[axis] * time_delta > self.grid_distance[axis] {
+                warn!("Stability: Product of velocity and time bigger than grid distance: {} * {} > {}", new_velocity[axis], time_delta, self.grid_distance[axis]);
+            }
         }
+        
         let cell = self.get_cell_mut(pos);
         cell.mod_water(water_delta);
         cell.set_velocity(new_velocity);
+    }
+
+    fn apply_erosion_deposition(&mut self) {
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                self.update_cell_normal(&[x, y]);
+                let mut cell = self.get_cell_mut(&[x, y]);
+                cell.update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
+                cell.apply_erosion_deposition(DISSOLVING_CONSTANT, DEPOSITION_CONSTANT);
+            }
+        }
+    }
+
+    fn update_transported_sediment(&mut self, time_delta: u32) {
+
+
+    }
+
+    fn update_cell_normal(&mut self, pos: &[i32; 2]) {
+        let cell = self.get_cell(pos);
+        let mut nb_height: [Float; 4] = [cell.get_water_level(),
+                                     cell.get_water_level(),
+                                     cell.get_water_level(),
+                                     cell.get_water_level()];
+        for dir in &NEIGHBOURS {
+            if let Some(nb) = self.get_neighbour(pos, *dir) {
+                let index: usize = (*dir).into();
+                nb_height[index] = nb.get_water_level();
+            }
+        }
+        let mut slope: [Float; 2] = [0., 0.];
+        for axis in 0..2 {
+            slope[axis] = nb_height[axis] - nb_height[axis + 2]; // top/right - bottom/left
+        }
+        let normal = normalize(Vector3::<Float>::new(slope[0], slope[1], 2.));
+        self.get_cell_mut(pos).set_normal(normal);
     }
 
     fn add_water_drop(&mut self, size: Float) {
@@ -191,4 +238,13 @@ impl HydraulicErosion {
     }
 }
 
-
+fn interpolate(p: [Float; 2], reference: [Float; 4]) -> Float {
+    let anchor = [p[0].floor() as i32, p[1].floor() as i32];
+    let a = anchor[0] as Float + 1. - p[0];
+    let b = p[0] - anchor[0] as Float;
+    let r_1 = a * reference[0] + b * reference[1];
+    let r_2 = a * reference[2] + b * reference[3];
+    let c = anchor[1] as Float + 1. - p[1];
+    let d = p[1] - anchor[1] as Float;
+    c * r_1 + d * r_2
+}

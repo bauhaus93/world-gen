@@ -1,4 +1,4 @@
-use glm::{ Vector2, Vector3, GenNum };
+use glm::{ Vector2, Vector3, GenNum, dot, sin, acos, length };
 
 use utility::Float;
 use super::direction::Direction;
@@ -41,6 +41,25 @@ impl Cell {
     pub fn set_velocity(&mut self, new_velocity: Vector2<Float>) {
         self.velocity = new_velocity;
     }
+    pub fn set_normal(&mut self, new_normal: Vector3<Float>) {
+        self.normal = new_normal;
+    }
+    pub fn update_transport_capacity(&mut self, sediment_capacity_constant: Float) {
+        let cosa = dot(self.normal, Vector3::new(0., 0., 1.));
+        let sin_alpha = Float::max(0.01, sin(acos(cosa)));
+        self.transport_capacacity = sediment_capacity_constant * sin_alpha * length(self.velocity);
+    }
+    pub fn apply_erosion_deposition(&mut self, dissolving_constant: Float, deposition_constant: Float) {
+        if self.transport_capacacity > self.suspended_sediment {
+            let dissolved_sediment = dissolving_constant * (self.transport_capacacity - self.suspended_sediment);
+            self.terrain_height -= dissolved_sediment;
+            self.suspended_sediment += dissolved_sediment;
+        } else {
+            let deposited_sediment = deposition_constant * (self.suspended_sediment - self.transport_capacacity);
+            self.terrain_height += deposited_sediment;
+            self.suspended_sediment -= deposited_sediment;
+        }
+    }
 }
 
 impl Default for Cell {
@@ -59,13 +78,3 @@ impl Default for Cell {
 }
 
 
-fn interpolate(p: [Float; 2], reference: [Float; 4]) -> Float {
-    let anchor = [p[0].floor() as i32, p[1].floor() as i32];
-    let a = anchor[0] as Float + 1. - p[0];
-    let b = p[0] - anchor[0] as Float;
-    let r_1 = a * reference[0] + b * reference[1];
-    let r_2 = a * reference[2] + b * reference[3];
-    let c = anchor[1] as Float + 1. - p[1];
-    let d = p[1] - anchor[1] as Float;
-    c * r_1 + d * r_2
-}

@@ -1,3 +1,4 @@
+use std::ops::Add;
 use rand::{ Rng, SeedableRng };
 use rand::rngs::SmallRng;
 use glm::{ Vector2, Vector3, GenNum, normalize };
@@ -71,6 +72,8 @@ impl HydraulicErosion {
         self.apply_waterflow(TIME_DELTA);
         self.apply_erosion_deposition();
         self.update_transported_sediment(TIME_DELTA);
+        self.apply_sediment_transportation();
+        self.apply_water_evaporation(TIME_DELTA);
     }
 
     pub fn rain(&mut self, drop_count: u32, drop_size: Float) {
@@ -110,22 +113,24 @@ impl HydraulicErosion {
 
     fn update_cell_outflow(&mut self, pos: &[i32; 2], flow_factor: Float, time_delta: Float) {
         let cell = self.get_cell(pos);
-        let mut new_flow = [0., 0., 0., 0.];
-        let mut flow_sum = 0.;
-        for dir in &NEIGHBOURS {
-            if let Some(nb) = self.get_neighbour(pos, *dir) {
-                let water_delta = cell.get_water_level() - nb.get_water_level();
-                let index: usize = Direction::into(*dir);
-                new_flow[index] = Float::max(0., cell.get_flow(*dir) + flow_factor * water_delta);
-                flow_sum += new_flow[index];
+        if cell.has_water() {
+            let mut new_flow = [0., 0., 0., 0.];
+            let mut flow_sum = 0.;
+            for dir in &NEIGHBOURS {
+                if let Some(nb) = self.get_neighbour(pos, *dir) {
+                    let water_delta = cell.get_water_level() - nb.get_water_level();
+                    let index: usize = Direction::into(*dir);
+                    new_flow[index] = Float::max(0., cell.get_flow(*dir) + flow_factor * water_delta);
+                    flow_sum += new_flow[index];
+                }
             }
-        }
-        let k = Float::min(1., (cell.get_water_height() * self.grid_distance[0] * self.grid_distance[1]) / (flow_sum * time_delta));
-        let cell = self.get_cell_mut(pos);
-        for dir in &NEIGHBOURS {
-            let index: usize = Direction::into(*dir);
-            let scaled_flow = k * new_flow[index];
-            cell.set_flow(*dir, scaled_flow);
+            let k = Float::min(1., (cell.get_water_height() * self.grid_distance[0] * self.grid_distance[1]) / (flow_sum * time_delta));
+            let cell = self.get_cell_mut(pos);
+            for dir in &NEIGHBOURS {
+                let index: usize = Direction::into(*dir);
+                let scaled_flow = k * new_flow[index];
+                cell.set_flow(*dir, scaled_flow);
+            }
         }
     }
 
@@ -143,36 +148,86 @@ impl HydraulicErosion {
             }
         }
         let water_delta = (time_delta * (flow_delta[0] + flow_delta[1])) / (self.grid_distance[0] * self.grid_distance[1]);
-        let mut new_velocity = Vector2::from_s(0.);
-        for axis in 0..2 {
-            let flow_avg = flow_delta[axis] / 2.;
-            let d = water_delta / 2.;
-            new_velocity[axis] = flow_avg / (d * self.grid_distance[(axis + 1) % 2]);
-            if new_velocity[axis] * time_delta > self.grid_distance[axis] {
-                warn!("Stability: Product of velocity and time bigger than grid distance: {} * {} > {}", new_velocity[axis], time_delta, self.grid_distance[axis]);
+        if water_delta.abs() > 1e-5 {
+            let mut new_velocity = Vector2::from_s(0.);
+            for axis in 0..2 {
+                let flow_avg = flow_delta[axis] / 2.;
+                let d = water_delta / 2.;
+                new_velocity[axis] = flow_avg / (d * self.grid_distance[(axis + 1) % 2]);
+                if new_velocity[axis] * time_delta > self.grid_distance[axis] {
+                    warn!("Stability: Product of velocity and time bigger than grid distance: {} * {} > {}", new_velocity[axis], time_delta, self.grid_distance[axis]);
+                }
             }
+            let cell = self.get_cell_mut(pos);
+            cell.mod_water(water_delta);
+            cell.set_velocity(new_velocity);
+        } else {
+            self.get_cell_mut(pos).set_water(0.);
         }
-        
-        let cell = self.get_cell_mut(pos);
-        cell.mod_water(water_delta);
-        cell.set_velocity(new_velocity);
     }
 
     fn apply_erosion_deposition(&mut self) {
         for y in 0..self.size[1] {
             for x in 0..self.size[0] {
-                self.update_cell_normal(&[x, y]);
-                let mut cell = self.get_cell_mut(&[x, y]);
-                cell.update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
-                cell.apply_erosion_deposition(DISSOLVING_CONSTANT, DEPOSITION_CONSTANT);
+                if self.get_cell(&[x, y]).has_water() {
+                    self.update_cell_normal(&[x, y]);
+                    let cell = self.get_cell_mut(&[x, y]);
+                    cell.update_transport_capacity(SEDIMENT_CAPACITY_CONSTANT);
+                    cell.apply_erosion_deposition(DISSOLVING_CONSTANT, DEPOSITION_CONSTANT);
+                }
             }
         }
     }
 
-    fn update_transported_sediment(&mut self, time_delta: u32) {
-
-
+    fn update_transported_sediment(&mut self, time_delta: Float) {
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                let transported_sediment = self.calculate_transported_sediment(&[x, y], time_delta);
+                debug_assert!(!transported_sediment.is_nan());
+                self.get_cell_mut(&[x, y]).set_transported_sediment(transported_sediment);
+            }
+        }
     }
+
+    fn apply_sediment_transportation(&mut self) {
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                self.get_cell_mut(&[x, y]).apply_sediment_transportation();
+            }
+        }  
+    }
+
+    fn apply_water_evaporation(&mut self, time_delta: Float) {
+        let evap_factor = Float::max(0., 1. - EVAPORATION_CONSTANT * time_delta);
+        for y in 0..self.size[1] {
+            for x in 0..self.size[0] {
+                self.get_cell_mut(&[x, y]).apply_water_evaporation(evap_factor);
+            }
+        }     
+    }
+
+    fn calculate_transported_sediment(&mut self, pos: &[i32; 2], time_delta: Float) -> Float {
+        const OFFSETS: [[i32; 2]; 4] = [ [0, 0], [0, 1], [1, 0], [1, 1] ];
+        if self.get_cell(pos).has_velocity() {
+            let cell_pos = Vector2::new(pos[0] as Float, pos[1] as Float);
+            let source_pos = cell_pos.add(self.get_cell(pos).get_sediment_source_offset(time_delta));
+
+            let mut neighbour_values: [Float; 4] = [0., 0., 0., 0.];
+
+            let root: [i32; 2] = [Float::floor(source_pos.x) as i32, Float::floor(source_pos.y) as i32];
+            for (off, val) in OFFSETS.iter().zip(neighbour_values.iter_mut()) {
+                let position = [root[0] + off[0],
+                                root[1] + off[1]];
+                if self.in_boundary(&position) {
+                    *val = self.get_cell(&position).get_suspended_sediment();
+                }
+            }
+            interpolate([source_pos.x, source_pos.y], neighbour_values)
+        } else {
+            0.
+        }
+    }
+
 
     fn update_cell_normal(&mut self, pos: &[i32; 2]) {
         let cell = self.get_cell(pos);
@@ -209,12 +264,23 @@ impl HydraulicErosion {
          self.rng.gen_range(0, self.size[1])]
     }
 
-    fn get_cell(&self, pos: &[i32; 2]) -> &Cell {
+    fn in_boundary(&self, pos: &[i32; 2]) -> bool {
+        pos[0] >= 0 && pos[0] < self.size[0] &&
+        pos[1] >= 0 && pos[1] < self.size[1]
+    }
+
+    fn pos_to_index(&self, pos: &[i32; 2]) -> usize {
+        debug_assert!(self.in_boundary(pos));
         let index = (pos[1] * self.size[0] + pos[0]) as usize;
-        &self.cells[index]
+        debug_assert!(index < self.cells.len());
+        index
+    }
+
+    fn get_cell(&self, pos: &[i32; 2]) -> &Cell {
+        &self.cells[self.pos_to_index(pos)]
     }
     fn get_cell_mut(&mut self, pos: &[i32; 2]) -> &mut Cell {
-        let index = (pos[1] * self.size[0] + pos[0]) as usize;
+        let index = self.pos_to_index(pos);
         &mut self.cells[index]
     }
 

@@ -28,7 +28,7 @@ impl TextureArray {
 
 impl Drop for TextureArray {
     fn drop(&mut self) {
-        debug!("Deleting texture id = {}", self.texture_id);
+        debug!("Deleting texture array id = {}", self.texture_id);
         unsafe { gl::DeleteTextures(1, &self.texture_id); }
         match check_opengl_error("gl::DeleteTextures") {
             Ok(_) => {},

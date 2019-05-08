@@ -1,4 +1,3 @@
-use std::cmp::min;
 use gl;
 use image;
 use image::GenericImageView;
@@ -33,7 +32,7 @@ impl TextureArrayBuilder {
     pub fn finish(self) -> Result<TextureArray, GraphicsError> {
         info!("Creating texture array");
         let mipmaps = {
-            let dim = min(self.texture_size[0], self.texture_size[1]) as Float;
+            let dim = u32::min(self.texture_size[0], self.texture_size[1]) as Float;
             dim.log(2.0) as u32
         };
         let layer_count: u32 = self.texture_origin_indices.len() as u32;
@@ -152,7 +151,5 @@ fn add_subimage(texture_id: GLuint, size: [GLsizei; 2], layer: GLsizei, sub_imag
  
 fn delete_texture(texture_id: GLuint) {
     debug_assert!(texture_id != 0);
-    unsafe {
-        gl::DeleteTextures(1, &texture_id);
-    }
+    unsafe { gl::DeleteTextures(1, &texture_id); }
 }

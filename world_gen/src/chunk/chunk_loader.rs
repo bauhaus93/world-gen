@@ -6,7 +6,6 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use crate::erosion::hydraulic_erosion::HydraulicErosion;
 use super::{ chunk::Chunk, chunk_builder::ChunkBuilder, architect::Architect, chunk_error::ChunkError };
 use super::chunk_size::CHUNK_SIZE;
 
@@ -153,10 +152,7 @@ fn worker(architect: Arc<Architect>,
             let build_start = time::Instant::now();
             let mut builder = ChunkBuilder::new(pos);
             let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
-            let mut erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
-            //erosion.erode(1000, 30);
-            let height_map = erosion.create_heightmap();
-            builder.create_surface_buffer(&height_map);
+            builder.create_surface_buffer(&raw_height_map);
 
             let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
             match build_stats.lock() {

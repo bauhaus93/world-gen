@@ -9,8 +9,7 @@ use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureAr
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
 use crate::{ object::Object, camera::Camera, world_error::WorldError, };
-use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_builder::ChunkBuilder, architect::Architect, chunk_size::{ get_chunk_pos, CHUNK_SIZE } };
-use crate::erosion::hydraulic_erosion::HydraulicErosion;
+use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_size::get_chunk_pos };
 use crate::timer::Timer;
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -20,8 +19,6 @@ pub struct World {
     surface_shader_program: ShaderProgram,
     rng: StdRng,
     test_object: Object,
-    test_chunk: Box<Chunk>,
-    test_erosion: HydraulicErosion,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -64,15 +61,6 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        let mut builder = ChunkBuilder::new([0, 0]);
-        let architect = Architect::from_rng(&mut rng);
-        let raw_height_map = architect.create_height_map([0, 0], CHUNK_SIZE, 1.);
-        let erosion = HydraulicErosion::new(&raw_height_map, &mut rand::thread_rng());
-        let height_map = erosion.create_heightmap();
-        builder.create_surface_buffer(&height_map);
-        let test_chunk = builder.finish()?;
-
-
 
         let mut world = World {
             texture_array: texture_array,
@@ -80,8 +68,6 @@ impl World {
             surface_shader_program: surface_shader_program,
             rng: rng,
             test_object: test_object,
-            test_chunk: Box::new(test_chunk),
-            test_erosion: erosion,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
@@ -92,8 +78,8 @@ impl World {
 
         world.camera.set_translation(Vector3::new(0., 0., 200.));
 
-        //world.chunk_loader.start(8);
-        //world.request_chunks()?;
+        world.chunk_loader.start(8);
+        world.request_chunks()?;
 
         Ok(world)
     }
@@ -189,7 +175,6 @@ impl World {
         self.surface_shader_program.use_program();
 
         self.test_object.render(&self.camera, &self.surface_shader_program)?;
-        self.test_chunk.render(&self.camera, &self.surface_shader_program)?;
         for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.surface_shader_program)?;
         }
@@ -202,14 +187,6 @@ impl World {
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
         if self.chunk_update_timer.fires() {
-            self.test_erosion.rain(10, 1.);
-            self.test_erosion.simulate(10);
-            let height_map = self.test_erosion.create_heightmap();
-            let mut builder = ChunkBuilder::new([0, 0]);
-            builder.create_surface_buffer(&height_map);
-            self.test_chunk = Box::new(builder.finish()?);
-
-
             self.get_finished_chunks()?;
             let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
             let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];

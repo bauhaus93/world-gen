@@ -4,13 +4,13 @@ use std::cmp::{ min, max };
 use glm::{ Vector3 };
 
 use utility::Float;
-use graphics::mesh::{ Vertex, Triangle, Mesh, Buffer };
+use graphics::mesh::{ Vertex, Triangle, Mesh };
 use super::{ chunk::Chunk, chunk_error::ChunkError, height_map::HeightMap };
 use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkBuilder {
     pos: [i32; 2],
-    vertex_buffer: Option<Buffer>
+    vao_builder: VAOBuilder
 }
 
 impl ChunkBuilder {
@@ -37,7 +37,8 @@ impl ChunkBuilder {
             }
         }
         trace!("Created chunk vertices for {}/{}: triangle count = {}", self.pos[0], self.pos[1], triangles.len());
-        self.vertex_buffer = Some(Buffer::from(triangles))
+        self.vao_builder = VAOBuilder::new()
+            
     }
 }
 

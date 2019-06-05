@@ -23,6 +23,7 @@ enum Buffer {
 impl VertexBuffer {
     // TODO: maybe use Vec<>, avoid unnecessary clone
     pub fn add_float_buffer(&mut self, buffer_data: &[Float], attribute_index: u32, element_count: u32) {
+        trace!("Adding float buffer to vertex buffer, size = {}, attribute index = {}, count = {}", buffer_data.len(), attribute_index, element_count);
         let buffer = Buffer::Float {
             data: buffer_data.into(),
             attribute_index: attribute_index.try_into().unwrap(),
@@ -32,6 +33,7 @@ impl VertexBuffer {
     }
 
     pub fn set_index_buffer(&mut self, index_data: &[GLuint]) {
+        trace!("Adding index buffer to vertex buffer, size = {}", index_data.len());
         self.index_list = index_data.into();
     }
 }
@@ -120,7 +122,9 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
     match check_opengl_error("gl::BindVertexArray") {
         Ok(_) => {},
         Err(e) => {
-            delete_vao(vao);
+            if let Err(new_err) = delete_vao(vao) {
+                error!("Additional error: {}", new_err);
+            }
             return Err(e);
         }
     }
@@ -170,7 +174,9 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
 fn disable_vao(vao: GLuint) -> Result<(), OpenglError> {
     unsafe { gl::BindVertexArray(0); }
     if let Err(e) = check_opengl_error("gl::BindVertexArray") {
-        delete_vao(vao);
+        if let Err(new_err) = delete_vao(vao) {
+            error!("Additional error: {}", new_err);
+        }
         Err(e)
     } else {
         Ok(())

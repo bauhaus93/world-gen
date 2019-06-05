@@ -1,7 +1,6 @@
-use std::convert::TryFrom;
+use std::convert::{ TryFrom, TryInto };
 
-use crate::mesh::{ VAO, Triangle, MeshError, read_obj::read_obj };
-use crate::mesh::vao_creation::create_vao_from_triangles;
+use crate::mesh::{ VAO, Triangle, MeshError, VertexBuffer, read_obj };
 
 pub struct Mesh {
     vao: Option<VAO>
@@ -38,9 +37,20 @@ impl Default for Mesh {
 impl TryFrom<&[Triangle]> for Mesh {
     type Error = MeshError;
     fn try_from(triangles: &[Triangle]) -> Result<Self, Self::Error> {
-        let vao = create_vao_from_triangles(triangles)?;
+        info!("Creating mesh from triangles");
+        let vb = VertexBuffer::from(triangles);
         let mesh = Self {
-            vao: Some(vao)
+            vao: Some(vb.try_into()?)
+        };
+        Ok(mesh)
+    }
+}
+
+impl TryFrom<VertexBuffer> for Mesh {
+    type Error = MeshError;
+    fn try_from(vb: VertexBuffer) -> Result<Self, Self::Error> {
+        let mesh = Self {
+            vao: Some(vb.try_into()?)
         };
         Ok(mesh)
     }

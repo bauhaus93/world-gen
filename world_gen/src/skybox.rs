@@ -6,7 +6,7 @@ use crate::WorldError;
 pub struct Skybox {
     shader: ShaderProgram,
     texture: Texture,
-    box_data: Object
+    //box_data: Object
 }
 
 impl Skybox {
@@ -18,6 +18,11 @@ impl Skybox {
             .add_resource("texture")
             .finish()?;
         let texture = Texture::new(img_file)?;
-    
+        let sb = Skybox {
+            shader: shader,
+            texture: texture,
+            //box_data: Object::default()
+        };
+        Ok(sb)
     }
 }

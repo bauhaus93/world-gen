@@ -3,7 +3,7 @@ use std::ops::Add;
 use rand::Rng;
 use glm::{ Vector3, GenNum, normalize };
 
-use graphics::mesh::{ Vertex, Triangle, Buffer };
+use graphics::mesh::{ Vertex, Triangle, VertexBuffer };
 use utility::Float;
 use super::part::Part;
 
@@ -123,8 +123,8 @@ impl Branch {
         triangles
     }
 
-    pub fn build_buffer(&self, point_count: u32) -> Buffer {
-        Buffer::from(self.build_triangles(point_count).as_slice())
+    pub fn build_buffer(&self, point_count: u32) -> VertexBuffer {
+        VertexBuffer::from(self.build_triangles(point_count).as_slice())
     }
 
     fn create_triangles(&self, bottom_ring: &[Vector3<Float>], top_ring: &[Vector3<Float>]) -> Vec<Triangle> {

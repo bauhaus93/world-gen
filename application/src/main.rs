@@ -18,7 +18,7 @@ use log::Record;
 use crate::application::Application;
 
 fn main() {
-    const WINDOW_SIZE: [f64; 2]= [1920., 1080.];
+    const WINDOW_SIZE: [f64; 2]= [1024., 768.];
 
     init_custom_logger();
 

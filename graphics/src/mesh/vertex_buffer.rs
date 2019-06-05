@@ -1,80 +1,115 @@
 use std::{ ffi::c_void, mem::size_of };
+use std::collections::btree_map::{ BTreeMap, Entry };
 use std::convert::TryInto;
+
 use gl;
-use gl::types::{ GLint, GLuint, GLenum, GLsizeiptr };
+use gl::types::{ GLuint, GLint, GLenum, GLsizeiptr };
 
-use crate::{ check_opengl_error, OpenglError };
 use utility::Float;
-use crate::mesh::utility:: { delete_vao, delete_vbos };
-use super::VAO;
+use crate::{ check_opengl_error, OpenglError };
+use crate::mesh::utility::{ delete_vao, delete_vbos };
+use super::{ VAO, Triangle, Vertex, MeshError };
 
-pub enum Buffer {
-    Float { data: Vec<Float>, attribute_index: GLuint, tuple_size: GLint },
-    Index { data: Vec<GLuint> }
-}
-
-pub struct VAOBuilder {
+pub struct VertexBuffer {
     buffer_list: Vec<Buffer>,
-    element_type: GLenum,
-    index_count: GLuint
+    index_list: Vec<GLuint>,
+    element_type: GLenum
 }
 
-impl VAOBuilder {
+enum Buffer {
+    Float { data: Vec<Float>, attribute_index: GLuint, element_count: GLint }
+}
 
-    pub fn new() -> Self {
-        VAOBuilder {
+impl VertexBuffer {
+    // TODO: maybe use Vec<>, avoid unnecessary clone
+    pub fn add_float_buffer(&mut self, buffer_data: &[Float], attribute_index: u32, element_count: u32) {
+        let buffer = Buffer::Float {
+            data: buffer_data.into(),
+            attribute_index: attribute_index.try_into().unwrap(),
+            element_count: element_count.try_into().unwrap()
+        };
+        self.buffer_list.push(buffer);
+    }
+
+    pub fn set_index_buffer(&mut self, index_data: &[GLuint]) {
+        self.index_list = index_data.into();
+    }
+}
+
+impl Default for VertexBuffer {
+    fn default() -> VertexBuffer {
+        VertexBuffer {
             buffer_list: Vec::new(),
-            element_type: gl::TRIANGLES,
-            index_count: 0
+            index_list: Vec::new(),
+            element_type: gl::TRIANGLES
         }
     }
+}
 
-    pub fn set_triangle(mut self) -> Self {
-        self.element_type = gl::TRIANGLES;
-        self
-    }
+impl TryInto<VAO> for VertexBuffer {
+    type Error = MeshError;
 
-    pub fn add_float_buffer(mut self, data: &[Float], attribute_index: u32, tuple_size: u32) -> Self {
-        let buffer = Buffer::Float {
-            data: Vec::<Float>::from(data),
-            attribute_index: attribute_index.try_into().unwrap(),
-            tuple_size: tuple_size.try_into().unwrap()
-        };
-        self.buffer_list.push(buffer);
-        
-        self
-    }
-    pub fn add_index_buffer(mut self, data: &[GLuint]) -> Self {
-        self.index_count = data.len().try_into().unwrap();
-        let buffer = Buffer::Index {
-            data: Vec::<GLuint>::from(data)
-        };
-        self.buffer_list.push(buffer);
-        
-        self
-    }
-
-    pub fn finish(self) -> Result<VAO, OpenglError> {
-        let vbo_ids = create_vbos(&self.buffer_list)?;
+    fn try_into(self) -> Result<VAO, Self::Error> {
+        let vbo_ids = create_vbos(&self.index_list, &self.buffer_list)?;
         let vao_id = match create_vao(&vbo_ids, &self.buffer_list) {
             Ok(id) => id,
             Err(e) => {
                 if let Err(new_err) = delete_vbos(&vbo_ids) {
                     error!("Additional error: {}", new_err);
                 }
-                return Err(e);
+                return Err(e.into());
             }
         };
 
-        debug_assert!(self.element_type == gl::TRIANGLES);
-        let vao = VAO::new(vao_id, &vbo_ids, self.element_type, self.index_count);
+        let vao = VAO::new(
+            vao_id,
+            &vbo_ids,
+            self.element_type,
+            self.index_list.len().try_into().unwrap()
+        );
         Ok(vao)
     }
+}
 
+impl From<&[Triangle]> for VertexBuffer {
+    fn from(triangles: &[Triangle]) -> VertexBuffer {
+        let mut indexed_vertices: BTreeMap<Vertex, GLuint> = BTreeMap::new();
+        let mut position_buffer: Vec<Float> = Vec::new();
+        let mut uv_buffer: Vec<Float> = Vec::new();
+        let mut normal_buffer: Vec<Float> = Vec::new();
+        let mut index_buffer: Vec<GLuint> = Vec::new();
+        for triangle in triangles.iter() {
+            for vertex in triangle.as_vertices() {
+                match indexed_vertices.entry(*vertex) {
+                    Entry::Occupied(o) => {
+                        index_buffer.push(*o.get());
+                    },
+                    Entry::Vacant(v) => {
+                        debug_assert!(position_buffer.len() % 3 == 0);
+                        debug_assert!(uv_buffer.len() % 3 == 0);
+                        debug_assert!(normal_buffer.len() % 3 == 0);
+                        let new_index = (position_buffer.len() / 3) as GLuint;
+                        position_buffer.extend(vertex.get_pos().as_array());
+                        uv_buffer.extend(vertex.get_uv().as_array());
+                        normal_buffer.extend(triangle.get_normal().as_array());
+                        index_buffer.push(new_index);
+                        v.insert(new_index);
+                    }
+                }
+            }
+        }
+        let mut buffer = VertexBuffer::default();
+        buffer.add_float_buffer(&position_buffer, 0, 3);
+        buffer.add_float_buffer(&uv_buffer, 1, 3);
+        buffer.add_float_buffer(&normal_buffer, 2, 3);
+        buffer.set_index_buffer(&index_buffer);
+
+        buffer
+    }
 }
 
 fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglError> {
-    debug_assert!(vbos.len() == buffer_list.len());
+    debug_assert!(vbos.len() == 1 + buffer_list.len()); // 1+ because vbo @ 0 is index vbo
     debug_assert!(vbos.iter().all(|v| *v != 0));
     let mut vao: GLuint = 0;
 
@@ -90,26 +125,16 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
         }
     }
 
-    for (vbo, buffer) in vbos.iter().zip(buffer_list.iter()) {
+    for (vbo, buffer) in vbos.iter().skip(1).zip(buffer_list.iter()) {
         match buffer {
-            Buffer::Float { attribute_index, tuple_size, .. } => {
+            Buffer::Float { attribute_index, element_count, .. } => {
                 let result = assign_buffer_to_vao(
                     *vbo,
                     *attribute_index,
-                    *tuple_size,
+                    *element_count,
                     gl::FLOAT
                 );
-
                 if let Err(e) = result {
-                    if let Err(new_err) = delete_vao(vao) {
-                        error!("Additional error: {}", new_err);
-                    }
-                    return Err(e);
-                }
-            },
-            Buffer::Index { .. } => {
-                unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, *vbo); }
-                if let Err(e) = check_opengl_error("gl::BindBuffer") {
                     if let Err(new_err) = delete_vao(vao) {
                         error!("Additional error: {}", new_err);
                     }
@@ -117,6 +142,14 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
                 }
             }
         }
+    }
+
+    unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, vbos[0]); }
+    if let Err(e) = check_opengl_error("gl::BindBuffer") {
+        if let Err(new_err) = delete_vao(vao) {
+            error!("Additional error: {}", new_err);
+        }
+        return Err(e);
     }
 
     if let Err(e) = disable_vao(vao) {
@@ -166,10 +199,10 @@ fn assign_buffer_to_vao(vbo: GLuint, index: GLuint, size: GLint, data_type: GLen
     Ok(())
 }
 
-fn create_vbos(buffer_list: &[Buffer]) -> Result<Vec<GLuint>, OpenglError> {
-    let vbos = create_vbo_ids(buffer_list.len())?;
+fn create_vbos(index_list: &[GLuint], buffer_list: &[Buffer]) -> Result<Vec<GLuint>, OpenglError> {
+    let vbos = create_vbo_ids(buffer_list.len() + 1)?;
 
-    for (buffer, vbo) in buffer_list.iter().zip(vbos.iter()) {
+    for (buffer, vbo) in buffer_list.iter().skip(1).zip(vbos.iter()) {
         match buffer {
             Buffer::Float { data, .. } => {
                 let buffer_size = data.len() * size_of::<Float>();
@@ -185,21 +218,20 @@ fn create_vbos(buffer_list: &[Buffer]) -> Result<Vec<GLuint>, OpenglError> {
                     }
                     return Err(e);
                 }
-            },
-            Buffer::Index { data } => {
-                let buffer_size = data.len() * size_of::<GLuint>();
-                let result = fill_vbo(
-                    *vbo,
-                    gl::ELEMENT_ARRAY_BUFFER,
-                    buffer_size.try_into().unwrap(),
-                    data.as_ptr() as * const _
-                );
-                if let Err(e) = result {
-                    if let Err(new_err) = delete_vbos(&vbos) {
-                        error!("Additional error: {}", new_err);
-                    }
-                }
             }
+        }
+    }
+
+    let buffer_size = index_list.len() * size_of::<GLuint>();
+    let result = fill_vbo(
+        vbos[0],
+        gl::ELEMENT_ARRAY_BUFFER,
+        buffer_size.try_into().unwrap(),
+        index_list.as_ptr() as * const _
+    );
+    if let Err(e) = result {
+        if let Err(new_err) = delete_vbos(&vbos) {
+            error!("Additional error: {}", new_err);
         }
     }
     Ok(vbos)
@@ -229,6 +261,3 @@ fn fill_vbo(
     }
     Ok(()) 
 }
-
-
-

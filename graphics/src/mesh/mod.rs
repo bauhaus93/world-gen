@@ -3,8 +3,7 @@ pub mod triangle;
 pub mod mesh;
 pub mod mesh_error;
 pub mod vao;
-pub mod vao_builder;
-mod vao_creation;
+pub mod vertex_buffer;
 mod read_obj;
 mod utility;
 
@@ -13,4 +12,5 @@ pub use self::triangle::Triangle;
 pub use self::mesh::Mesh;
 pub use self::mesh_error::MeshError;
 pub use self::vao::VAO;
-pub use self::vao_builder::VAOBuilder;
+pub use self::vertex_buffer::VertexBuffer;
+use self::read_obj::read_obj;

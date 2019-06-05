@@ -6,7 +6,7 @@
             "type": "shell",
             "options": {
                 "env": {
-                    "RUST_LOG":"application=debug,utility=debug,world_gen=debug,graphics=debug"
+                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
                 }
             },
             "command": "cargo",
@@ -28,7 +28,7 @@
             "type": "shell",
             "options": {
                 "env": {
-                    "RUST_LOG":"application=debug,utility=debug,world_gen=debug,graphics=debug"
+                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
                 }
             },
             "command": "cargo",

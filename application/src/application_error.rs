@@ -40,7 +40,7 @@ impl Error for ApplicationError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ApplicationError::Graphics(ref err) => Some(err),
             ApplicationError::World(ref err) => Some(err),

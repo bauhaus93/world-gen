@@ -39,7 +39,7 @@ impl Error for WorldError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             WorldError::Graphics(ref err) => Some(err),
             WorldError::Mesh(ref err) => Some(err),

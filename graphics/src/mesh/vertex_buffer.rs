@@ -161,12 +161,14 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
         if let Err(new_err) = delete_vao(vao) {
             error!("Additional error: {}", new_err);
         }
+        return Err(e);
     }
 
     if let Err(e) = disable_vertex_attributes(vbos.len()) {
         if let Err(new_err) = delete_vao(vao) {
             error!("Additional error: {}", new_err);
         }
+        return Err(e);
     }
 
     Ok(vao)

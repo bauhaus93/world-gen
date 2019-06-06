@@ -10,7 +10,7 @@ const DEFAULT_SCALE: Float = 1e-2;
 const DEFAULT_RANGE: [Float; 2]= [-1., 1.];
 
 pub struct OctavedNoise {
-    noise: Box<Noise>,
+    noise: Box<dyn Noise>,
     octaves: u8,
     roughness: Float,
     scale: Float,

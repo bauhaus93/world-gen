@@ -78,7 +78,7 @@ impl Error for GraphicsError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             GraphicsError::GlutinCreation(ref err) => Some(err),
             GraphicsError::GlutinContext(ref err) => Some(err),

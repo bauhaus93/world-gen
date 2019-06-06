@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use rand;
+#[allow(unused)]
 use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::Vector3;
@@ -17,7 +18,6 @@ pub struct World {
     texture_array: TextureArray,
     camera: Camera,
     surface_shader_program: ShaderProgram,
-    rng: StdRng,
     test_object: Object,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
@@ -66,7 +66,6 @@ impl World {
             texture_array: texture_array,
             camera: Camera::default(),
             surface_shader_program: surface_shader_program,
-            rng: rng,
             test_object: test_object,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),

@@ -33,7 +33,7 @@ impl Error for MeshError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             MeshError::File(ref err) => Some(err),
             MeshError::Opengl(ref err) => Some(err),

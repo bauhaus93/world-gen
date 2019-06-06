@@ -18,6 +18,7 @@ impl HeightMap {
         }
     }
 
+    #[allow(unused)]
     pub fn get_size(&self) -> [i32; 2] {
         self.size
     }
@@ -30,16 +31,17 @@ impl HeightMap {
     pub fn get(&self, pos: &[i32; 2]) -> Float {
         self.height_list[self.calculate_index(pos)]
     }
-
+    #[allow(unused)]
     pub fn set_by_index(&mut self, index: usize, height: Float) {
         self.height_list[index] = height;
     }
 
+    #[allow(unused)]
     pub fn get_by_index(&self, index: usize) -> Float {
         debug_assert!(index < self.height_list.len());
         self.height_list[index]
     }
-
+    #[allow(unused)]
     fn get_quad_heights(&self, anchor: [i32; 2]) -> [Float; 4] {
         [self.get(&anchor),
          self.get(&[anchor[0] + 1, anchor[1]]),

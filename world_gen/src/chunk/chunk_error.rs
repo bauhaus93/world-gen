@@ -26,7 +26,7 @@ impl Error for ChunkError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ChunkError::Mesh(ref err) => Some(err),
             ChunkError::NoBufferBuilt(_) => None,

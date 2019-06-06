@@ -4,16 +4,9 @@
         {
             "label": "run_release",
             "type": "shell",
-            "options": {
-                "env": {
-                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
-                }
+            "linux": {
+                "command": "${workspaceRoot}/scripts/run_release.sh"
             },
-            "command": "cargo",
-            "args": [
-                "run",
-                "--release"
-            ],
             "problemMatcher": [
                 "$rustc"
             ],
@@ -29,19 +22,12 @@
                 "clear": true
             }
         },
-
         {
             "label": "run_debug",
             "type": "shell",
-            "options": {
-                "env": {
-                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
-                }
+            "linux": {
+                "command": "${workspaceRoot}/scripts/run_debug.sh"
             },
-            "command": "cargo",
-            "args": [
-                "run",
-            ],
             "problemMatcher": [
                 "$rustc"
             ],

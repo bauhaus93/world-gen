@@ -39,7 +39,7 @@ impl Error for ShaderError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ShaderError::File(ref err) => Some(err),
             ShaderError::UnknownShaderType(_) => None,

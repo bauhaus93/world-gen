@@ -21,6 +21,10 @@ impl Skybox {
             .add_resource("mvp")
             .add_resource("texture_img")
             .finish()?;
+        if let Err(e) = shader.set_resource_integer("texture_img", 0) {
+            return Err(GraphicsError::from(e).into());
+        }
+
         let texture = Texture::new(img_file)?;
 
         let mesh = Mesh::from_obj(CUBE_PATH)?;

@@ -46,6 +46,11 @@ impl World {
             .add_resource("view_pos")
             .add_resource("light_pos")
             .finish()?;
+        
+        // setting texture slot to 0
+        if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
+            return Err(GraphicsError::from(e).into());
+        }
 
         let mut builder = TextureArrayBuilder::new("resources/img/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
@@ -162,6 +167,7 @@ impl World {
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
+        self.surface_shader_program.use_program();
         self.surface_shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
         self.surface_shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
         Ok(())
@@ -181,7 +187,7 @@ impl World {
         }
 
         self.texture_array.deactivate();
-        self.skybox.render(&self.camera)?;
+        //self.skybox.render(&self.camera)?;
         Ok(())
     }
 }

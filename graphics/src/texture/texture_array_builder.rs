@@ -30,7 +30,6 @@ impl TextureArrayBuilder {
     }
 
     pub fn finish(self) -> Result<TextureArray, GraphicsError> {
-        info!("Creating texture array");
         let mipmaps = {
             let dim = u32::min(self.texture_size[0], self.texture_size[1]) as Float;
             dim.log(2.0) as u32
@@ -42,7 +41,7 @@ impl TextureArrayBuilder {
             layer_count as GLsizei,
             mipmaps as GLsizei
         )?;
-        debug!("Id = {}, size = {}x{}x{}, mipmaps = {}", texture_id, self.texture_size[0], self.texture_size[1], layer_count, mipmaps);
+
 
         debug!("Opening atlas image '{}'", self.atlas_path);
         let img = match image::open(self.atlas_path.clone())? {
@@ -76,15 +75,18 @@ impl TextureArrayBuilder {
 }
 
 fn create_texture(size: (GLsizei, GLsizei), layers: GLsizei, mipmaps: GLsizei) -> Result<GLuint, OpenglError> {
+    info!("Creating texture array...");
     debug_assert!(size.0 > 0);
     debug_assert!(size.1 > 0);
     debug_assert!(layers > 0);
     let mut id: GLuint = 0;
     unsafe {
+        gl::ActiveTexture(gl::TEXTURE0);
         gl::GenTextures(1, &mut id);
     }
     check_opengl_error("gl::GenTextures")?;
     debug_assert!(id != 0);
+    debug!("Texture info: id = {}, size = {}x{}x{}, mipmaps = {}", id, size.0, size.1, layers, mipmaps);
     unsafe {
         gl::BindTexture(gl::TEXTURE_2D_ARRAY, id);
     }

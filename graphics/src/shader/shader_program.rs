@@ -23,17 +23,9 @@ impl ShaderProgram {
 
         program.use_program();
 
+        info!("Loading handles...");
         for res_name in resource_names.iter() {
             program.load_handle(res_name)?;
-        }
-
-        //defaults texture array slot to 0 (only if resource texture array is loaded)
-        match program.handles.get("texture_array") {
-            Some(handle) => {
-                unsafe { gl::Uniform1i(*handle, 0) }
-                check_opengl_error("gl::Uniform1i")?;
-            },
-            _ => {}
         }
 
         Ok(program)
@@ -48,9 +40,21 @@ impl ShaderProgram {
         unsafe { gl::UseProgram(self.id); }
     }
 
+    pub fn set_resource_integer(&self, resource_name: &str, value: i32) -> Result<(), ShaderProgramError> {
+        match self.handles.get(resource_name) {
+            Some(handle) => {
+                unsafe { gl::Uniform1i(*handle, value) }
+                check_opengl_error("gl::Uniform1i")?;
+                Ok(())
+            },
+            _ => Err(ShaderProgramError::HandleNotExisting(resource_name.to_string()))
+        }
+    }
+
     pub fn set_resource_mat4(&self, resource_name: &str, matrix: &Matrix4<Float>) -> Result<(), ShaderProgramError> {
         match self.handles.get(resource_name) {
             Some(handle) => {
+
                 unsafe { gl::UniformMatrix4fv(*handle, 1, gl::FALSE, matrix.as_array().as_ptr() as * const Float); }
                 check_opengl_error("gl::UniformMatrix4fv")?;
                 Ok(())
@@ -62,8 +66,7 @@ impl ShaderProgram {
         match self.handles.get(resource_name) {
             Some(handle) => {
                 unsafe { gl::Uniform3fv(*handle, 1, vector.as_array().as_ptr() as * const Float); }
-                check_opengl_error("gl::UniformMatrix4fv")?;
-                Ok(())
+                 Ok(())
             },
             _ => { Err(ShaderProgramError::HandleNotExisting(resource_name.to_string())) }
         }

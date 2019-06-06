@@ -44,7 +44,7 @@ impl fmt::Display for ShaderProgramError {
             ShaderProgramError::Linkage(ref program_log) => write!(f, "{}: {}", self.description(), program_log),
             ShaderProgramError::Opengl(ref err) => write!(f, "{}/{}", self.description(), err),
             ShaderProgramError::FunctionFailure(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            ShaderProgramError::HandleNotExisting(ref handle_name) => write!(f, "{} @ {}", self.description(), handle_name)
+            ShaderProgramError::HandleNotExisting(ref handle_name) => write!(f, "{}: '{}'", self.description(), handle_name)
         }
     }
 }

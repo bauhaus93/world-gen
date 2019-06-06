@@ -43,5 +43,35 @@
                 "clear": true
             }
         },
+        {
+            "label": "resource_compress",
+            "type": "shell",
+            "linux": {
+                "command": "${workspaceRoot}/scripts/resource_compress.sh"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "resource_extract",
+            "type": "shell",
+            "linux": {
+                "command": "${workspaceRoot}/scripts/resource_extract.sh"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        }
     ]
 }

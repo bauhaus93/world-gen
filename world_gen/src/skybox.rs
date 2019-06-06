@@ -1,5 +1,6 @@
 use glm::{ Vector3, GenNum };
 
+use utility::Float;
 use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, GraphicsError };
 use crate::{ Model, Camera, WorldError };
 use crate::traits::{ Translatable, Scalable };
@@ -8,7 +9,8 @@ pub struct Skybox {
     texture: Texture,
     shader: ShaderProgram,
     model: Model,
-    mesh: Mesh
+    mesh: Mesh,
+    origin_z: Float
 }
 
 impl Skybox {
@@ -29,8 +31,7 @@ impl Skybox {
         let texture = Texture::new(img_file)?;
 
         let mut model = Model::default();
-        model.set_translation(Vector3::new(0., 0., 250.));
-        model.set_scale(Vector3::from_s(100.));
+        model.set_scale(Vector3::from_s(750.));
 
         let mesh = Mesh::from_obj(CUBE_PATH)?;
 
@@ -38,7 +39,8 @@ impl Skybox {
             shader: shader,
             texture: texture,
             model: model,
-            mesh: mesh
+            mesh: mesh,
+            origin_z: 100.
         };
 
         Ok(sb)
@@ -55,5 +57,15 @@ impl Skybox {
 
         self.texture.deactivate();
         Ok(())
+    }
+}
+
+impl Translatable for Skybox {
+    fn set_translation(&mut self, mut new_translation: Vector3<Float>) {
+        new_translation[2] = self.origin_z;
+        self.model.set_translation(new_translation);
+    }
+    fn get_translation(&self) -> Vector3<Float> {
+        self.model.get_translation()
     }
 }

@@ -212,6 +212,9 @@ impl Updatable for World {
             self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
+
+        self.skybox.set_translation(self.camera.get_translation());
+        
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;
         self.chunk_build_stats_timer.tick(time_passed)?;

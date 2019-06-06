@@ -1,8 +1,6 @@
 use gl;
-use gl::types::{ GLint, GLuint, GLsizei };
+use gl::types::{ GLuint, GLsizei };
 use image;
-use image::GenericImageView;
-
 
 use utility::Float;
 use crate::{ GraphicsError, OpenglError, check_opengl_error };

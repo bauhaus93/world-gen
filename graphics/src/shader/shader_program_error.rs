@@ -28,7 +28,7 @@ impl Error for ShaderProgramError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ShaderProgramError::Linkage(_) => None,
             ShaderProgramError::Opengl(ref err) => Some(err),

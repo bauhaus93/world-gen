@@ -8,7 +8,7 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn from_obj(obj_path: &str) -> Result<Mesh, MeshError> {
-        Self::try_from((read_obj(obj_path)?).as_slice())
+           Self::try_from((read_obj(obj_path)?).as_slice())
     }
 
     pub fn get_vertex_count(&self) -> u32 {

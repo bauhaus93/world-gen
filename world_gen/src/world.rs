@@ -18,7 +18,7 @@ pub struct World {
     camera: Camera,
     surface_shader_program: ShaderProgram,
     test_object: Object,
-    //skybox: Skybox,
+    skybox: Skybox,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -61,14 +61,14 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        //let skybox = Skybox::new("resources/img/sky.png")?;
+        let skybox = Skybox::new("resources/img/sky.png")?;
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             surface_shader_program: surface_shader_program,
             test_object: test_object,
-            //skybox: skybox,
+            skybox: skybox,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
@@ -181,7 +181,7 @@ impl World {
         }
 
         self.texture_array.deactivate();
-        //self.skybox.render(&self.camera)?;
+        self.skybox.render(&self.camera)?;
         Ok(())
     }
 }

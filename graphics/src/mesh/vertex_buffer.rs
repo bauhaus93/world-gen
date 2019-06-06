@@ -115,7 +115,7 @@ impl From<&[Triangle]> for VertexBuffer {
         }
         let mut buffer = VertexBuffer::default();
         buffer.add_float_buffer(&position_buffer, 0, 3);
-        buffer.add_float_buffer(&uv_buffer, 1, 3);
+        buffer.add_float_buffer(&uv_buffer, 1, uv_size as u32);
         buffer.add_float_buffer(&normal_buffer, 2, 3);
         buffer.set_index_buffer(&index_buffer);
 
@@ -264,7 +264,6 @@ fn create_vbos(index_list: &[GLuint], buffer_list: &[Buffer]) -> Result<Vec<GLui
 fn create_vbo_ids(size: usize) -> Result<Vec<GLuint>, OpenglError> {
     let mut vbos: Vec<GLuint> = Vec::with_capacity(size);
     vbos.resize(size, 0);
-    
     unsafe { gl::GenBuffers(size.try_into().unwrap(), vbos.as_mut_ptr() as * mut GLuint) };
     check_opengl_error("gl::GenBuffers")?;
 

@@ -1,7 +1,7 @@
+use std::convert::TryInto;
 use gl;
 use gl::types::{ GLint, GLuint, GLsizei };
 use image;
-use image::GenericImageView;
 
 
 use utility::Float;
@@ -13,13 +13,13 @@ pub struct Texture {
 
 impl Texture {
     pub fn new(img_path: &str) -> Result<Texture, GraphicsError> {
-
         debug!("Opening texture image '{}'", img_path);
         let texture_id = match image::open(img_path.clone())? {
             image::DynamicImage::ImageRgba8(img) => {
-                let img_size = (img.width() as GLsizei, img.height() as GLsizei);
+                let img_size = [img.width() as GLsizei,
+                                img.height() as GLsizei];
                 let mipmaps = {
-                    let dim = GLsizei::min(img_size.0, img_size.1) as Float;
+                    let dim = GLsizei::min(img_size[0], img_size[1]) as Float;
                     dim.log(2.0) as GLsizei
                 };
                 let raw_data = img.into_raw();
@@ -59,33 +59,41 @@ impl Drop for Texture {
     }
 }
 
-fn create_texture(size: (GLsizei, GLsizei), mipmaps: GLsizei, img_data: &[u8]) -> Result<GLuint, OpenglError> {
-    debug_assert!(size.0 > 0);
-    debug_assert!(size.1 > 0);
+fn create_texture(size: [GLsizei; 2], mipmaps: GLsizei, img_data: &[u8]) -> Result<GLuint, OpenglError> {
+    debug!("Creating texture with dimension {}x{}", size[0], size[1]);
+    debug_assert!(size[0] >= 0 && size[0] <= gl::MAX_TEXTURE_SIZE.try_into().unwrap());
+    debug_assert!(size[1] >= 0 && size[1] <= gl::MAX_TEXTURE_SIZE.try_into().unwrap());
+    debug_assert!(mipmaps >= 0 && mipmaps <= (gl::MAX_TEXTURE_SIZE as f32).log(2.) as i32);
+    debug_assert!(!img_data.as_ptr().is_null());
+    check_opengl_error("BEFORE ALSO NOT OK!")?;
+
     let mut id: GLuint = 0;
     unsafe { gl::GenTextures(1, &mut id); }
     check_opengl_error("gl::GenTextures")?;
     debug_assert!(id != 0);
+
     unsafe { gl::BindTexture(gl::TEXTURE_2D, id); }
-    match check_opengl_error("gl::BindTexture") {
-        Ok(_) => {},
-        Err(e) => {
-            delete_texture(id);
-            return Err(e);
-        }
+    if let Err(e) = check_opengl_error("gl::BindTexture") {
+        delete_texture(id);
+        return Err(e);
     }
+
     unsafe {
         gl::TexImage2D(
             gl::TEXTURE_2D,
             mipmaps,
-            gl::RGBA8 as GLsizei,
-            size.0,
-            size.1,
+            gl::RGBA.try_into().unwrap(),
+            size[0].try_into().unwrap(),
+            size[1].try_into().unwrap(),
             0,
             gl::RGBA,
             gl::UNSIGNED_BYTE,
             img_data.as_ptr() as * const _
         );
+    }
+    if let Err(e) = check_opengl_error("gl::TexImage2D") {
+        delete_texture(id);
+        return Err(e);
     }
     Ok(id)
 }

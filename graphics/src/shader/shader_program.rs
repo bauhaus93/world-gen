@@ -23,7 +23,6 @@ impl ShaderProgram {
 
         program.use_program();
 
-        info!("Loading handles...");
         for res_name in resource_names.iter() {
             program.load_handle(res_name)?;
         }

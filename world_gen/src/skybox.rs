@@ -5,15 +5,15 @@ use crate::{ Model, Camera, WorldError };
 use crate::traits::{ Translatable, Scalable };
 
 pub struct Skybox {
-    shader: ShaderProgram,
     texture: Texture,
+    shader: ShaderProgram,
     model: Model,
     mesh: Mesh
 }
 
 impl Skybox {
     pub fn new(img_file: &str) -> Result<Self, WorldError> {
-        const CUBE_PATH: &'static str = "resources/obj/cube.obj";
+        const CUBE_PATH: &'static str = "resources/obj/cube_inward.obj";
         info!("Creating skybox from obj '{}' with img '{}'", CUBE_PATH, img_file);
 
         let shader = ShaderProgramBuilder::new()
@@ -46,8 +46,8 @@ impl Skybox {
 
     // caller must restore previously set shader/textures after call
     pub fn render(&self, camera: &Camera) -> Result<(), GraphicsError> {
-        self.shader.use_program();
         self.texture.activate();
+        self.shader.use_program();
 
         let mvp = camera.create_mvp_matrix(&self.model);
         self.shader.set_resource_mat4("mvp", &mvp)?;

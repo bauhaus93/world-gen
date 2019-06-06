@@ -34,6 +34,7 @@ impl Texture {
             texture_id: texture_id
         };
         texture.deactivate();
+
         Ok(texture)
     }
 
@@ -67,14 +68,11 @@ fn create_texture(size: [GLsizei; 2], mipmaps: GLsizei, img_data: &[u8]) -> Resu
     debug_assert!(mipmaps >= 0 && mipmaps <= (gl::MAX_TEXTURE_SIZE as f32).log(2.) as i32);
     debug_assert!(!img_data.as_ptr().is_null());
 
-    info!("MAX = {}, mipmap_MAX = {}", gl::MAX_TEXTURE_SIZE, (gl::MAX_TEXTURE_SIZE as f32).log(2.).floor());
-
     let mut id: GLuint = 0;
     unsafe { gl::GenTextures(1, &mut id); }
     check_opengl_error("gl::GenTextures")?;
     debug!("Texture info: id = {}, size = {}x{}, mipmaps = {}", id, size[0], size[1], mipmaps);
     debug_assert!(id != 0);
-
 
     unsafe {
         gl::ActiveTexture(gl::TEXTURE0);
@@ -86,19 +84,31 @@ fn create_texture(size: [GLsizei; 2], mipmaps: GLsizei, img_data: &[u8]) -> Resu
     }
 
     unsafe {
-        gl::TexImage2D(
+        gl::TexStorage2D(
             gl::TEXTURE_2D,
-            4,//mipmaps,    // TODO: check why mipmaps > 4 throw invalid value error
-            gl::RGBA8.try_into().unwrap(),
+            mipmaps as GLsizei,
+            gl::RGBA8,
             size[0].try_into().unwrap(),
             size[1].try_into().unwrap(),
+        );
+    }
+    if let Err(e) = check_opengl_error("gl::TexStorage2D") {
+        delete_texture(id);
+        return Err(e);
+    }
+    unsafe {
+        gl::TexSubImage2D(
+            gl::TEXTURE_2D,
             0,
+            0, 0,
+            size[0], size[1],
             gl::RGBA,
             gl::UNSIGNED_BYTE,
             img_data.as_ptr() as * const _
         );
     }
-    if let Err(e) = check_opengl_error("gl::TexImage2D") {
+
+    if let Err(e) = check_opengl_error("gl::TexStorage2D") {
         delete_texture(id);
         return Err(e);
     }

@@ -149,6 +149,7 @@ fn create_vao(vbos: &[GLuint], buffer_list: &[Buffer]) -> Result<GLuint, OpenglE
     }
 
     unsafe { gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, vbos[0]); }
+
     if let Err(e) = check_opengl_error("gl::BindBuffer") {
         if let Err(new_err) = delete_vao(vao) {
             error!("Additional error: {}", new_err);
@@ -208,7 +209,7 @@ fn assign_buffer_to_vao(vbo: GLuint, index: GLuint, size: GLint, data_type: GLen
 fn create_vbos(index_list: &[GLuint], buffer_list: &[Buffer]) -> Result<Vec<GLuint>, OpenglError> {
     let vbos = create_vbo_ids(buffer_list.len() + 1)?;
 
-    for (buffer, vbo) in buffer_list.iter().skip(1).zip(vbos.iter()) {
+    for (buffer, vbo) in buffer_list.iter().zip(vbos.iter().skip(1)) {
         match buffer {
             Buffer::Float { data, .. } => {
                 let buffer_size = data.len() * size_of::<Float>();
@@ -239,6 +240,7 @@ fn create_vbos(index_list: &[GLuint], buffer_list: &[Buffer]) -> Result<Vec<GLui
         if let Err(new_err) = delete_vbos(&vbos) {
             error!("Additional error: {}", new_err);
         }
+        return Err(e)
     }
     Ok(vbos)
 }

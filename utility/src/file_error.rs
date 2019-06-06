@@ -40,7 +40,7 @@ impl Error for FileError {
         }
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             FileError::IO(ref err) => Some(err),
             FileError::ParseFloat(ref err) => Some(err),

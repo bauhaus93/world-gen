@@ -10,12 +10,12 @@ pub struct VAO {
     vao: GLuint,
     vbos: Vec<GLuint>,
     element_type: GLenum,
-    index_count: GLuint
+    index_count: GLint
 }
 
 impl VAO {
 
-    pub fn new(vao: GLuint, vbos: &[GLuint], element_type: GLenum, index_count: GLuint) -> Self {
+    pub fn new(vao: GLuint, vbos: &[GLuint], element_type: GLenum, index_count: GLint) -> Self {
         VAO {
             vao: vao,
             vbos: vbos.into(),
@@ -33,12 +33,12 @@ impl VAO {
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 self.element_type,
-                self.index_count as GLint,
+                self.index_count,
                 gl::UNSIGNED_INT,
                 ptr::null()
             );
             gl::BindVertexArray(0);
-        }
+         }
         check_opengl_error("Mesh::render")?;
         Ok(())
     }

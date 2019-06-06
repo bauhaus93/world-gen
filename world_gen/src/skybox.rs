@@ -30,14 +30,14 @@ impl Skybox {
 
         let mut model = Model::default();
         model.set_translation(Vector3::new(0., 0., 250.));
-        model.set_scale(Vector3::from_s(1000.));
+        model.set_scale(Vector3::from_s(100.));
 
         let mesh = Mesh::from_obj(CUBE_PATH)?;
 
         let sb = Skybox {
             shader: shader,
             texture: texture,
-            model: Model::default(),
+            model: model,
             mesh: mesh
         };
 

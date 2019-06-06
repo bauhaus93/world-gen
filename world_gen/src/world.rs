@@ -9,9 +9,8 @@ use glm::Vector3;
 use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
-use crate::{ object::Object, camera::Camera, world_error::WorldError, };
-use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_size::get_chunk_pos };
-use crate::timer::Timer;
+use crate::{ Timer, Object, Camera, WorldError, Skybox };
+use crate::chunk::{ Chunk, ChunkLoader, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
@@ -19,6 +18,7 @@ pub struct World {
     camera: Camera,
     surface_shader_program: ShaderProgram,
     test_object: Object,
+    //skybox: Skybox,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -47,7 +47,7 @@ impl World {
             .add_resource("light_pos")
             .finish()?;
 
-        let mut builder = TextureArrayBuilder::new("resources/atlas.png", [32, 32]);
+        let mut builder = TextureArrayBuilder::new("resources/img/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
             builder = builder.add_texture(tex);
         }
@@ -61,12 +61,14 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
+        //let skybox = Skybox::new("resources/img/sky.png")?;
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             surface_shader_program: surface_shader_program,
             test_object: test_object,
+            //skybox: skybox,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
@@ -77,7 +79,7 @@ impl World {
 
         world.camera.set_translation(Vector3::new(0., 0., 200.));
 
-        world.chunk_loader.start(8);
+        world.chunk_loader.start(1);
         world.request_chunks()?;
 
         Ok(world)
@@ -179,6 +181,7 @@ impl World {
         }
 
         self.texture_array.deactivate();
+        //self.skybox.render(&self.camera)?;
         Ok(())
     }
 }

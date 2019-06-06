@@ -35,9 +35,14 @@ impl Triangle {
         self.vertex[index] = vertex;
     }
 
-    #[allow(dead_code)]
     pub fn set_uv_layer(&mut self, uv_layer: u32) {
         self.vertex.iter_mut().for_each(|v| v.set_uv_layer(uv_layer));
+    }
+
+    pub fn get_uv_dim(&self) -> u8 {
+        debug_assert!(self.vertex[0].get_uv_dim() == self.vertex[1].get_uv_dim());
+        debug_assert!(self.vertex[1].get_uv_dim() == self.vertex[2].get_uv_dim());
+        self.vertex[0].get_uv_dim()
     }
 
     pub fn update_normal(&mut self) {

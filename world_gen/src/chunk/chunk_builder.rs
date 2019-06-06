@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::cmp::{ min, max };
 
-use glm::{ Vector3 };
+use glm::{ Vector2, Vector3 };
 
 use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, VertexBuffer };
@@ -55,7 +55,6 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
         let mut vertices: [Vertex; 3] = [Vertex::default(),
                                          Vertex::default(),
                                          Vertex::default()];
-        let texture_layer = 1.;
         for (vert, off) in vertices.iter_mut().zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3)) {
                 let map_pos = [offset[0] + max(0, min(1, off[0] as i32)),
                                offset[1] + max(0, min(1, off[1] as i32))];
@@ -64,11 +63,10 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
                                           offset[1] as Float + off[1],
                                           height));
                 debug_assert!(off[0] <= 1., off[1] <= 1.);
-                vert.set_uv(Vector3::new(off[0],
-                                         off[1],
-                                         texture_layer as Float));
+                vert.set_uv(Vector2::new(off[0], off[1]));
         }
         triangles[i] = Triangle::new(vertices);
     }
+    triangles.iter_mut().for_each(|t| t.set_uv_layer(1));
     triangles
 }

@@ -15,6 +15,11 @@ extern crate utility;
 pub use self::world::World;
 pub use self::world_error::WorldError;
 
+use self::camera::Camera;
+use self::object::Object;
+use self::skybox::Skybox;
+use self::timer::Timer;
+
 pub mod world;
 pub mod world_error;
 mod traits;

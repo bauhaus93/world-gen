@@ -1,4 +1,4 @@
-use glm::{ Vector3 };
+use glm::{ Vector2, Vector3 };
 
 use utility::{ read_file, FileError, Float };
 use crate::mesh::{ Triangle, Vertex };
@@ -15,7 +15,7 @@ pub fn read_obj(obj_path: &str) -> Result<Vec<Triangle>, FileError> {
             let uv = uvs[indices[1] - 1];
             //normals get calculated
             vert.set_pos(Vector3::new(pos[0], pos[1], pos[2]));
-            vert.set_uv(Vector3::new(uv[0], uv[1], 0.));
+            vert.set_uv(Vector2::new(uv[0], uv[1]));
             triangle.set_vertex(vert, i);
         }
         triangle.update_normal();

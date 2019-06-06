@@ -21,6 +21,7 @@ mod opengl_string;
 pub use self::shader::ShaderProgram;
 pub use self::shader::ShaderProgramBuilder;
 pub use self::texture::TextureArray;
+pub use self::texture::Texture;
 pub use self::texture::TextureArrayBuilder;
 pub use self::mesh::Mesh;
 pub use self::mesh::triangle::Triangle;

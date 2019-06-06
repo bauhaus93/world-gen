@@ -75,12 +75,14 @@ impl TryInto<VAO> for VertexBuffer {
 
 impl From<&[Triangle]> for VertexBuffer {
     fn from(triangles: &[Triangle]) -> VertexBuffer {
+        let uv_size = triangles[0].get_uv_dim();
         let mut indexed_vertices: BTreeMap<Vertex, GLuint> = BTreeMap::new();
         let mut position_buffer: Vec<Float> = Vec::new();
         let mut uv_buffer: Vec<Float> = Vec::new();
         let mut normal_buffer: Vec<Float> = Vec::new();
         let mut index_buffer: Vec<GLuint> = Vec::new();
         for triangle in triangles.iter() {
+            debug_assert!(triangle.get_uv_dim() == uv_size);
             for vertex in triangle.as_vertices() {
                 match indexed_vertices.entry(*vertex) {
                     Entry::Occupied(o) => {
@@ -88,11 +90,22 @@ impl From<&[Triangle]> for VertexBuffer {
                     },
                     Entry::Vacant(v) => {
                         debug_assert!(position_buffer.len() % 3 == 0);
-                        debug_assert!(uv_buffer.len() % 3 == 0);
+                        debug_assert!(uv_buffer.len() % (uv_size as usize) == 0);
                         debug_assert!(normal_buffer.len() % 3 == 0);
                         let new_index = (position_buffer.len() / 3) as GLuint;
                         position_buffer.extend(vertex.get_pos().as_array());
-                        uv_buffer.extend(vertex.get_uv().as_array());
+                        match uv_size {
+                            2 => {
+                                uv_buffer.extend(vertex.get_uv().as_array());
+                            },
+                            3 => {
+                                uv_buffer.extend(vertex.get_uv_layered().as_array());
+                            },
+                            unknown_dim => {
+                                panic!("Unknown uv dimension: {}", unknown_dim);
+                            }
+                        }
+                                
                         normal_buffer.extend(triangle.get_normal().as_array());
                         index_buffer.push(new_index);
                         v.insert(new_index);

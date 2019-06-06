@@ -24,4 +24,3 @@ mod model;
 mod object;
 mod noise;
 mod timer;
-mod skybox;

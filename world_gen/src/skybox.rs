@@ -1,13 +1,14 @@
 use glm::{ Vector3, GenNum };
 
 use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, GraphicsError };
-use crate::{ Object, Camera, WorldError };
-use crate::traits::{ Renderable, Scalable };
+use crate::{ Model, Camera, WorldError };
+use crate::traits::{ Translatable, Scalable };
 
 pub struct Skybox {
     shader: ShaderProgram,
     texture: Texture,
-    cube: Object
+    model: Model,
+    mesh: Mesh
 }
 
 impl Skybox {
@@ -18,8 +19,8 @@ impl Skybox {
         let shader = ShaderProgramBuilder::new()
             .add_vertex_shader("resources/shader/skybox/VertexShader.glsl")
             .add_fragment_shader("resources/shader/skybox/FragmentShader.glsl")
-            .add_resource("mvp")
             .add_resource("texture_img")
+            .add_resource("mvp")
             .finish()?;
         if let Err(e) = shader.set_resource_integer("texture_img", 0) {
             return Err(GraphicsError::from(e).into());
@@ -27,15 +28,17 @@ impl Skybox {
 
         let texture = Texture::new(img_file)?;
 
-        let mesh = Mesh::from_obj(CUBE_PATH)?;
+        let mut model = Model::default();
+        model.set_translation(Vector3::new(0., 0., 250.));
+        model.set_scale(Vector3::from_s(1000.));
 
-        let mut cube = Object::new(mesh);
-        cube.set_scale(Vector3::from_s(10.));
+        let mesh = Mesh::from_obj(CUBE_PATH)?;
 
         let sb = Skybox {
             shader: shader,
             texture: texture,
-            cube: cube
+            model: Model::default(),
+            mesh: mesh
         };
 
         Ok(sb)
@@ -46,7 +49,9 @@ impl Skybox {
         self.shader.use_program();
         self.texture.activate();
 
-        self.cube.render(camera, &self.shader)?;
+        let mvp = camera.create_mvp_matrix(&self.model);
+        self.shader.set_resource_mat4("mvp", &mvp)?;
+        self.mesh.render()?;
 
         self.texture.deactivate();
         Ok(())

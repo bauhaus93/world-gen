@@ -40,8 +40,8 @@ impl World {
         let surface_shader_program = ShaderProgramBuilder::new()
             .add_vertex_shader("resources/shader/surface/VertexShader.glsl")
             .add_fragment_shader("resources/shader/surface/FragmentShader.glsl")
-            .add_resource("mvp")
             .add_resource("texture_array")
+            .add_resource("mvp")
             .add_resource("model")
             .add_resource("view_pos")
             .add_resource("light_pos")
@@ -84,7 +84,7 @@ impl World {
 
         world.camera.set_translation(Vector3::new(0., 0., 200.));
 
-        world.chunk_loader.start(1);
+        world.chunk_loader.start(8);
         world.request_chunks()?;
 
         Ok(world)
@@ -187,7 +187,7 @@ impl World {
         }
 
         self.texture_array.deactivate();
-        //self.skybox.render(&self.camera)?;
+        self.skybox.render(&self.camera)?;
         Ok(())
     }
 }

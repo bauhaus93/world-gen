@@ -159,14 +159,13 @@ pub fn add_subimage(size: [GLsizei; 2], layer: GLsizei, sub_image: &[u8]) -> Res
     Ok(())
 }
 
-pub fn add_cube_images(img: &RgbaImage, sub_size: [u32; 2], origin_map: &BTreeMap<GLenum, [u32; 2]>) -> Result<(), GraphicsError> {
+pub fn add_cube_images(img: &RgbaImage, cube_size: u32, origin_map: &BTreeMap<GLenum, [u32; 2]>) -> Result<(), GraphicsError> {
     for (orientation, origin) in origin_map {
-        trace!("Adding cube image, origin = {}/{}, size = {}/{}", origin[0], origin[1], sub_size[0], sub_size[1]);
-        let sub_img = img.view(origin[0], origin[1], sub_size[0], sub_size[1]).to_image();
+        trace!("Adding cube image, origin = {}/{}, size = {}/{}", origin[0], origin[1], cube_size, cube_size);
+        let sub_img = img.view(origin[0], origin[1], cube_size, cube_size).to_image();
         let pixels: Vec<u8> = sub_img.into_raw();
         add_cube_image(
-            [sub_size[0] as GLsizei,
-             sub_size[1] as GLsizei],
+            cube_size as GLsizei,
             *orientation,
             &pixels)
         ?; 
@@ -174,22 +173,23 @@ pub fn add_cube_images(img: &RgbaImage, sub_size: [u32; 2], origin_map: &BTreeMa
     Ok(())
 }
 
-pub fn add_cube_image(size: [GLsizei; 2], orientation: GLenum, cube_image: &[u8]) -> Result<(), GraphicsError> {
+pub fn add_cube_image(cube_size: GLsizei, orientation: GLenum, cube_image: &[u8]) -> Result<(), GraphicsError> {
     unsafe {
         gl::TexSubImage2D(
             orientation,
             0,
             0, 0,
-            size[0], size[1],
+            cube_size, cube_size,
             gl::RGBA,
             gl::UNSIGNED_BYTE,
             cube_image.as_ptr() as * const _
         );
         check_opengl_error("gl::TexSubImage2D")?;
-        gl::TexParameteri(orientation, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
-        gl::TexParameteri(orientation, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
-        gl::TexParameteri(orientation, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_NEAREST as GLint);
-        gl::TexParameteri(orientation, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
+        gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as GLint);
+        gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as GLint);
+        gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_R, gl::CLAMP_TO_EDGE as GLint);
+        gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_NEAREST as GLint);
+        gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
         check_opengl_error("gl::TexParameteri")?;
         gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
         check_opengl_error("gl::GenerateMipmap")?;
@@ -207,12 +207,12 @@ pub fn get_opengl_texture_type(texture_type: &TextureType) -> GLenum {
 
 pub fn get_texture_size(texture_type: &TextureType, texture_img: &RgbaImage) -> [GLsizei; 2] {
     match texture_type {
-        TextureType::Single2D => [texture_img.width().try_into().unwrap(),
-                                  texture_img.height().try_into().unwrap()],
-        TextureType::Array2D { size, .. } => [size[0].try_into().unwrap(),
-                                              size[1].try_into().unwrap()],
-        TextureType::CubeMap { size, ..} => [size[0].try_into().unwrap(),
-                                             size[1].try_into().unwrap()],
+        TextureType::Single2D => [texture_img.width() as GLsizei,
+                                  texture_img.height() as GLsizei],
+        TextureType::Array2D { size, .. } => [size[0] as GLsizei,
+                                              size[1] as GLsizei],
+        TextureType::CubeMap { size, ..} => [*size as GLsizei,
+                                             *size as GLsizei],
     }
 }
 

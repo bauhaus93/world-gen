@@ -1,7 +1,7 @@
 use glm::{ Vector3, GenNum };
 
 use utility::Float;
-use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
+use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError, texture::Orientation };
 use crate::{ Model, Camera, WorldError };
 use crate::traits::{ Translatable, Scalable };
 
@@ -21,14 +21,23 @@ impl Skybox {
         let shader = ShaderProgramBuilder::new()
             .add_vertex_shader("resources/shader/skybox/VertexShader.glsl")
             .add_fragment_shader("resources/shader/skybox/FragmentShader.glsl")
-            .add_resource("texture_img")
+            .add_resource("cube_texture")
             .add_resource("mvp")
             .finish()?;
-        if let Err(e) = shader.set_resource_integer("texture_img", 0) {
+        if let Err(e) = shader.set_resource_integer("cube_texture", 0) {
             return Err(GraphicsError::from(e).into());
         }
 
         let texture = TextureBuilder::new_2d(img_file).finish()?;
+
+        let mut builder = TextureBuilder::new_cube_map(img_file, 512);
+        builder.add_cube_element([0, 0], Orientation::Top);
+        builder.add_cube_element([0, 0], Orientation::Bottom);
+        builder.add_cube_element([0, 0], Orientation::Left);
+        builder.add_cube_element([0, 0], Orientation::Right);
+        builder.add_cube_element([0, 0], Orientation::Front);
+        builder.add_cube_element([0, 0], Orientation::Back);
+        let texture = builder.finish()?;
 
         let mut model = Model::default();
         model.set_scale(Vector3::from_s(750.));

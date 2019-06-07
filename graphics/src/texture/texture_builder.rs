@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use gl;
 
-use crate::{ Texture, GraphicsError, check_opengl_error };
+use crate::{ Texture, GraphicsError };
 use super::{ Orientation, TextureType, utility::* };
 
 pub struct TextureBuilder {
@@ -24,10 +24,10 @@ impl TextureBuilder {
             TextureType::Array2D { index_list: Vec::new(), size: sub_size }
         )
     }
-    pub fn new_cube_map(img_path: &str, sub_size: [u32; 2]) -> TextureBuilder {
+    pub fn new_cube_map(img_path: &str, cube_size: u32) -> TextureBuilder {
         TextureBuilder::new(
             img_path,
-            TextureType::CubeMap { origin_map: BTreeMap::new(), size: sub_size }
+            TextureType::CubeMap { origin_map: BTreeMap::new(), size: cube_size }
         )
     }
 

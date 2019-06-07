@@ -21,7 +21,8 @@ pub struct Application {
     time_passed: u32,
     sleep_time: time::Duration,
     movement_keys_down: [bool; 5],
-    title_update_passed: u32
+    title_update_passed: u32,
+    target_frequency: u32
 }
 
 impl Application {
@@ -42,7 +43,8 @@ impl Application {
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50),
             movement_keys_down: [false; 5],
-            title_update_passed: 0
+            title_update_passed: 0,
+            target_frequency: 30
         };
         Ok(app)
     }
@@ -182,9 +184,8 @@ impl Application {
     }
 
     fn update_sleep_time(&mut self) {
-        const TARGET_FREQ: u32 = 30;
-        let diff: i32 = (self.time_passed * TARGET_FREQ) as i32 - 1000;
-        if diff.abs() as u32 > TARGET_FREQ {
+        let diff: i32 = (self.time_passed * self.target_frequency) as i32 - 1000;
+        if diff.abs() as u32 > self.target_frequency {
             let adj = time::Duration::from_millis(u64::min(u64::max(diff.abs() as u64 / 100, 1), 5 as u64));
             match diff.signum() {
                 1 => {
@@ -200,7 +201,8 @@ impl Application {
 
     fn update_title(&mut self) {
         let idle: i32 = i32::min(100, (100. * (1. - (self.time_passed as i32 - self.sleep_time.as_millis() as i32) as f64 / self.time_passed as f64)) as i32);
-        self.window.set_title(&format!("main thread idle = {}%, last frame = {} ms, idle time = {} ms", idle, self.time_passed, self.sleep_time.as_millis()));
+        let info = format!("main thread idle = {}%, frequency = {}Hz", idle, 1000 / self.time_passed);
+        self.window.set_title(&info);
         self.title_update_passed = 0;
     }
 

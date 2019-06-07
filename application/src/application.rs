@@ -17,6 +17,7 @@ pub struct Application {
     events_loop: glutin::EventsLoop,
     window_size: [f64; 2],
     quit: bool,
+    hibernate: bool,
     time_passed: u32,
     sleep_time: time::Duration,
     movement_keys_down: [bool; 5]
@@ -34,6 +35,7 @@ impl Application {
             world: world,
             window_size: window_size,
             quit: false,
+            hibernate: false,
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50),
             movement_keys_down: [false; 5]
@@ -45,12 +47,14 @@ impl Application {
         let mut last_time = time::Instant::now();
         while !self.quit {
             self.handle_events();
-            self.handle_movement();
-            self.world.update(self.time_passed)?;
-            self.render()?;
+            if !self.hibernate {
+                self.handle_movement();
+                self.world.update(self.time_passed)?;
+                self.render()?;
+                self.update_sleep_time();
+            }
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
             last_time = time::Instant::now();
-            self.update_sleep_time();
             thread::sleep(self.sleep_time);
         }
         Ok(())
@@ -74,19 +78,20 @@ impl Application {
                 glutin::Event::WindowEvent { event, .. } => {
                     match event {
                         glutin::WindowEvent::CloseRequested => { self.quit = true; },
+                        glutin::WindowEvent::Focused(focused) => { self.hibernate = !focused; },
                         glutin::WindowEvent::Resized(logical_size) => { self.handle_resize((*logical_size).into()); },
                         glutin::WindowEvent::KeyboardInput { input, .. } => {
                             if let Some(key) = get_keycode(*input) {
                                 keys_pressed.push(key);
                             }
                         },
-                        glutin::WindowEvent::MouseWheel { delta, phase, .. } => { self.handle_mousewheel(*delta, *phase); }
+                        glutin::WindowEvent::MouseWheel { delta, phase, .. } if !self.hibernate => { self.handle_mousewheel(*delta, *phase); }
                         _ => {}
                     }
                 },
                 glutin::Event::DeviceEvent { event, .. } => {
                     match event {
-                        glutin::DeviceEvent::MouseMotion { delta } => { self.handle_mouse_movement(*delta); },
+                        glutin::DeviceEvent::MouseMotion { delta } if !self.hibernate => { self.handle_mouse_movement(*delta); },
                         _ => {}
                     }
                 },

@@ -28,9 +28,7 @@ impl Skybox {
             return Err(GraphicsError::from(e).into());
         }
 
-        let texture = TextureBuilder::new_2d(img_file).finish()?;
-
-        let mut builder = TextureBuilder::new_cube_map(img_file, 512);
+        let mut builder = TextureBuilder::new_cube_map(img_file, 1024);
         builder.add_cube_element([0, 0], Orientation::Top);
         builder.add_cube_element([0, 0], Orientation::Bottom);
         builder.add_cube_element([0, 0], Orientation::Left);

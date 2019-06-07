@@ -6,7 +6,7 @@ use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::Vector3;
 
-use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
+use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
 use crate::{ Timer, Object, Camera, WorldError, Skybox };
@@ -14,7 +14,7 @@ use crate::chunk::{ Chunk, ChunkLoader, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
-    texture_array: TextureArray,
+    texture_array: Texture,
     camera: Camera,
     surface_shader_program: ShaderProgram,
     test_object: Object,
@@ -52,9 +52,9 @@ impl World {
             return Err(GraphicsError::from(e).into());
         }
 
-        let mut builder = TextureArrayBuilder::new("resources/img/atlas.png", [32, 32]);
+        let mut builder = TextureBuilder::new_2d_array("resources/img/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
-            builder = builder.add_texture(tex);
+            builder.add_array_element(*tex);
         }
         let texture_array = builder.finish()?;
 

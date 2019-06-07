@@ -1,7 +1,7 @@
 use glm::{ Vector3, GenNum };
 
 use utility::Float;
-use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, GraphicsError };
+use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use crate::{ Model, Camera, WorldError };
 use crate::traits::{ Translatable, Scalable };
 
@@ -28,7 +28,7 @@ impl Skybox {
             return Err(GraphicsError::from(e).into());
         }
 
-        let texture = Texture::new(img_file)?;
+        let texture = TextureBuilder::new_2d(img_file).finish()?;
 
         let mut model = Model::default();
         model.set_scale(Vector3::from_s(750.));

@@ -19,11 +19,11 @@ pub fn create_orthographic_projection(width: Float, aspect_ratio: Float) -> Proj
 }
 
 pub fn create_default_perspective() -> Projection {
-    Projection::Perspective { fov: 90f32.to_radians(), aspect_ratio: 4./3., near: 0.5, far: 2000. }
+    Projection::Perspective { fov: 90f32.to_radians(), aspect_ratio: 4./3., near: 0.5, far: 10000. }
 }
 
 pub fn create_default_orthographic() -> Projection {
-    Projection::Orthographic { width: 20., aspect_ratio: 4./3. }
+    Projection::Orthographic { width: 2500., aspect_ratio: 4./3. }
 }
 
 pub fn create_orthographic_projection_matrix(left: Float, right: Float, top: Float, bottom: Float, near: Float, far: Float) -> Matrix4<Float> {

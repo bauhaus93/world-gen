@@ -2,7 +2,7 @@ use glm::Vector3;
 
 use utility::Float;
 
-pub const CHUNK_SIZE: [i32; 2] = [128, 128];
+pub const CHUNK_SIZE: [i32; 2] = [64, 64];
 
 pub fn get_chunk_pos(world_pos: Vector3<Float>) -> [i32; 2] {
     [world_pos.x as i32 / CHUNK_SIZE[0],

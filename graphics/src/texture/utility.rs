@@ -111,9 +111,9 @@ pub fn fill_texture(texture_type: &TextureType, img: RgbaImage) -> Result<(), Gr
             trace!("Filling gl::TEXTURE_2D_ARRAY");
             add_subimages(&img, *size, index_list)?;
         },
-        TextureType::CubeMap { origin_map, size } => {
+        TextureType::CubeMap { index_map, size } => {
             trace!("Filling gl::TEXTURE_CUBE_MAP");
-            add_cube_images(&img, *size, origin_map)?;
+            add_cube_images(&img, *size, index_map)?;
         }
     }
     trace!("Successfully filled texture");
@@ -159,8 +159,10 @@ pub fn add_subimage(size: [GLsizei; 2], layer: GLsizei, sub_image: &[u8]) -> Res
     Ok(())
 }
 
-pub fn add_cube_images(img: &RgbaImage, cube_size: u32, origin_map: &BTreeMap<GLenum, [u32; 2]>) -> Result<(), GraphicsError> {
-    for (orientation, origin) in origin_map {
+pub fn add_cube_images(img: &RgbaImage, cube_size: u32, index_map: &BTreeMap<GLenum, [u32; 2]>) -> Result<(), GraphicsError> {
+    for (orientation, index) in index_map {
+        let origin = [index[0] * cube_size,
+                      index[1] * cube_size];
         trace!("Adding cube image, origin = {}/{}, size = {}/{}", origin[0], origin[1], cube_size, cube_size);
         let sub_img = img.view(origin[0], origin[1], cube_size, cube_size).to_image();
         let pixels: Vec<u8> = sub_img.into_raw();

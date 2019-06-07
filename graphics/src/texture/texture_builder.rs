@@ -27,7 +27,7 @@ impl TextureBuilder {
     pub fn new_cube_map(img_path: &str, cube_size: u32) -> TextureBuilder {
         TextureBuilder::new(
             img_path,
-            TextureType::CubeMap { origin_map: BTreeMap::new(), size: cube_size }
+            TextureType::CubeMap { index_map: BTreeMap::new(), size: cube_size }
         )
     }
 
@@ -46,26 +46,26 @@ impl TextureBuilder {
         }
     }
 
-    pub fn add_cube_element(&mut self, origin: [u32; 2], orientation: Orientation) {
-        if let TextureType::CubeMap { origin_map, .. } = &mut self.texture_type {
+    pub fn add_cube_element(&mut self, index: [u32; 2], orientation: Orientation) {
+        if let TextureType::CubeMap { index_map, .. } = &mut self.texture_type {
             match orientation {
                 Orientation::Right => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_X, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_X, index);
                 },
                 Orientation::Left => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_X, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_X, index);
                 },
                 Orientation::Top => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Y, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Y, index);
                 },
                 Orientation::Bottom => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Y, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Y, index);
                 },
                 Orientation::Back => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Z, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Z, index);
                 },
                 Orientation::Front => {
-                    origin_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Z, origin);
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Z, index);
                 }
             }
         } else {

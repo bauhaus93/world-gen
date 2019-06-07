@@ -28,17 +28,17 @@ impl Skybox {
             return Err(GraphicsError::from(e).into());
         }
 
-        let mut builder = TextureBuilder::new_cube_map(img_file, 1024);
-        builder.add_cube_element([0, 0], Orientation::Top);
-        builder.add_cube_element([0, 0], Orientation::Bottom);
-        builder.add_cube_element([0, 0], Orientation::Left);
-        builder.add_cube_element([0, 0], Orientation::Right);
-        builder.add_cube_element([0, 0], Orientation::Front);
-        builder.add_cube_element([0, 0], Orientation::Back);
+        let mut builder = TextureBuilder::new_cube_map(img_file, 512);
+        builder.add_cube_element([1, 0], Orientation::Top);
+        builder.add_cube_element([1, 2], Orientation::Bottom);
+        builder.add_cube_element([0, 1], Orientation::Left);
+        builder.add_cube_element([2, 1], Orientation::Right);
+        builder.add_cube_element([1, 1], Orientation::Front);
+        builder.add_cube_element([3, 1], Orientation::Back);
         let texture = builder.finish()?;
 
         let mut model = Model::default();
-        model.set_scale(Vector3::from_s(750.));
+        model.set_scale(Vector3::from_s(2000.));
 
         let mesh = Mesh::from_obj(CUBE_PATH)?;
 

@@ -78,7 +78,7 @@ impl World {
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
-            active_chunk_radius: 10,
+            active_chunk_radius: 20,
             last_chunk_load: [0, 0]
         };
 
@@ -150,11 +150,9 @@ impl World {
         match self.camera.get_projection() {
             Projection::Orthographic { .. } => {
                 self.camera.set_projection(create_default_perspective());
-                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             },
             Projection::Perspective { .. } => {
                 self.camera.set_projection(create_default_orthographic());
-                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             }
         }
     }

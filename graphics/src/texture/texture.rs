@@ -19,12 +19,14 @@ impl Texture {
     pub fn activate(&self) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
-            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            gl::BindTexture(self.tex_type, self.id);
         }
+        // TODO: maybe add check_opengl_error
     }
 
     pub fn deactivate(&self) {
-        unsafe { gl::BindTexture(gl::TEXTURE_2D, 0) }
+        unsafe { gl::BindTexture(self.tex_type, 0) }
+        // TODO: maybe add check_opengl_error
     }
 }
 

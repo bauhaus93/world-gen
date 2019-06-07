@@ -1,7 +1,7 @@
-use gl;
 use image;
 use image::GenericImageView;
 
+use gl;
 use gl::types::{ GLint, GLuint, GLsizei };
 
 use utility::Float;

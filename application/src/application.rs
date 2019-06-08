@@ -17,15 +17,20 @@ pub struct Application {
     events_loop: glutin::EventsLoop,
     window_size: [f64; 2],
     quit: bool,
+    hibernate: bool,
     time_passed: u32,
     sleep_time: time::Duration,
-    movement_keys_down: [bool; 5]
+    movement_keys_down: [bool; 5],
+    title_update_passed: u32,
+    target_frequency: u32
 }
 
 impl Application {
     pub fn new(window_size: [f64; 2]) -> Result<Application, ApplicationError> {
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
+
+        window.set_title("world_gen");
         
         let world = world_gen::World::new()?;
         let app = Self {
@@ -34,9 +39,12 @@ impl Application {
             world: world,
             window_size: window_size,
             quit: false,
+            hibernate: false,
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50),
-            movement_keys_down: [false; 5]
+            movement_keys_down: [false; 5],
+            title_update_passed: 0,
+            target_frequency: 30
         };
         Ok(app)
     }
@@ -45,12 +53,18 @@ impl Application {
         let mut last_time = time::Instant::now();
         while !self.quit {
             self.handle_events();
-            self.handle_movement();
-            self.world.update(self.time_passed)?;
-            self.render()?;
+            if !self.hibernate {
+                self.handle_movement();
+                self.world.update(self.time_passed)?;
+                self.render()?;
+                if self.title_update_passed > 1000 {
+                    self.update_title();
+                }
+                self.update_sleep_time();
+            }
             self.time_passed = last_time.elapsed().as_secs() as u32 * 1000 + last_time.elapsed().subsec_millis();
+            self.title_update_passed += self.time_passed;
             last_time = time::Instant::now();
-            self.update_sleep_time();
             thread::sleep(self.sleep_time);
         }
         Ok(())
@@ -74,19 +88,20 @@ impl Application {
                 glutin::Event::WindowEvent { event, .. } => {
                     match event {
                         glutin::WindowEvent::CloseRequested => { self.quit = true; },
+                        glutin::WindowEvent::Focused(focused) => { self.hibernate = !focused; },
                         glutin::WindowEvent::Resized(logical_size) => { self.handle_resize((*logical_size).into()); },
                         glutin::WindowEvent::KeyboardInput { input, .. } => {
                             if let Some(key) = get_keycode(*input) {
                                 keys_pressed.push(key);
                             }
                         },
-                        glutin::WindowEvent::MouseWheel { delta, phase, .. } => { self.handle_mousewheel(*delta, *phase); }
+                        glutin::WindowEvent::MouseWheel { delta, phase, .. } if !self.hibernate => { self.handle_mousewheel(*delta, *phase); }
                         _ => {}
                     }
                 },
                 glutin::Event::DeviceEvent { event, .. } => {
                     match event {
-                        glutin::DeviceEvent::MouseMotion { delta } => { self.handle_mouse_movement(*delta); },
+                        glutin::DeviceEvent::MouseMotion { delta } if !self.hibernate => { self.handle_mouse_movement(*delta); },
                         _ => {}
                     }
                 },
@@ -169,16 +184,26 @@ impl Application {
     }
 
     fn update_sleep_time(&mut self) {
-        const TARGET_FREQ: u32 = 30;
-        let diff: i32 = (self.time_passed * TARGET_FREQ) as i32 - 1000;
-        if diff.abs() as u32 > TARGET_FREQ {
-            let adj = time::Duration::from_millis(std::cmp::min(std::cmp::max(diff.abs() as u64 / 100, 1), self.sleep_time.subsec_millis() as u64));
+        let diff: i32 = (self.time_passed * self.target_frequency) as i32 - 1000;
+        if diff.abs() as u32 > self.target_frequency {
+            let adj = time::Duration::from_millis(u64::min(u64::max(diff.abs() as u64 / 100, 1), 5 as u64));
             match diff.signum() {
-                1 => self.sleep_time = self.sleep_time.sub(adj),
+                1 => {
+                    if self.sleep_time >= adj {
+                        self.sleep_time = self.sleep_time.sub(adj)
+                    }
+                },
                 -1 => self.sleep_time = self.sleep_time.add(adj),
                 _ => {}
             }
         } 
+    }
+
+    fn update_title(&mut self) {
+        let idle: i32 = i32::min(100, (100. * (1. - (self.time_passed as i32 - self.sleep_time.as_millis() as i32) as f64 / self.time_passed as f64)) as i32);
+        let info = format!("main thread idle = {}%, frequency = {}Hz", idle, 1000 / self.time_passed);
+        self.window.set_title(&info);
+        self.title_update_passed = 0;
     }
 
     fn render(&mut self) -> Result<(), ApplicationError> {

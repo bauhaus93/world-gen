@@ -4,44 +4,74 @@
         {
             "label": "run_release",
             "type": "shell",
-            "options": {
-                "env": {
-                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
-                }
+            "linux": {
+                "command": "${workspaceRoot}/scripts/run_release.sh"
             },
-            "command": "cargo",
-            "args": [
-                "run",
-                "--release"
-            ],
             "problemMatcher": [
                 "$rustc"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
             }
         },
-
         {
             "label": "run_debug",
             "type": "shell",
-            "options": {
-                "env": {
-                    "RUST_LOG":"main=debug,application=debug,utility=debug,world_gen=debug,graphics=debug"
-                }
+            "linux": {
+                "command": "${workspaceRoot}/scripts/run_debug.sh"
             },
-            "command": "cargo",
-            "args": [
-                "run",
-            ],
             "problemMatcher": [
                 "$rustc"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
             }
         },
+        {
+            "label": "resource_compress",
+            "type": "shell",
+            "linux": {
+                "command": "${workspaceRoot}/scripts/resource_compress.sh"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "resource_extract",
+            "type": "shell",
+            "linux": {
+                "command": "${workspaceRoot}/scripts/resource_extract.sh"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        }
     ]
 }

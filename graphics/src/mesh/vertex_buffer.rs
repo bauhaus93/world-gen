@@ -23,7 +23,6 @@ enum Buffer {
 impl VertexBuffer {
     // TODO: maybe use Vec<>, avoid unnecessary clone
     pub fn add_float_buffer(&mut self, buffer_data: &[Float], attribute_index: u32, element_count: u32) {
-        trace!("Adding float buffer to vertex buffer, size = {}, attribute index = {}, count = {}", buffer_data.len(), attribute_index, element_count);
         let buffer = Buffer::Float {
             data: buffer_data.into(),
             attribute_index: attribute_index.try_into().unwrap(),
@@ -33,7 +32,6 @@ impl VertexBuffer {
     }
 
     pub fn set_index_buffer(&mut self, index_data: &[GLuint]) {
-        trace!("Adding index buffer to vertex buffer, size = {}", index_data.len());
         self.index_list = index_data.into();
     }
 }
@@ -75,12 +73,14 @@ impl TryInto<VAO> for VertexBuffer {
 
 impl From<&[Triangle]> for VertexBuffer {
     fn from(triangles: &[Triangle]) -> VertexBuffer {
+        let uv_size = triangles[0].get_uv_dim();
         let mut indexed_vertices: BTreeMap<Vertex, GLuint> = BTreeMap::new();
         let mut position_buffer: Vec<Float> = Vec::new();
         let mut uv_buffer: Vec<Float> = Vec::new();
         let mut normal_buffer: Vec<Float> = Vec::new();
         let mut index_buffer: Vec<GLuint> = Vec::new();
         for triangle in triangles.iter() {
+            debug_assert!(triangle.get_uv_dim() == uv_size);
             for vertex in triangle.as_vertices() {
                 match indexed_vertices.entry(*vertex) {
                     Entry::Occupied(o) => {
@@ -88,11 +88,22 @@ impl From<&[Triangle]> for VertexBuffer {
                     },
                     Entry::Vacant(v) => {
                         debug_assert!(position_buffer.len() % 3 == 0);
-                        debug_assert!(uv_buffer.len() % 3 == 0);
+                        debug_assert!(uv_buffer.len() % (uv_size as usize) == 0);
                         debug_assert!(normal_buffer.len() % 3 == 0);
                         let new_index = (position_buffer.len() / 3) as GLuint;
                         position_buffer.extend(vertex.get_pos().as_array());
-                        uv_buffer.extend(vertex.get_uv().as_array());
+                        match uv_size {
+                            2 => {
+                                uv_buffer.extend(vertex.get_uv().as_array());
+                            },
+                            3 => {
+                                uv_buffer.extend(vertex.get_uv_layered().as_array());
+                            },
+                            unknown_dim => {
+                                panic!("Unknown uv dimension: {}", unknown_dim);
+                            }
+                        }
+                                
                         normal_buffer.extend(triangle.get_normal().as_array());
                         index_buffer.push(new_index);
                         v.insert(new_index);
@@ -102,7 +113,7 @@ impl From<&[Triangle]> for VertexBuffer {
         }
         let mut buffer = VertexBuffer::default();
         buffer.add_float_buffer(&position_buffer, 0, 3);
-        buffer.add_float_buffer(&uv_buffer, 1, 3);
+        buffer.add_float_buffer(&uv_buffer, 1, uv_size as u32);
         buffer.add_float_buffer(&normal_buffer, 2, 3);
         buffer.set_index_buffer(&index_buffer);
 
@@ -251,7 +262,6 @@ fn create_vbos(index_list: &[GLuint], buffer_list: &[Buffer]) -> Result<Vec<GLui
 fn create_vbo_ids(size: usize) -> Result<Vec<GLuint>, OpenglError> {
     let mut vbos: Vec<GLuint> = Vec::with_capacity(size);
     vbos.resize(size, 0);
-    
     unsafe { gl::GenBuffers(size.try_into().unwrap(), vbos.as_mut_ptr() as * mut GLuint) };
     check_opengl_error("gl::GenBuffers")?;
 

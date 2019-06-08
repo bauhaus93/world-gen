@@ -12,6 +12,6 @@ pub mod format;
 
 pub use self::read_file::read_file;
 pub use self::file_error::FileError;
-pub use self::cmp::cmp_vec;
+pub use self::cmp::{ cmp_vec2, cmp_vec3 };
 pub use self::float::Float;
 pub use self::format::format_number;

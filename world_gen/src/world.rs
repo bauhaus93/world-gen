@@ -6,19 +6,19 @@ use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::Vector3;
 
-use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, TextureArray, TextureArrayBuilder, GraphicsError };
+use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
-use crate::{ object::Object, camera::Camera, world_error::WorldError, };
-use crate::chunk::{ chunk::Chunk, chunk_loader::ChunkLoader, chunk_size::get_chunk_pos };
-use crate::timer::Timer;
+use crate::{ Timer, Object, Camera, WorldError, Skybox };
+use crate::chunk::{ Chunk, ChunkLoader, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
-    texture_array: TextureArray,
+    texture_array: Texture,
     camera: Camera,
     surface_shader_program: ShaderProgram,
     test_object: Object,
+    skybox: Skybox,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -40,16 +40,21 @@ impl World {
         let surface_shader_program = ShaderProgramBuilder::new()
             .add_vertex_shader("resources/shader/surface/VertexShader.glsl")
             .add_fragment_shader("resources/shader/surface/FragmentShader.glsl")
-            .add_resource("mvp")
             .add_resource("texture_array")
+            .add_resource("mvp")
             .add_resource("model")
             .add_resource("view_pos")
             .add_resource("light_pos")
             .finish()?;
+        
+        // setting texture slot to 0
+        if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
+            return Err(GraphicsError::from(e).into());
+        }
 
-        let mut builder = TextureArrayBuilder::new("resources/atlas.png", [32, 32]);
+        let mut builder = TextureBuilder::new_2d_array("resources/img/atlas.png", [32, 32]);
         for tex in TEXTURES.iter() {
-            builder = builder.add_texture(tex);
+            builder.add_array_element(*tex);
         }
         let texture_array = builder.finish()?;
 
@@ -61,17 +66,19 @@ impl World {
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
+        let skybox = Skybox::new("resources/img/sky.png")?;
 
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             surface_shader_program: surface_shader_program,
             test_object: test_object,
+            skybox: skybox,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
-            active_chunk_radius: 10,
+            active_chunk_radius: 20,
             last_chunk_load: [0, 0]
         };
 
@@ -143,11 +150,9 @@ impl World {
         match self.camera.get_projection() {
             Projection::Orthographic { .. } => {
                 self.camera.set_projection(create_default_perspective());
-                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             },
             Projection::Perspective { .. } => {
                 self.camera.set_projection(create_default_orthographic());
-                self.camera.set_translation(Vector3::new(-5., -5., 5.));
             }
         }
     }
@@ -160,6 +165,7 @@ impl World {
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
+        self.surface_shader_program.use_program();
         self.surface_shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
         self.surface_shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
         Ok(())
@@ -179,6 +185,7 @@ impl World {
         }
 
         self.texture_array.deactivate();
+        self.skybox.render(&self.camera)?;
         Ok(())
     }
 }
@@ -203,6 +210,9 @@ impl Updatable for World {
             self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
         }
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
+
+        self.skybox.set_translation(self.camera.get_translation());
+        
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;
         self.chunk_build_stats_timer.tick(time_passed)?;

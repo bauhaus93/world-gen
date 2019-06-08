@@ -25,7 +25,7 @@ impl Object {
 }
 
 impl Renderable for Object {
-    fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
+    fn render(&self, camera: &Camera, shader: &ShaderProgram, _lod: u8) -> Result<(), GraphicsError> {
         let mvp = camera.create_mvp_matrix(&self.model);
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;

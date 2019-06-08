@@ -6,7 +6,6 @@ use glm::{ Vector2, Vector3 };
 use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, VertexBuffer };
 use super::{ chunk::Chunk, chunk_error::ChunkError, height_map::HeightMap };
-use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkBuilder {
     pos: [i32; 2],

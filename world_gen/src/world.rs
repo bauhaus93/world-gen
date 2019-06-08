@@ -147,7 +147,7 @@ impl World {
     pub fn unload_distant_chunks(&mut self) {
         let mut unload_list = Vec::new();
         let cam_pos = get_chunk_pos(self.camera.get_translation());
-        for (chunk_pos, chunk) in &self.chunks {
+        for chunk_pos in self.chunks.keys() {
             let vec = [cam_pos[0] - chunk_pos[0], cam_pos[1] - chunk_pos[1]];
             let distance = f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32).round() as i32;
             if distance >= self.active_chunk_radius {

@@ -18,7 +18,6 @@ pub use self::world_error::WorldError;
 use self::camera::Camera;
 use self::model::Model;
 use self::object::Object;
-use self::object_lod::ObjectLOD;
 use self::skybox::Skybox;
 use self::timer::Timer;
 use self::sun::Sun;

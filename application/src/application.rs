@@ -140,7 +140,7 @@ impl Application {
             move_offset = move_offset.add(Vector3::new(0., 0., 1.));
         }
         if length(move_offset) > 1e-3 {
-            const SPEED: Float = 1.;
+            const SPEED: Float = 2.;
             self.world.move_camera(normalize(move_offset) * SPEED);
         }
     }

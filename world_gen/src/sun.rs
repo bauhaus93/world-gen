@@ -26,6 +26,7 @@ impl Sun {
     pub fn calculate_position(&self) -> Vector3<Float> {
         (create_direction(self.rotation) * self.center_distance).sub(self.rotation_center)
     }
+    #[allow(unused)]
     pub fn calculate_daytime(&self) -> f32 {
         match 12. + 24. * self.rotation[1] / (2. * PI) {
             t if t > 24. => t - 24.,

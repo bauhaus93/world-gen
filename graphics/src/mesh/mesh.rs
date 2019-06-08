@@ -1,6 +1,7 @@
 use std::convert::{ TryFrom, TryInto };
 
-use crate::mesh::{ VAO, Triangle, MeshError, VertexBuffer, read_obj };
+use crate::mesh::{ VAO, Triangle, MeshError, VertexBuffer, read_obj, triangles_to_buffers };
+use crate::mesh::vertex_buffer::{ BUFFER_POSTION, BUFFER_UV, BUFFER_NORMAL };
 
 pub struct Mesh {
     vao: Option<VAO>
@@ -8,7 +9,28 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn from_obj(obj_path: &str) -> Result<Mesh, MeshError> {
-           Self::try_from((read_obj(obj_path)?).as_slice())
+        Mesh::try_from((read_obj(obj_path)?).as_slice())
+    }
+
+    pub fn from_obj_custom_buffers(obj_path: &str, buffer_flags: u8) -> Result<Mesh, MeshError> {
+        let triangles = read_obj(obj_path)?;
+        let (pos, uv, nm, index) = triangles_to_buffers(&triangles, buffer_flags);
+        let mut vb = VertexBuffer::default();
+        let mut attr_index = 0;
+        if buffer_flags & BUFFER_POSTION == 1 {
+            vb.add_float_buffer(pos, attr_index, 3);
+            attr_index += 1;
+        }
+        if buffer_flags & BUFFER_UV == 1 {
+            let uv_size = triangles[0].get_uv_dim();
+            vb.add_float_buffer(uv, attr_index, uv_size.into());
+            attr_index += 1;
+        }
+        if buffer_flags & BUFFER_NORMAL == 1 {
+            vb.add_float_buffer(nm, attr_index, 3);
+        }
+        vb.set_index_buffer(index);
+        vb.try_into()
     }
 
     pub fn get_vertex_count(&self) -> u32 {

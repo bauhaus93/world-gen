@@ -14,3 +14,4 @@ pub use self::mesh_error::MeshError;
 pub use self::vao::VAO;
 pub use self::vertex_buffer::VertexBuffer;
 use self::read_obj::read_obj;
+use self::vertex_buffer::triangles_to_buffers;

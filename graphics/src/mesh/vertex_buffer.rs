@@ -10,6 +10,10 @@ use crate::{ check_opengl_error, OpenglError };
 use crate::mesh::utility::{ delete_vao, delete_vbos };
 use super::{ VAO, Triangle, Vertex, MeshError };
 
+pub const BUFFER_POSTION: u8 = 1 << 1;
+pub const BUFFER_UV: u8 = 1 << 2;
+pub const BUFFER_NORMAL: u8 = 1 << 3;
+
 pub struct VertexBuffer {
     buffer_list: Vec<Buffer>,
     index_list: Vec<GLuint>,
@@ -21,19 +25,19 @@ enum Buffer {
 }
 
 impl VertexBuffer {
-    // TODO: maybe use Vec<>, avoid unnecessary clone
-    pub fn add_float_buffer(&mut self, buffer_data: &[Float], attribute_index: u32, element_count: u32) {
+    pub fn add_float_buffer(&mut self, buffer_data: Vec<Float>, attribute_index: u32, element_count: u32) {
         let buffer = Buffer::Float {
-            data: buffer_data.into(),
+            data: buffer_data,
             attribute_index: attribute_index.try_into().unwrap(),
             element_count: element_count.try_into().unwrap()
         };
         self.buffer_list.push(buffer);
     }
 
-    pub fn set_index_buffer(&mut self, index_data: &[GLuint]) {
-        self.index_list = index_data.into();
+    pub fn set_index_buffer(&mut self, index_data: Vec<GLuint>) {
+        self.index_list = index_data;
     }
+   
 }
 
 impl Default for VertexBuffer {
@@ -71,27 +75,31 @@ impl TryInto<VAO> for VertexBuffer {
     }
 }
 
-impl From<&[Triangle]> for VertexBuffer {
-    fn from(triangles: &[Triangle]) -> VertexBuffer {
-        let uv_size = triangles[0].get_uv_dim();
-        let mut indexed_vertices: BTreeMap<Vertex, GLuint> = BTreeMap::new();
-        let mut position_buffer: Vec<Float> = Vec::new();
-        let mut uv_buffer: Vec<Float> = Vec::new();
-        let mut normal_buffer: Vec<Float> = Vec::new();
-        let mut index_buffer: Vec<GLuint> = Vec::new();
-        for triangle in triangles.iter() {
-            debug_assert!(triangle.get_uv_dim() == uv_size);
-            for vertex in triangle.as_vertices() {
-                match indexed_vertices.entry(*vertex) {
-                    Entry::Occupied(o) => {
-                        index_buffer.push(*o.get());
-                    },
-                    Entry::Vacant(v) => {
-                        debug_assert!(position_buffer.len() % 3 == 0);
-                        debug_assert!(uv_buffer.len() % (uv_size as usize) == 0);
-                        debug_assert!(normal_buffer.len() % 3 == 0);
-                        let new_index = (position_buffer.len() / 3) as GLuint;
+pub fn triangles_to_buffers(triangles: &[Triangle], buffer_flags: u8) ->
+    (Vec<Float>, Vec<Float>, Vec<Float>, Vec<GLuint>) {
+
+    let uv_size = triangles[0].get_uv_dim();
+    let mut indexed_vertices: BTreeMap<Vertex, GLuint> = BTreeMap::new();
+    let mut position_buffer: Vec<Float> = Vec::new();
+    let mut uv_buffer: Vec<Float> = Vec::new();
+    let mut normal_buffer: Vec<Float> = Vec::new();
+    let mut index_buffer: Vec<GLuint> = Vec::new();
+    for triangle in triangles.iter() {
+        debug_assert!(triangle.get_uv_dim() == uv_size);
+        for vertex in triangle.as_vertices() {
+            match indexed_vertices.entry(*vertex) {
+                Entry::Occupied(o) => {
+                    index_buffer.push(*o.get());
+                },
+                Entry::Vacant(v) => {
+                    debug_assert!(position_buffer.len() % 3 == 0);
+                    debug_assert!(uv_buffer.len() % (uv_size as usize) == 0);
+                    debug_assert!(normal_buffer.len() % 3 == 0);
+                    let new_index = (position_buffer.len() / 3) as GLuint;
+                    if buffer_flags & BUFFER_POSTION != 0 {
                         position_buffer.extend(vertex.get_pos().as_array());
+                    }
+                    if buffer_flags & BUFFER_UV != 0  {
                         match uv_size {
                             2 => {
                                 uv_buffer.extend(vertex.get_uv().as_array());
@@ -103,19 +111,36 @@ impl From<&[Triangle]> for VertexBuffer {
                                 panic!("Unknown uv dimension: {}", unknown_dim);
                             }
                         }
-                                
-                        normal_buffer.extend(triangle.get_normal().as_array());
-                        index_buffer.push(new_index);
-                        v.insert(new_index);
                     }
+                    if buffer_flags & BUFFER_NORMAL != 0 {
+                        normal_buffer.extend(triangle.get_normal().as_array());
+                    }
+                    index_buffer.push(new_index);
+                    v.insert(new_index);
                 }
             }
         }
+    }
+    (position_buffer, uv_buffer, normal_buffer, index_buffer)
+}
+
+impl From<&[Triangle]> for VertexBuffer {
+    fn from(triangles: &[Triangle]) -> VertexBuffer {
+        let uv_size = triangles[0].get_uv_dim();
+        let (position_buffer, uv_buffer, normal_buffer, index_buffer) =
+            triangles_to_buffers(triangles, BUFFER_POSTION | BUFFER_UV | BUFFER_NORMAL);
         let mut buffer = VertexBuffer::default();
-        buffer.add_float_buffer(&position_buffer, 0, 3);
-        buffer.add_float_buffer(&uv_buffer, 1, uv_size as u32);
-        buffer.add_float_buffer(&normal_buffer, 2, 3);
-        buffer.set_index_buffer(&index_buffer);
+
+        if position_buffer.len() > 0 {
+            buffer.add_float_buffer(position_buffer, 0, 3);
+        }
+        if uv_buffer.len() > 0 {
+            buffer.add_float_buffer(uv_buffer, 1, uv_size as u32);
+        }
+        if normal_buffer.len() > 0 {
+            buffer.add_float_buffer(normal_buffer, 2, 3);
+        }
+        buffer.set_index_buffer(index_buffer);
 
         buffer
     }

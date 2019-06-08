@@ -2,6 +2,7 @@ use glm::{ Vector3, GenNum };
 
 use utility::Float;
 use graphics::{ Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError, texture::Orientation };
+use graphics::mesh::vertex_buffer::{ BUFFER_POSTION };
 use crate::{ Model, Camera, WorldError };
 use crate::traits::{ Translatable, Scalable };
 
@@ -41,7 +42,7 @@ impl Skybox {
         let mut model = Model::default();
         model.set_scale(Vector3::from_s(2000.));
 
-        let mesh = Mesh::from_obj(CUBE_PATH)?;
+        let mesh = Mesh::from_obj_custom_buffers(CUBE_PATH, BUFFER_POSTION)?;
 
         let sb = Skybox {
             shader: shader,

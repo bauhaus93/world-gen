@@ -33,8 +33,7 @@ impl Texture {
 impl Drop for Texture {
     fn drop(&mut self) {
         debug!("Deleting texture: id = {}, type = {}", self.id, self.tex_type);
-        delete_texture(self.id);
-        if let Err(e) = check_opengl_error("gl::DeleteTextures") {
+        if let Err(e) = delete_texture(self.id) {
             error!("{}", e);
         }
     }

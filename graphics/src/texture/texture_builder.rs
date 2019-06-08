@@ -56,16 +56,16 @@ impl TextureBuilder {
                     index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_X, index);
                 },
                 Orientation::Top => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Y, index);
-                },
-                Orientation::Bottom => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Y, index);
-                },
-                Orientation::Back => {
                     index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Z, index);
                 },
-                Orientation::Front => {
+                Orientation::Bottom => {
                     index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Z, index);
+                },
+                Orientation::Back => {
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Y, index);
+                },
+                Orientation::Front => {
+                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Y, index);
                 }
             }
         } else {

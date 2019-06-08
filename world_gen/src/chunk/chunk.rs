@@ -31,8 +31,8 @@ impl Chunk {
 }
 
 impl Renderable for Chunk {
-    fn render(&self, camera: &Camera, shader: &ShaderProgram) -> Result<(), GraphicsError> {
-        self.object.render(camera, shader)
+    fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
+        self.object.render(camera, shader, lod)
     }
 }
 

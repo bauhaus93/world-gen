@@ -191,9 +191,9 @@ impl World {
         self.texture_array.activate();
         self.surface_shader_program.use_program();
 
-        self.test_object.render(&self.camera, &self.surface_shader_program)?;
+        self.test_object.render(&self.camera, &self.surface_shader_program, 0)?;
         for (_pos, chunk) in self.chunks.iter() {
-            chunk.render(&self.camera, &self.surface_shader_program)?;
+            chunk.render(&self.camera, &self.surface_shader_program, 0)?;
         }
 
         self.texture_array.deactivate();

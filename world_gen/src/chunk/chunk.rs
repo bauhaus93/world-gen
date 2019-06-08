@@ -9,20 +9,26 @@ use super::chunk_size::CHUNK_SIZE;
 pub struct Chunk {
     pos: [i32; 2],
     object: Object,
+    lod: u8
 }
 
 impl Chunk {
-    pub fn new(pos: [i32; 2], mesh: Mesh) -> Self {
+    pub fn new(pos: [i32; 2], lod: u8, mesh: Mesh) -> Self {
         let mut object = Object::new(mesh);
         object.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
         Self {
             pos: pos,
             object: object,
+            lod: lod
         }
     }
 
     pub fn get_pos(&self) -> [i32; 2] {
         self.pos
+    }
+
+    pub fn get_lod(&self) -> u8 {
+        self.lod
     }
 
     pub fn get_vertex_count(&self) -> u32 {

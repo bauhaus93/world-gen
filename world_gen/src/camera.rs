@@ -18,6 +18,18 @@ pub struct Camera {
 
 impl Camera {
 
+    pub fn set_far(&mut self, new_far: Float) {
+        match &mut self.projection {
+            Projection::Perspective { far, .. } => {
+                *far = new_far;
+            },
+            Projection::Orthographic { width, .. } => {
+                *width = new_far / 2.;
+            }
+        }
+        self.update_projection();
+    }
+
      pub fn create_mvp_matrix(&self, model: &Model) -> Matrix4<Float> {
         self.projection_matrix * self.view_matrix * model.get_matrix()
     }

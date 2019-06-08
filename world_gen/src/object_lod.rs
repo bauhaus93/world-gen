@@ -7,11 +7,11 @@ use crate::traits::{ Rotatable, Translatable, Scalable, Renderable };
 
 pub struct ObjectLOD {
     model: Model,
-    mesh_list: [Mesh; 3]
+    mesh_list: [Mesh; 2]
 }
 
 impl ObjectLOD {
-    pub fn new(mesh_list: [Mesh; 3]) -> ObjectLOD {
+    pub fn new(mesh_list: [Mesh; 2]) -> ObjectLOD {
         ObjectLOD {
             model: Model::default(),
             mesh_list: mesh_list
@@ -21,7 +21,7 @@ impl ObjectLOD {
 
 impl Renderable for ObjectLOD {
     fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
-        debug_assert!(lod < 3);
+        debug_assert!(lod < 2);
         let mvp = camera.create_mvp_matrix(&self.model);
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;

@@ -22,6 +22,7 @@ use self::object_lod::ObjectLOD;
 use self::skybox::Skybox;
 use self::timer::Timer;
 use self::sun::Sun;
+use self::chunk::CHUNK_SIZE;
 
 pub mod world;
 pub mod world_error;

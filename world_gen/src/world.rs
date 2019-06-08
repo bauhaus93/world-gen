@@ -10,7 +10,7 @@ use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, Texture, 
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
 use crate::{ Timer, Object, Camera, WorldError, Skybox, Sun };
-use crate::chunk::{ Chunk, ChunkLoader, chunk_size::get_chunk_pos };
+use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
@@ -24,6 +24,7 @@ pub struct World {
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
     chunk_build_stats_timer: Timer,
+    lod_near_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: [i32; 2]
 }
@@ -35,6 +36,9 @@ const TEXTURES: [[u32; 3]; 2] = [
     [0, 0, TEXTURE_LAYER_MUD],
     [1, 0, TEXTURE_LAYER_GRASS]
 ];
+
+const NEAR_RADIUS: i32 = 20;
+const ACTIVE_RADIUS: i32 = 60;
 
 impl World {
     pub fn new() -> Result<World, WorldError> {
@@ -62,20 +66,24 @@ impl World {
 
         let mut rng = StdRng::seed_from_u64(0);//StdRng::from_entropy();
 
+        let mut camera = Camera::default();
+        camera.set_far((ACTIVE_RADIUS * CHUNK_SIZE * 4) as Float);
+
         let chunk_loader = ChunkLoader::from_rng(&mut rng);
 
         let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
         test_object.set_translation(Vector3::new(0., 0., 500.));
         test_object.set_scale(Vector3::new(5., 5., 5.));
 
-        let skybox = Skybox::new("resources/img/sky.png")?;
+        let mut skybox = Skybox::new("resources/img/sky.png")?;
+        skybox.scale_to_chunk_units(ACTIVE_RADIUS * 2);
 
         let mut sun = Sun::default();
         sun.set_day_length(3 * 60);
 
         let mut world = World {
             texture_array: texture_array,
-            camera: Camera::default(),
+            camera: camera,
             surface_shader_program: surface_shader_program,
             test_object: test_object,
             skybox: skybox,
@@ -84,7 +92,8 @@ impl World {
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
-            active_chunk_radius: 20,
+            lod_near_radius: NEAR_RADIUS,
+            active_chunk_radius: ACTIVE_RADIUS,
             last_chunk_load: [0, 0]
         };
 
@@ -109,16 +118,23 @@ impl World {
     }
 
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
-        let mut request_list: Vec<[i32; 2]> = Vec::new();
+        let mut request_list: Vec<([i32; 2], u8)> = Vec::new();
         let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
         for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
             for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-                if f32::sqrt((x * x + y * y) as f32) < self.active_chunk_radius as f32 {
+                let distance = f32::sqrt((x * x + y * y) as f32).round() as i32;
+                if distance < self.active_chunk_radius {
+                    let lod = self.lod_by_chunk_distance(distance);
                     let chunk_pos = [cam_chunk_pos[0] + x,
                                      cam_chunk_pos[1] + y];
-                    if !self.chunks.contains_key(&chunk_pos) {
-                        request_list.push(chunk_pos);
+                    if let Some(c) = self.chunks.get(&chunk_pos) {
+                        if lod != c.get_lod() {
+                           request_list.push((chunk_pos, lod)); 
+                        }
+                    } else {
+                        request_list.push((chunk_pos, lod));
                     }
+
                 }
             }
         }
@@ -129,11 +145,12 @@ impl World {
     }
 
     pub fn unload_distant_chunks(&mut self) {
-        let mut unload_list = Vec::new();;
+        let mut unload_list = Vec::new();
         let cam_pos = get_chunk_pos(self.camera.get_translation());
-        for chunk_pos in self.chunks.keys() {
+        for (chunk_pos, chunk) in &self.chunks {
             let vec = [cam_pos[0] - chunk_pos[0], cam_pos[1] - chunk_pos[1]];
-            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) >= self.active_chunk_radius as f32 {
+            let distance = f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32).round() as i32;
+            if distance >= self.active_chunk_radius {
                 unload_list.push(*chunk_pos);
             }
         }
@@ -168,6 +185,14 @@ impl World {
         let mut vertex_count = 0;
         self.chunks.iter().for_each(|(_, c)| vertex_count += c.get_vertex_count());
         vertex_count
+    }
+
+    fn lod_by_chunk_distance(&self, distance: i32) -> u8 {
+        if distance < self.lod_near_radius {
+            0
+        } else {
+            1
+        }
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
@@ -208,7 +233,7 @@ impl Updatable for World {
             self.get_finished_chunks()?;
             let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
             let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
-            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > self.active_chunk_radius as f32 / 10. {
+            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > 2. {
                 self.unload_distant_chunks();
                 self.request_chunks()?;
             }

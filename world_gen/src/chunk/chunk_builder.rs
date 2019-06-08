@@ -10,13 +10,15 @@ use super::chunk_size::CHUNK_SIZE;
 
 pub struct ChunkBuilder {
     pos: [i32; 2],
+    lod: u8,
     vertex_buffer: Option<VertexBuffer>
 }
 
 impl ChunkBuilder {
-    pub fn new(pos: [i32; 2]) -> Self {
+    pub fn new(pos: [i32; 2], lod: u8) -> Self {
         Self {
             pos: pos,
+            lod: lod,
             vertex_buffer: None
         }
     }
@@ -26,7 +28,7 @@ impl ChunkBuilder {
             Some(vb) => Mesh::try_from(vb)?,
             _ => { return Err(ChunkError::NoBufferBuilt(self.pos)); }
         };
-        Ok(Chunk::new(self.pos, mesh))
+        Ok(Chunk::new(self.pos, self.lod, mesh))
     }
 
     pub fn create_surface_buffer(&mut self, height_map: &HeightMap) {

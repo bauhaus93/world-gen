@@ -12,7 +12,7 @@ use super::chunk_size::CHUNK_SIZE;
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
-    input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
+    input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<[i32; 2]>,
@@ -84,12 +84,12 @@ impl ChunkLoader {
         Ok(chunks)
     }
 
-    pub fn request(&mut self, chunk_pos: &[[i32; 2]]) -> Result<(), ChunkError> {
+    pub fn request(&mut self, chunk_pos: &[([i32; 2], u8)]) -> Result<(), ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => {
-                for pos in chunk_pos {
+                for (pos, lod) in chunk_pos {
                     if self.handeled_positions.insert(*pos) {
-                        (*guard).push_back(*pos);
+                        (*guard).push_back((*pos, *lod));
                     }
                 }
                 Ok(())
@@ -139,7 +139,7 @@ impl BuildStats {
 
 fn worker(architect: Arc<Architect>,
           stop: Arc<AtomicBool>,
-          input_queue: Arc<Mutex<VecDeque<[i32; 2]>>>,
+          input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
           output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
           build_stats: Arc<Mutex<BuildStats>>) {
     let sleep_time = time::Duration::from_millis(500);
@@ -148,10 +148,14 @@ fn worker(architect: Arc<Architect>,
             Ok(mut guard) => (*guard).pop_back(),
             Err(_poisoned) => { break 'exit; }
         };
-        if let Some(pos) = pos_opt {
+        if let Some((pos, lod)) = pos_opt {
             let build_start = time::Instant::now();
-            let mut builder = ChunkBuilder::new(pos);
-            let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1);
+            let mut builder = ChunkBuilder::new(pos, lod);
+            
+            let raw_height_map = match lod {
+                0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
+                _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
+            };
             builder.create_surface_buffer(&raw_height_map);
 
             let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();

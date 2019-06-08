@@ -151,7 +151,7 @@ fn worker(architect: Arc<Architect>,
         if let Some(pos) = pos_opt {
             let build_start = time::Instant::now();
             let mut builder = ChunkBuilder::new(pos);
-            let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1.);
+            let raw_height_map = architect.create_height_map(pos, CHUNK_SIZE, 1);
             builder.create_surface_buffer(&raw_height_map);
 
             let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();

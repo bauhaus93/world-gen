@@ -14,7 +14,7 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(pos: [i32; 2], mesh: Mesh) -> Self {
         let mut object = Object::new(mesh);
-        object.set_translation(Vector3::new((pos[0] * CHUNK_SIZE[0]) as Float, (pos[1] * CHUNK_SIZE[1]) as Float, 0.));
+        object.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
         Self {
             pos: pos,
             object: object,

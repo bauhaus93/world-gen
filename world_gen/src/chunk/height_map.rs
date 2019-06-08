@@ -2,18 +2,21 @@ use utility::Float;
 
 pub struct HeightMap {
     size: [i32; 2],
+    resolution: i32,
     height_list: Vec<Float>
 }
 
 
 impl HeightMap {
 
-    pub fn new(size: [i32; 2]) -> Self {
+    pub fn new(size: [i32; 2], resolution: i32) -> Self {
         debug_assert!(size[0] > 0 && size[1] > 0);
+        debug_assert!(resolution > 0);
         let mut height_list =  Vec::new();
         height_list.resize((size[0] * size[1]) as usize, 0.);
         Self {
             size: size,
+            resolution: resolution,
             height_list: height_list
         }
     }

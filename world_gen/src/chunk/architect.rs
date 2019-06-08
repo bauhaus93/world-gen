@@ -3,14 +3,13 @@ use rand::{ Rng, rngs::SmallRng, SeedableRng };
 use utility::Float;
 use crate::noise::{ Noise, OctavedNoise };
 use super::height_map::HeightMap;
-use super::chunk_size::CHUNK_SIZE;
+use super::get_world_pos;
 
 pub struct Architect {
     height_noise: OctavedNoise,
     hill_noise: OctavedNoise,
     mountain_noise: OctavedNoise
 }
-
 
 impl Architect {
     pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Architect {
@@ -35,14 +34,13 @@ impl Architect {
         }
     }
 
-    pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: [i32; 2], resolution: Float) -> HeightMap {
-        let size = [chunk_size[0] + 1,
-                    chunk_size[1] + 1];
-        let mut height_map = HeightMap::new(size);
+    pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: i32, resolution: i32) -> HeightMap {
+        let size = [chunk_size + 1,
+                    chunk_size + 1];
+        let mut height_map = HeightMap::new(size, resolution);
         for y in 0..size[1] {
             for x in 0..size[0] {
-                let abs_pos = [(chunk_pos[0] * CHUNK_SIZE[1]) as Float + (x as Float * resolution),
-                               (chunk_pos[1] * CHUNK_SIZE[0]) as Float + (y as Float * resolution)];
+                let abs_pos = get_world_pos(&chunk_pos, &[x, y], resolution);
                 height_map.set(&[x, y], self.get_height(abs_pos));
             }
         }

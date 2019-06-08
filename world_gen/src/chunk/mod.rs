@@ -9,3 +9,4 @@ pub mod architect;  //make private, when no longer needed public
 pub use self::chunk::Chunk;
 pub use self::chunk_loader::ChunkLoader;
 pub use self::architect::Architect;
+use chunk_size::{ get_chunk_pos, get_world_pos };

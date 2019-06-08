@@ -30,9 +30,9 @@ impl ChunkBuilder {
     }
 
     pub fn create_surface_buffer(&mut self, height_map: &HeightMap) {
-        let mut triangles: Vec<Triangle> = Vec::with_capacity((CHUNK_SIZE[0] * CHUNK_SIZE[1] * 2) as usize);
-        for y in 0..CHUNK_SIZE[1] {
-            for x in 0..CHUNK_SIZE[0] {
+        let mut triangles: Vec<Triangle> = Vec::with_capacity((CHUNK_SIZE * CHUNK_SIZE * 2) as usize);
+        for y in 0..CHUNK_SIZE {
+            for x in 0..CHUNK_SIZE {
                 triangles.extend(&add_quad_triangles(&[x, y], height_map));
             }
         }

@@ -4,12 +4,12 @@ use rand;
 #[allow(unused)]
 use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
-use glm::Vector3;
+use glm::{ GenNum, Vector3 };
 
 use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
-use crate::{ Timer, Object, Camera, WorldError, Skybox };
+use crate::{ Timer, Object, Camera, WorldError, Skybox, Sun };
 use crate::chunk::{ Chunk, ChunkLoader, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -19,6 +19,7 @@ pub struct World {
     surface_shader_program: ShaderProgram,
     test_object: Object,
     skybox: Skybox,
+    sun: Sun,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<[i32; 2], Chunk>,
     chunk_update_timer: Timer,
@@ -45,6 +46,7 @@ impl World {
             .add_resource("model")
             .add_resource("view_pos")
             .add_resource("light_pos")
+            .add_resource("fog_color")
             .finish()?;
         
         // setting texture slot to 0
@@ -68,12 +70,16 @@ impl World {
 
         let skybox = Skybox::new("resources/img/sky.png")?;
 
+        let mut sun = Sun::default();
+        sun.set_day_length(3 * 60);
+
         let mut world = World {
             texture_array: texture_array,
             camera: Camera::default(),
             surface_shader_program: surface_shader_program,
             test_object: test_object,
             skybox: skybox,
+            sun: sun,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
@@ -167,7 +173,13 @@ impl World {
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
         self.surface_shader_program.use_program();
         self.surface_shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
-        self.surface_shader_program.set_resource_vec3("light_pos", &self.camera.get_translation())?;
+        self.surface_shader_program.set_resource_vec3("light_pos", &self.sun.calculate_position())?;
+
+        let light_level = self.sun.calculate_light_level();
+        let fog_color = Vector3::from_s(0.1 + light_level * 0.6);
+        self.surface_shader_program.set_resource_vec3("fog_color", &fog_color)?;
+        self.skybox.update_light_level(light_level)?;
+        self.surface_shader_program.use_program();
         Ok(())
     }
 
@@ -212,6 +224,8 @@ impl Updatable for World {
         self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
 
         self.skybox.set_translation(self.camera.get_translation());
+        self.sun.set_rotation_center(self.camera.get_translation());
+        self.sun.tick(time_passed)?;
         
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;

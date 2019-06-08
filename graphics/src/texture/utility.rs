@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::convert::TryInto;
 
 use gl;
 use gl::types::{ GLenum, GLint, GLuint, GLsizei };

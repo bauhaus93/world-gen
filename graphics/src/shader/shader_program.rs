@@ -50,6 +50,18 @@ impl ShaderProgram {
         }
     }
 
+    pub fn set_resource_float(&self, resource_name: &str, value: Float) -> Result<(), ShaderProgramError> {
+            check_opengl_error("gl::Unifaaaaaaaaaaorm1f")?;
+        match self.handles.get(resource_name) {
+            Some(handle) => {
+                unsafe { gl::Uniform1f(*handle, value) }
+                check_opengl_error("gl::Uniform1f")?;
+                Ok(())
+            },
+            _ => Err(ShaderProgramError::HandleNotExisting(resource_name.to_string()))
+        }
+    }
+
     pub fn set_resource_mat4(&self, resource_name: &str, matrix: &Matrix4<Float>) -> Result<(), ShaderProgramError> {
         match self.handles.get(resource_name) {
             Some(handle) => {

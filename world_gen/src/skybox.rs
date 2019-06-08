@@ -23,6 +23,7 @@ impl Skybox {
             .add_fragment_shader("resources/shader/skybox/FragmentShader.glsl")
             .add_resource("cube_texture")
             .add_resource("mvp")
+            .add_resource("light_level")
             .finish()?;
         if let Err(e) = shader.set_resource_integer("cube_texture", 0) {
             return Err(GraphicsError::from(e).into());
@@ -51,6 +52,12 @@ impl Skybox {
         };
 
         Ok(sb)
+    }
+
+    pub fn update_light_level(&self, light_level: f32) -> Result<(), GraphicsError> {
+        self.shader.use_program();
+        self.shader.set_resource_float("light_level", light_level)?;
+        Ok(())
     }
 
     // caller must restore previously set shader/textures after call

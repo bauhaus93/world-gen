@@ -20,6 +20,7 @@ use self::model::Model;
 use self::object::Object;
 use self::skybox::Skybox;
 use self::timer::Timer;
+use self::sun::Sun;
 
 pub mod world;
 pub mod world_error;
@@ -31,3 +32,4 @@ mod object;
 mod noise;
 mod timer;
 mod skybox;
+mod sun;

@@ -176,7 +176,7 @@ impl World {
         self.surface_shader_program.set_resource_vec3("light_pos", &self.sun.calculate_position())?;
 
         let light_level = self.sun.calculate_light_level();
-        let fog_color = Vector3::from_s(0.1 + light_level * 0.6);
+        let fog_color = Vector3::from_s(0.1 + light_level * 0.8);
         self.surface_shader_program.set_resource_vec3("fog_color", &fog_color)?;
         self.skybox.update_light_level(light_level)?;
         self.surface_shader_program.use_program();
@@ -214,7 +214,7 @@ impl Updatable for World {
             }
         }
         if self.chunk_build_stats_timer.fires() {
-            info!("Avg chunk build time: {:.2} ms", self.chunk_loader.get_avg_build_time());
+            info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), self.count_loaded_vertices());
         }
 
         self.test_object.mod_translation(Vector3::new(2., 0., 0.));

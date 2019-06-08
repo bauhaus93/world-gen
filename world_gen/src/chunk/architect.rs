@@ -35,11 +35,10 @@ impl Architect {
     }
 
     pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: i32, resolution: i32) -> HeightMap {
-        let size = [chunk_size + 1,
-                    chunk_size + 1];
+        let size = chunk_size + 1;
         let mut height_map = HeightMap::new(size, resolution);
-        for y in 0..size[1] {
-            for x in 0..size[0] {
+        for y in 0..size {
+            for x in 0..size {
                 let abs_pos = get_world_pos(&chunk_pos, &[x, y], resolution);
                 height_map.set(&[x, y], self.get_height(abs_pos));
             }

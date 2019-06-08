@@ -30,9 +30,10 @@ impl ChunkBuilder {
     }
 
     pub fn create_surface_buffer(&mut self, height_map: &HeightMap) {
-        let mut triangles: Vec<Triangle> = Vec::with_capacity((CHUNK_SIZE * CHUNK_SIZE * 2) as usize);
-        for y in 0..CHUNK_SIZE {
-            for x in 0..CHUNK_SIZE {
+        let size = height_map.get_size();
+        let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
+        for y in 0..size - 1 {
+            for x in 0..size - 1 {
                 triangles.extend(&add_quad_triangles(&[x, y], height_map));
             }
         }
@@ -50,6 +51,7 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
     ];
     let mut triangles = [Triangle::default(),
                          Triangle::default()];
+    let resolution: Float = height_map.get_resolution() as Float;
 
     for i in 0..2 {
         let mut vertices: [Vertex; 3] = [Vertex::default(),
@@ -59,8 +61,8 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
                 let map_pos = [offset[0] + max(0, min(1, off[0] as i32)),
                                offset[1] + max(0, min(1, off[1] as i32))];
                 let height = height_map.get(&map_pos);
-                vert.set_pos(Vector3::new(offset[0] as Float + off[0],
-                                          offset[1] as Float + off[1],
+                vert.set_pos(Vector3::new((offset[0] as Float + off[0]) * resolution,
+                                          (offset[1] as Float + off[1]) * resolution,
                                           height));
                 debug_assert!(off[0] <= 1., off[1] <= 1.);
                 vert.set_uv(Vector2::new(off[0], off[1]));

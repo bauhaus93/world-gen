@@ -17,16 +17,16 @@ impl Mesh {
         let (pos, uv, nm, index) = triangles_to_buffers(&triangles, buffer_flags);
         let mut vb = VertexBuffer::default();
         let mut attr_index = 0;
-        if buffer_flags & BUFFER_POSTION == 1 {
+        if buffer_flags & BUFFER_POSTION != 0 {
             vb.add_float_buffer(pos, attr_index, 3);
             attr_index += 1;
         }
-        if buffer_flags & BUFFER_UV == 1 {
+        if buffer_flags & BUFFER_UV != 0 {
             let uv_size = triangles[0].get_uv_dim();
             vb.add_float_buffer(uv, attr_index, uv_size.into());
             attr_index += 1;
         }
-        if buffer_flags & BUFFER_NORMAL == 1 {
+        if buffer_flags & BUFFER_NORMAL != 0 {
             vb.add_float_buffer(nm, attr_index, 3);
         }
         vb.set_index_buffer(index);

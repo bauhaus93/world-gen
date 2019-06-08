@@ -1,7 +1,7 @@
 use utility::Float;
 
 pub struct HeightMap {
-    size: [i32; 2],
+    size: i32,
     resolution: i32,
     height_list: Vec<Float>
 }
@@ -9,11 +9,11 @@ pub struct HeightMap {
 
 impl HeightMap {
 
-    pub fn new(size: [i32; 2], resolution: i32) -> Self {
-        debug_assert!(size[0] > 0 && size[1] > 0);
+    pub fn new(size: i32, resolution: i32) -> Self {
+        debug_assert!(size> 0);
         debug_assert!(resolution > 0);
         let mut height_list =  Vec::new();
-        height_list.resize((size[0] * size[1]) as usize, 0.);
+        height_list.resize((size * size) as usize, 0.);
         Self {
             size: size,
             resolution: resolution,
@@ -22,8 +22,12 @@ impl HeightMap {
     }
 
     #[allow(unused)]
-    pub fn get_size(&self) -> [i32; 2] {
+    pub fn get_size(&self) -> i32 {
         self.size
+    }
+
+    pub fn get_resolution(&self) -> i32 {
+        self.resolution
     }
 
     pub fn set(&mut self, pos: &[i32; 2], height: Float) {
@@ -54,7 +58,7 @@ impl HeightMap {
 
     fn calculate_index(&self, pos: &[i32; 2]) -> usize {
         debug_assert!(pos[0] >= 0 && pos[1] >= 0);
-        debug_assert!(pos[0] < self.size[0] && pos[1] < self.size[1]);
-        (pos[0] + self.size[0] * pos[1]) as usize
+        debug_assert!(pos[0] < self.size && pos[1] < self.size);
+        (pos[0] + self.size * pos[1]) as usize
     }
 }

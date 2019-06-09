@@ -1,27 +1,28 @@
 use std::ops::Add;
-use glm::{ Vector3, Matrix4 };
+use glm::{ Vector3, Vector4, Matrix4 };
 use glm::ext::{ look_at, perspective };
 use num_traits::One;
 
 use graphics::{ Projection, create_direction,projection::{ create_orthographic_projection_matrix, create_default_perspective } };
 use utility::Float;
-use crate::{ Model, Frustum };
+use crate::Model;
 use crate::traits::{ Translatable, Rotatable };
 
 
 pub struct Camera {
     model: Model,
     projection: Projection,
-    frustum: Frustum,
     view_matrix: Matrix4<Float>,
     projection_matrix: Matrix4<Float>
 }
 
 impl Camera {
 
-    pub fn is_visible(&self, target: &Model) -> bool {
-        let mvp = self.create_mvp_matrix(target);
-        self.frustum.is_visible(mvp)
+    pub fn is_visible(&self, target_mvp: &Matrix4<Float>) -> bool {
+        let p = target_mvp.clone() * Vector4::new(0., 0., 0., 1.);
+        p.x.abs() < p.w &&
+        p.y.abs() < p.w &&
+        p.z.abs() < p.w
     }
 
     pub fn set_far(&mut self, new_far: Float) {
@@ -49,10 +50,6 @@ impl Camera {
         self.projection
     }
 
-    pub fn get_frustum(&self) -> &Frustum {
-        &self.frustum
-    }
-
     pub fn get_direction(&self) -> Vector3<Float> {
         create_direction(self.model.get_rotation())
     }
@@ -69,9 +66,7 @@ impl Camera {
         self.projection_matrix = match self.projection {
             Projection::Perspective { fov, aspect_ratio, near, far } => {
                 trace!("projection update: perspective, fov = {}, aspect ratio = {}, near = {}, far = {}", fov.to_degrees(), aspect_ratio, near, far);
-                let mat = perspective(fov, aspect_ratio, near, far);
-                self.frustum = Frustum::from_perspective(&mat);
-                mat
+                perspective(fov, aspect_ratio, near, far)
             },
             Projection::Orthographic { width, aspect_ratio } => {
                 trace!("projection update: orthographic, width = {}, aspect ratio = {}", width, aspect_ratio);
@@ -87,7 +82,6 @@ impl Default for Camera {
         let mut camera = Camera {
             model: Model::default(),
             projection:  create_default_perspective(),
-            frustum: Frustum::default(),
             view_matrix: Matrix4::<Float>::one(),
             projection_matrix: Matrix4::<Float>::one()
         };

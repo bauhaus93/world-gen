@@ -152,8 +152,6 @@ impl World {
                 }
             }
         }
-        //request_list.clear();
-        //request_list.push(([0, 0], 0));
         self.chunk_loader.request(&request_list)?;
         self.last_chunk_load = cam_chunk_pos;
         trace!("Requested chunks: {}", request_list.len());
@@ -226,6 +224,12 @@ impl World {
         Ok(())
     }
 
+    fn update_chunk_mvps(&mut self) {
+        for c in self.chunks.values_mut() {
+            c.update_mvp(self.camera.create_mvp_matrix(c.get_model()));
+        }
+    } 
+
     pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
         self.tick(time_passed)
     }
@@ -236,7 +240,7 @@ impl World {
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
         self.chunks.values()
-            .filter(|c| self.camera.is_visible(c.get_model()))
+            .filter(|c| self.camera.is_visible(c.get_mvp()))
             .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
 
         /*for (_pos, chunk) in self.chunks.iter() {
@@ -263,6 +267,8 @@ impl Updatable for World {
         if self.chunk_build_stats_timer.fires() {
             info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), self.count_loaded_vertices());
         }
+
+        self.update_chunk_mvps();
 
         self.skybox.set_translation(self.camera.get_translation());
         self.sun.set_rotation_center(self.camera.get_translation());

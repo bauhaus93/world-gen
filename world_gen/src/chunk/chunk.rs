@@ -1,4 +1,6 @@
-use glm::Vector3;
+use num_traits::One;
+
+use glm::{ Vector3, Matrix4 };
 
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
@@ -10,6 +12,7 @@ pub struct Chunk {
     pos: [i32; 2],
     model: Model,
     mesh: Mesh,
+    mvp: Matrix4<Float>,
     lod: u8,
     tree_list: Vec<Object>
 }
@@ -22,10 +25,12 @@ impl Chunk {
             pos: pos,
             model: model,
             mesh: mesh,
+            mvp: Matrix4::one(),
             lod: lod,
             tree_list: Vec::new()
         }
     }
+
 
     pub fn get_pos(&self) -> [i32; 2] {
         self.pos
@@ -43,6 +48,14 @@ impl Chunk {
         &self.model
     }
 
+    pub fn get_mvp(&self) -> &Matrix4<Float> {
+        &self.mvp
+    }
+
+    pub fn update_mvp(&mut self, new_mvp: Matrix4<Float>) {
+        self.mvp = new_mvp;
+    }
+
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }
@@ -50,8 +63,7 @@ impl Chunk {
 
 impl Renderable for Chunk {
     fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
-        let mvp = camera.create_mvp_matrix(&self.model);
-        shader.set_resource_mat4("mvp", &mvp)?;
+        shader.set_resource_mat4("mvp", &self.mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
         self.mesh.render()?;
         for tree in &self.tree_list {

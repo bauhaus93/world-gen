@@ -14,28 +14,29 @@ pub struct Model {
     position: Vector3<Float>,
     rotation: Vector3<Float>,
     scale: Vector3<Float>,
-    matrix: glm::Matrix4<Float>
+    matrix: Matrix4<Float>,
 }
 
 impl Model {
-    fn update_matrix(&mut self) {
-        self.matrix = create_transformation_matrix(self.position, self.rotation, self.scale);
-    }
+
     pub fn get_matrix(&self) -> Matrix4<Float> {
         self.matrix.clone()
     }
     pub fn get_matrix_ref(&self) -> &Matrix4<Float> {
         &self.matrix
     }
+    fn update_matrix(&mut self) {
+        self.matrix = create_transformation_matrix(self.position, self.rotation, self.scale);
+    }
 }
 
 impl Default for Model {
     fn default() -> Self {
         let mut model = Self {
-            position: Vector3::<Float>::from_s(0.),
-            rotation: Vector3::<Float>::from_s(0.),
-            scale: Vector3::<Float>::from_s(1.),
-            matrix: Matrix4::<Float>::one()
+            position: Vector3::from_s(0.),
+            rotation: Vector3::from_s(0.),
+            scale: Vector3::from_s(1.),
+            matrix: Matrix4::one(),
         };
         model.update_matrix();
         model

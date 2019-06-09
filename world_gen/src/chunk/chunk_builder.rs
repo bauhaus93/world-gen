@@ -49,8 +49,8 @@ impl ChunkBuilder {
             let size = self.height_map.get_size();
             for y in 0..size {
                 for x in 0..size {
-                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + x) as Float,
-                                   ((self.pos[1] * CHUNK_SIZE) + y) as Float];
+                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + x * resolution) as Float,
+                                   ((self.pos[1] * CHUNK_SIZE) + y * resolution) as Float];
                     if architect.has_tree(abs_pos) {
                         let mut tree = object_manager.create_object("tree")?;
 

@@ -39,6 +39,10 @@ impl Chunk {
         self.mesh.get_vertex_count()
     }
 
+    pub fn get_model(&self) -> &Model {
+        &self.model
+    }
+
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }

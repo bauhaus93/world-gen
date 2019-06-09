@@ -5,18 +5,24 @@ use num_traits::One;
 
 use graphics::{ Projection, create_direction,projection::{ create_orthographic_projection_matrix, create_default_perspective } };
 use utility::Float;
-use crate::model::Model;
+use crate::{ Model, Frustum };
 use crate::traits::{ Translatable, Rotatable };
 
 
 pub struct Camera {
     model: Model,
     projection: Projection,
+    frustum: Frustum,
     view_matrix: Matrix4<Float>,
     projection_matrix: Matrix4<Float>
 }
 
 impl Camera {
+
+    pub fn is_visible(&self, target: &Model) -> bool {
+        let mvp = self.create_mvp_matrix(target);
+        self.frustum.is_visible(mvp)
+    }
 
     pub fn set_far(&mut self, new_far: Float) {
         match &mut self.projection {
@@ -43,6 +49,10 @@ impl Camera {
         self.projection
     }
 
+    pub fn get_frustum(&self) -> &Frustum {
+        &self.frustum
+    }
+
     pub fn get_direction(&self) -> Vector3<Float> {
         create_direction(self.model.get_rotation())
     }
@@ -59,7 +69,9 @@ impl Camera {
         self.projection_matrix = match self.projection {
             Projection::Perspective { fov, aspect_ratio, near, far } => {
                 trace!("projection update: perspective, fov = {}, aspect ratio = {}, near = {}, far = {}", fov.to_degrees(), aspect_ratio, near, far);
-                perspective(fov, aspect_ratio, near, far)
+                let mat = perspective(fov, aspect_ratio, near, far);
+                self.frustum = Frustum::from_perspective(&mat);
+                mat
             },
             Projection::Orthographic { width, aspect_ratio } => {
                 trace!("projection update: orthographic, width = {}, aspect ratio = {}", width, aspect_ratio);
@@ -75,6 +87,7 @@ impl Default for Camera {
         let mut camera = Camera {
             model: Model::default(),
             projection:  create_default_perspective(),
+            frustum: Frustum::default(),
             view_matrix: Matrix4::<Float>::one(),
             projection_matrix: Matrix4::<Float>::one()
         };

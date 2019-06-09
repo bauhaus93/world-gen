@@ -152,6 +152,8 @@ impl World {
                 }
             }
         }
+        //request_list.clear();
+        //request_list.push(([0, 0], 0));
         self.chunk_loader.request(&request_list)?;
         self.last_chunk_load = cam_chunk_pos;
         trace!("Requested chunks: {}", request_list.len());
@@ -233,9 +235,13 @@ impl World {
         self.surface_shader_program.use_program();
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
-        for (_pos, chunk) in self.chunks.iter() {
+        self.chunks.values()
+            .filter(|c| self.camera.is_visible(c.get_model()))
+            .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
+
+        /*for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.surface_shader_program, 0)?;
-        }
+        }*/
 
         self.texture_array.deactivate();
         self.skybox.render(&self.camera)?;

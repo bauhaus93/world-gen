@@ -17,11 +17,12 @@ pub use self::world_error::WorldError;
 
 use self::camera::Camera;
 use self::model::Model;
-use self::object::Object;
 use self::skybox::Skybox;
 use self::timer::Timer;
 use self::sun::Sun;
 use self::chunk::CHUNK_SIZE;
+use self::object::ObjectManager;
+use self::object::Object;
 
 pub mod world;
 pub mod world_error;
@@ -30,8 +31,8 @@ mod chunk;
 mod camera;
 mod model;
 mod object;
-mod object_lod;
 mod noise;
 mod timer;
 mod skybox;
 mod sun;
+

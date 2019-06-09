@@ -3,12 +3,14 @@ use std::error::Error;
 
 use graphics::{ GraphicsError, mesh::MeshError };
 use super::chunk::chunk_error::ChunkError;
+use super::object::object_error::ObjectError;
 
 #[derive(Debug)]
 pub enum WorldError {
     Graphics(GraphicsError),
     Mesh(MeshError),
-    Chunk(ChunkError)
+    Chunk(ChunkError),
+    Object(ObjectError)
 }
 
 impl From<GraphicsError> for WorldError {
@@ -29,6 +31,13 @@ impl From<ChunkError> for WorldError {
     }
 }
 
+impl From<ObjectError> for WorldError {
+    fn from(err: ObjectError) -> Self {
+        WorldError::Object(err)
+    }
+}
+
+
 impl Error for WorldError {
 
     fn description(&self) -> &str {
@@ -36,7 +45,8 @@ impl Error for WorldError {
             WorldError::Graphics(_) => "graphics",
             WorldError::Mesh(_) => "mesh",
             WorldError::Chunk(_) => "chunk",
-        }
+            WorldError::Object(_) => "object"
+            }
     }
 
     fn cause(&self) -> Option<&dyn Error> {
@@ -44,6 +54,7 @@ impl Error for WorldError {
             WorldError::Graphics(ref err) => Some(err),
             WorldError::Mesh(ref err) => Some(err),
             WorldError::Chunk(ref err) => Some(err),
+            WorldError::Object(ref err) => Some(err)
         }
     }
 }
@@ -54,6 +65,7 @@ impl fmt::Display for WorldError {
             WorldError::Graphics(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Mesh(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Chunk(ref err) => write!(f, "{}/{}", self.description(), err),
+            WorldError::Object(ref err) => write!(f, "{}/{}", self.description(), err),
         }
     }
 }

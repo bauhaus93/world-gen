@@ -6,10 +6,10 @@ use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::{ GenNum, Vector3 };
 
-use graphics::{ Projection, Mesh, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
+use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::Float;
-use crate::{ Timer, Object, Camera, WorldError, Skybox, Sun };
+use crate::{ Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
@@ -17,7 +17,6 @@ pub struct World {
     texture_array: Texture,
     camera: Camera,
     surface_shader_program: ShaderProgram,
-    test_object: Object,
     skybox: Skybox,
     sun: Sun,
     chunk_loader: ChunkLoader,
@@ -26,7 +25,9 @@ pub struct World {
     chunk_build_stats_timer: Timer,
     lod_near_radius: i32,
     active_chunk_radius: i32,
-    last_chunk_load: [i32; 2]
+    last_chunk_load: [i32; 2],
+    object_manager: ObjectManager,
+    test_monkey: Object
 }
 
 const TEXTURE_LAYER_MUD: u32 = 0;
@@ -71,21 +72,23 @@ impl World {
 
         let chunk_loader = ChunkLoader::from_rng(&mut rng);
 
-        let mut test_object = Object::new(Mesh::from_obj("resources/obj/test.obj")?);
-        test_object.set_translation(Vector3::new(0., 0., 500.));
-        test_object.set_scale(Vector3::new(5., 5., 5.));
-
         let mut skybox = Skybox::new("resources/img/sky.png")?;
         skybox.scale_to_chunk_units(ACTIVE_RADIUS * 2);
 
         let mut sun = Sun::default();
         sun.set_day_length(3 * 60);
 
+        let mut object_manager = ObjectManager::default();
+        object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
+
+        let mut test_monkey = object_manager.create_object("monkey")?;
+        test_monkey.set_translation(Vector3::new(0., 0., 400.));
+        test_monkey.set_scale(Vector3::from_s(10.));
+
         let mut world = World {
             texture_array: texture_array,
             camera: camera,
             surface_shader_program: surface_shader_program,
-            test_object: test_object,
             skybox: skybox,
             sun: sun,
             chunk_loader: chunk_loader,
@@ -94,7 +97,9 @@ impl World {
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: NEAR_RADIUS,
             active_chunk_radius: ACTIVE_RADIUS,
-            last_chunk_load: [0, 0]
+            last_chunk_load: [0, 0],
+            object_manager: object_manager,
+            test_monkey: test_monkey
         };
 
         world.camera.set_translation(Vector3::new(0., 0., 200.));
@@ -216,7 +221,7 @@ impl World {
         self.texture_array.activate();
         self.surface_shader_program.use_program();
 
-        self.test_object.render(&self.camera, &self.surface_shader_program, 0)?;
+        self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
         for (_pos, chunk) in self.chunks.iter() {
             chunk.render(&self.camera, &self.surface_shader_program, 0)?;
         }
@@ -242,15 +247,15 @@ impl Updatable for World {
             info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), self.count_loaded_vertices());
         }
 
-        self.test_object.mod_translation(Vector3::new(2., 0., 0.));
-        if self.test_object.get_translation()[0] > 1000. {
-            self.test_object.mod_translation(Vector3::new(-1000., 0., 0.));
-        }
-        self.test_object.mod_rotation(Vector3::new(0., 0., 5f32.to_radians()));
-
         self.skybox.set_translation(self.camera.get_translation());
         self.sun.set_rotation_center(self.camera.get_translation());
         self.sun.tick(time_passed)?;
+
+        self.test_monkey.mod_rotation(Vector3::new(0., 0., 0.25));
+        self.test_monkey.mod_translation(Vector3::new(4., 0., 0.));
+        if self.test_monkey.get_translation()[0] >= 500. {
+            self.test_monkey.mod_translation(Vector3::new(-500., 0., 0.));
+        }
         
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;

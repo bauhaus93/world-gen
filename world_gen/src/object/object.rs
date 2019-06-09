@@ -4,33 +4,28 @@ use graphics::{ Mesh, ShaderProgram, GraphicsError };
 use utility::Float;
 use crate::{ Camera, Model };
 use crate::traits::{ Rotatable, Translatable, Scalable, Renderable };
+use super::ObjectPrototype;
 
 pub struct Object {
-    model: Model,
-    mesh: Mesh,
+    prototype: ObjectPrototype,
+    model: Model
 }
 
 impl Object {
-    pub fn new(mesh: Mesh) -> Object {
+    pub fn new(prototype: &ObjectPrototype) -> Object {
         Object {
-            model: Model::default(),
-            mesh: mesh,
+            prototype: prototype.clone(),
+            model: Model::default()
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn get_vertex_count(&self) -> u32 {
-        self.mesh.get_vertex_count()
     }
 }
 
 impl Renderable for Object {
-    fn render(&self, camera: &Camera, shader: &ShaderProgram, _lod: u8) -> Result<(), GraphicsError> {
+    fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
         let mvp = camera.create_mvp_matrix(&self.model);
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
-        self.mesh.render()?;
-        Ok(()) 
+        self.prototype.render(lod)
     }
 }
 

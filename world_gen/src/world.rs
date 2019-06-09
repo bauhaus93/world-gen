@@ -67,7 +67,7 @@ impl World {
         let mut rng = StdRng::seed_from_u64(0);//StdRng::from_entropy();
 
         let mut camera = Camera::default();
-        camera.set_far((ACTIVE_RADIUS * CHUNK_SIZE * 4) as Float);
+        camera.set_far((ACTIVE_RADIUS * CHUNK_SIZE * 8) as Float);
 
         let chunk_loader = ChunkLoader::from_rng(&mut rng);
 
@@ -201,7 +201,7 @@ impl World {
         self.surface_shader_program.set_resource_vec3("light_pos", &self.sun.calculate_position())?;
 
         let light_level = self.sun.calculate_light_level();
-        let fog_color = Vector3::from_s(0.1 + light_level * 0.8);
+        let fog_color = Vector3::from_s(1. - (-light_level).exp());
         self.surface_shader_program.set_resource_vec3("fog_color", &fog_color)?;
         self.skybox.update_light_level(light_level)?;
         self.surface_shader_program.use_program();

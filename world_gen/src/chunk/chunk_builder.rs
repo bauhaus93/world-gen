@@ -38,7 +38,7 @@ impl ChunkBuilder {
             Some(vb) => Mesh::try_from(vb)?,
             _ => { return Err(ChunkError::NoBufferBuilt(self.pos)); }
         };
-        let mut chunk = Chunk::new(self.pos, self.lod, mesh);
+        let mut chunk = Chunk::new(self.pos, self.height_map, self.lod, mesh);
         self.tree_list.into_iter().for_each(|t| chunk.add_tree(t));
         Ok(chunk)
     }

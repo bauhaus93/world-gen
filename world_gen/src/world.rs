@@ -240,7 +240,7 @@ impl World {
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
         self.chunks.values()
-            .filter(|c| self.camera.is_visible(c.get_mvp()))
+            .filter(|c| c.is_visible())
             .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
 
         /*for (_pos, chunk) in self.chunks.iter() {

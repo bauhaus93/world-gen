@@ -18,8 +18,9 @@ pub struct Camera {
 
 impl Camera {
 
-    pub fn is_visible(&self, target_mvp: &Matrix4<Float>) -> bool {
-        let p = target_mvp.clone() * Vector4::new(0., 0., 0., 1.);
+    #[allow(unused)]
+    pub fn point_visible(&self, point_mvp: &Matrix4<Float>) -> bool {
+        let p = point_mvp.clone() * Vector4::new(0., 0., 0., 1.);
         p.x.abs() < p.w &&
         p.y.abs() < p.w &&
         p.z.abs() < p.w

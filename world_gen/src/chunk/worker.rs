@@ -1,6 +1,6 @@
 use std::sync::{ Arc, Mutex };
 use std::collections::VecDeque;
-use std::time;
+use std::time::{ Instant, Duration };
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
@@ -37,35 +37,55 @@ impl Worker {
     }
 
     pub fn work(&self) -> Result<(), ChunkError> {
-        let sleep_time = time::Duration::from_millis(500);
-        'exit: while !self.stop.load(Ordering::Relaxed) {
-            let pos_opt = match self.input_queue.lock() {
-                Ok(mut guard) => (*guard).pop_back(),
-                Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
-            };
-            if let Some((pos, lod)) = pos_opt {
-                let build_start = time::Instant::now();
-                let mut builder = ChunkBuilder::new(pos, lod);
-                
-                let raw_height_map = match lod {
-                    0 => self.architect.create_height_map(pos, CHUNK_SIZE, 1),
-                    _ => self.architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
-                };
-                builder.create_surface_buffer(&raw_height_map);
-
-                let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
-                match self.build_stats.lock() {
-                    Ok(mut guard) => (*guard).add_time(build_time),
-                    Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
-                }
-                match self.output_queue.lock() {
-                    Ok(mut guard) => (*guard).push(builder),
-                    Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
-                }
-            } else {
-                thread::sleep(sleep_time);
-            }
+        while !self.stop.load(Ordering::Relaxed) {
+            self.work_cycle()?;
         }
         Ok(())
+    }
+
+    fn work_cycle(&self) -> Result<(), ChunkError> {
+        let sleep_time = Duration::from_millis(500);
+        if let Some((pos, lod)) = self.get_chunk_pos()? {
+            let build_start = Instant::now();
+            self.build_chunk(pos, lod)?;
+            if lod == 0 {   // only want stats for high quality chunks
+                self.handle_build_stats(&build_start)?;
+            }
+        } else {
+            thread::sleep(sleep_time);
+        }
+        Ok(())
+    }
+
+    fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
+        let mut builder = ChunkBuilder::new(chunk_pos, lod);
+        
+        let raw_height_map = match lod {
+            0 => self.architect.create_height_map(chunk_pos, CHUNK_SIZE, 1),
+            _ => self.architect.create_height_map(chunk_pos, CHUNK_SIZE / 8, 8),
+        };
+        builder.create_surface_buffer(&raw_height_map);
+
+        match self.output_queue.lock() {
+            Ok(mut guard) => (*guard).push(builder),
+            Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
+        }
+        Ok(())
+    }
+
+    fn handle_build_stats(&self, build_start: &Instant) -> Result<(), ChunkError> {
+        let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
+        match self.build_stats.lock() {
+            Ok(mut guard) => (*guard).add_time(build_time),
+            Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
+        }
+        Ok(())
+    }
+
+    fn get_chunk_pos(&self) -> Result<Option<([i32; 2], u8)>, ChunkError> {
+        match self.input_queue.lock() {
+            Ok(mut guard) => Ok((*guard).pop_back()),
+            Err(_poisoned) =>  Err(ChunkError::MutexPoison)
+        }
     }
 }

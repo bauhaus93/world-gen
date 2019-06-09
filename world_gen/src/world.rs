@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use rand;
 #[allow(unused)]
@@ -26,7 +27,7 @@ pub struct World {
     lod_near_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: [i32; 2],
-    object_manager: ObjectManager,
+    object_manager: Arc<ObjectManager>,
     test_monkey: Object
 }
 
@@ -70,7 +71,11 @@ impl World {
         let mut camera = Camera::default();
         camera.set_far((ACTIVE_RADIUS * CHUNK_SIZE * 8) as Float);
 
-        let chunk_loader = ChunkLoader::from_rng(&mut rng);
+        let mut object_manager = ObjectManager::default();
+        object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
+        let obj_mng_arc = Arc::new(object_manager);
+
+        let chunk_loader = ChunkLoader::new(&mut rng, obj_mng_arc.clone());
 
         let mut skybox = Skybox::new("resources/img/sky.png")?;
         skybox.scale_to_chunk_units(ACTIVE_RADIUS * 2);
@@ -78,10 +83,9 @@ impl World {
         let mut sun = Sun::default();
         sun.set_day_length(3 * 60);
 
-        let mut object_manager = ObjectManager::default();
-        object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
 
-        let mut test_monkey = object_manager.create_object("monkey")?;
+
+        let mut test_monkey = obj_mng_arc.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
         test_monkey.set_scale(Vector3::from_s(10.));
 
@@ -98,7 +102,7 @@ impl World {
             lod_near_radius: NEAR_RADIUS,
             active_chunk_radius: ACTIVE_RADIUS,
             last_chunk_load: [0, 0],
-            object_manager: object_manager,
+            object_manager: obj_mng_arc,
             test_monkey: test_monkey
         };
 

@@ -1,17 +1,17 @@
 use std::sync::{ Arc, Mutex };
 use std::collections::{ BTreeMap, BTreeSet, VecDeque };
-use std::time;
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use super::{ chunk::Chunk, chunk_builder::ChunkBuilder, architect::Architect, chunk_error::ChunkError };
-use super::chunk_size::CHUNK_SIZE;
+use crate::{ ObjectManager };
+use super::{ Chunk, ChunkBuilder, Architect, ChunkError, BuildStats, Worker };
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
+    object_manager: Arc<ObjectManager>,
     input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
@@ -19,16 +19,13 @@ pub struct ChunkLoader {
     thread_handles: Vec<thread::JoinHandle<()>>
 }
 
-struct BuildStats {
-    build_time_accumulated: u32,
-    build_count: u32,
-}
 
 impl ChunkLoader {
-    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R, object_manager: Arc<ObjectManager>) -> Self {
         Self {
             stop: Arc::new(AtomicBool::new(false)),
             architect: Arc::new(Architect::from_rng(rng)),
+            object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),
             build_stats: Arc::new(Mutex::new(BuildStats::default())),
@@ -41,14 +38,21 @@ impl ChunkLoader {
             warn!("Starting chunk loader threads, but threads already running");
         }
         self.stop.load(Ordering::Relaxed);
+        let worker = Worker::new(
+            self.architect.clone(),
+            self.object_manager.clone(),
+            self.stop.clone(),
+            self.input_queue.clone(),
+            self.output_queue.clone(),
+            self.build_stats.clone()
+        );
         for _i in 0..thread_count {
-            let architect = self.architect.clone();
-            let stop = self.stop.clone();
-            let input = self.input_queue.clone();
-            let output = self.output_queue.clone();
-            let build_stats = self.build_stats.clone();
+            let next_worker = worker.clone();
             let handle = thread::spawn(move || {
-                worker(architect, stop, input, output, build_stats);
+                match next_worker.work() {
+                    Ok(_) => debug!("Worker finished successfully"),
+                    Err(e) =>  error!("Worker error: {}", e)
+                 }
             });
             self.thread_handles.push(handle);
         }
@@ -114,61 +118,4 @@ impl Drop for ChunkLoader {
     }
 }
 
-impl Default for BuildStats {
-    fn default() -> Self {
-        Self {
-            build_time_accumulated: 0,
-            build_count: 0,
-        }
-    }
-}
 
-impl BuildStats {
-    pub fn add_time(&mut self, build_time: u32) {
-        self.build_time_accumulated += build_time;
-        self.build_count += 1;
-    }
-    pub fn get_avg_time(&mut self) -> f64 {
-        if self.build_count > 0 {
-            self.build_time_accumulated as f64 / self.build_count as f64
-        } else {
-            0.
-        }
-    }
-}
-
-fn worker(architect: Arc<Architect>,
-          stop: Arc<AtomicBool>,
-          input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
-          output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
-          build_stats: Arc<Mutex<BuildStats>>) {
-    let sleep_time = time::Duration::from_millis(500);
-    'exit: while !stop.load(Ordering::Relaxed) {
-        let pos_opt = match input_queue.lock() {
-            Ok(mut guard) => (*guard).pop_back(),
-            Err(_poisoned) => { break 'exit; }
-        };
-        if let Some((pos, lod)) = pos_opt {
-            let build_start = time::Instant::now();
-            let mut builder = ChunkBuilder::new(pos, lod);
-            
-            let raw_height_map = match lod {
-                0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
-                _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
-            };
-            builder.create_surface_buffer(&raw_height_map);
-
-            let build_time = build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
-            match build_stats.lock() {
-                Ok(mut guard) => (*guard).add_time(build_time),
-                Err(_poisoned) => { break 'exit; }
-            }
-            match output_queue.lock() {
-                Ok(mut guard) => (*guard).push(builder),
-                Err(_poisoned) => { break 'exit; }
-            }
-        } else {
-            thread::sleep(sleep_time);
-        }
-    }
-}

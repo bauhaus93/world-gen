@@ -58,13 +58,9 @@ impl Worker {
     }
 
     fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
-        let mut builder = ChunkBuilder::new(chunk_pos, lod);
-        
-        let raw_height_map = match lod {
-            0 => self.architect.create_height_map(chunk_pos, CHUNK_SIZE, 1),
-            _ => self.architect.create_height_map(chunk_pos, CHUNK_SIZE / 8, 8),
-        };
-        builder.create_surface_buffer(&raw_height_map);
+        let mut builder = ChunkBuilder::new(chunk_pos, lod, &self.architect);
+        builder.load_trees(&self.object_manager)?;
+        builder.create_surface_buffer();
 
         match self.output_queue.lock() {
             Ok(mut guard) => (*guard).push(builder),

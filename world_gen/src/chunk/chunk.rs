@@ -3,14 +3,15 @@ use glm::Vector3;
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
-use crate::{ Model, Camera };
+use crate::{ Model, Object, Camera };
 use super::chunk_size::CHUNK_SIZE;
 
 pub struct Chunk {
     pos: [i32; 2],
     model: Model,
     mesh: Mesh,
-    lod: u8
+    lod: u8,
+    tree_list: Vec<Object>
 }
 
 impl Chunk {
@@ -21,7 +22,8 @@ impl Chunk {
             pos: pos,
             model: model,
             mesh: mesh,
-            lod: lod
+            lod: lod,
+            tree_list: Vec::new()
         }
     }
 
@@ -32,9 +34,13 @@ impl Chunk {
     pub fn get_lod(&self) -> u8 {
         self.lod
     }
-
+    
     pub fn get_vertex_count(&self) -> u32 {
         self.mesh.get_vertex_count()
+    }
+
+    pub fn add_tree(&mut self, tree_object: Object) {
+        self.tree_list.push(tree_object);
     }
 }
 
@@ -44,6 +50,9 @@ impl Renderable for Chunk {
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
         self.mesh.render()?;
+        for tree in &self.tree_list {
+            tree.render(camera, shader, lod)?;
+        }
         Ok(())
     }
 }

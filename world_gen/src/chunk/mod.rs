@@ -17,3 +17,4 @@ use self::chunk_builder::ChunkBuilder;
 use self::chunk_error::ChunkError;
 use self::worker::Worker;
 use self::build_stats::BuildStats;
+use self::height_map::HeightMap;

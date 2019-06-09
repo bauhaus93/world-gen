@@ -46,7 +46,7 @@ impl Error for WorldError {
             WorldError::Mesh(_) => "mesh",
             WorldError::Chunk(_) => "chunk",
             WorldError::Object(_) => "object"
-            }
+        }
     }
 
     fn cause(&self) -> Option<&dyn Error> {

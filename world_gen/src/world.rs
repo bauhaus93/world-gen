@@ -25,6 +25,7 @@ pub struct World {
     chunk_update_timer: Timer,
     chunk_build_stats_timer: Timer,
     lod_near_radius: i32,
+    lod_far_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: [i32; 2],
     object_manager: Arc<ObjectManager>,
@@ -40,6 +41,7 @@ const TEXTURES: [[u32; 3]; 2] = [
 ];
 
 const NEAR_RADIUS: i32 = 20;
+const FAR_RADIUS: i32 = 40;
 const ACTIVE_RADIUS: i32 = 60;
 
 impl World {
@@ -73,6 +75,7 @@ impl World {
 
         let mut object_manager = ObjectManager::default();
         object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
+        object_manager.add_prototype("tree", "resources/obj/tree.obj", "resources/obj/tree.obj")?;
         let obj_mng_arc = Arc::new(object_manager);
 
         let chunk_loader = ChunkLoader::new(&mut rng, obj_mng_arc.clone());
@@ -100,6 +103,7 @@ impl World {
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: NEAR_RADIUS,
+            lod_far_radius: FAR_RADIUS,
             active_chunk_radius: ACTIVE_RADIUS,
             last_chunk_load: [0, 0],
             object_manager: obj_mng_arc,
@@ -137,7 +141,8 @@ impl World {
                     let chunk_pos = [cam_chunk_pos[0] + x,
                                      cam_chunk_pos[1] + y];
                     if let Some(c) = self.chunks.get(&chunk_pos) {
-                        if lod != c.get_lod() {
+                        let old_lod = c.get_lod();
+                        if lod != old_lod && (lod < 2 || old_lod < 2) {
                            request_list.push((chunk_pos, lod)); 
                         }
                     } else {
@@ -199,8 +204,10 @@ impl World {
     fn lod_by_chunk_distance(&self, distance: i32) -> u8 {
         if distance < self.lod_near_radius {
             0
-        } else {
+        } else if distance < self.lod_far_radius {
             1
+        } else {
+            2
         }
     }
 

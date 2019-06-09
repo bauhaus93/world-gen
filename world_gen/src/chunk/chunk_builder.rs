@@ -43,19 +43,22 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    pub fn load_trees(&mut self, object_manager: &ObjectManager) -> Result<(), ChunkError> {
+    pub fn load_trees(&mut self, architect: &Architect, object_manager: &ObjectManager) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
-            let offset = (resolution * size) as Float / 2.;
+            for y in 0..size {
+                for x in 0..size {
+                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + x) as Float,
+                                   ((self.pos[1] * CHUNK_SIZE) + y) as Float];
+                    if architect.has_tree(abs_pos) {
+                        let mut tree = object_manager.create_object("tree")?;
 
-            let mut tree = object_manager.create_object("tree")?;
-
-            tree.set_translation(Vector3::new((self.pos[0] * CHUNK_SIZE) as Float + offset,
-                                            (self.pos[1] * CHUNK_SIZE) as Float + offset,
-                                            self.height_map.get(&[size / 2, size / 2])));
-
-            self.tree_list.push(tree);
+                        tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&[x, y])));
+                        self.tree_list.push(tree);
+                    }
+                }
+            }
         }
         Ok(())
     }

@@ -8,7 +8,8 @@ use super::get_world_pos;
 pub struct Architect {
     height_noise: OctavedNoise,
     hill_noise: OctavedNoise,
-    mountain_noise: OctavedNoise
+    mountain_noise: OctavedNoise,
+    tree_noise: OctavedNoise
 }
 
 impl Architect {
@@ -26,11 +27,19 @@ impl Architect {
         mountain_noise.set_octaves(4);
         mountain_noise.set_scale(1e-4);
         mountain_noise.set_roughness(2.);
-        mountain_noise.set_range([0./*-2.*/, 1.]);
+        mountain_noise.set_range([-1., 1.]);
+
+        let mut tree_noise = OctavedNoise::from_rng(&mut local_rng);
+        tree_noise.set_octaves(3);
+        tree_noise.set_scale(1e-1);
+        tree_noise.set_roughness(10.);
+        tree_noise.set_range([0., 1.]);
+
         Self {
             height_noise: height_noise,
             hill_noise: hill_noise,
-            mountain_noise: mountain_noise
+            mountain_noise: mountain_noise,
+            tree_noise: tree_noise
         }
     }
 
@@ -51,7 +60,7 @@ impl Architect {
         let _hill_val = self.hill_noise.get_noise(absolute_pos);
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);
         if mountain_val > 0. {
-            raw_height * (1. +  (/*30.*/ 10. * mountain_val.powf(2.)))
+            raw_height * (1. +  (10. * mountain_val.powf(2.)))
         } else {
             raw_height
         }
@@ -64,5 +73,9 @@ impl Architect {
         } else {
             1
         }
-    } 
+    }
+
+    pub fn has_tree(&self, absolute_pos: [Float; 2]) -> bool {
+        self.tree_noise.get_noise(absolute_pos) > 0.90
+    }
 }

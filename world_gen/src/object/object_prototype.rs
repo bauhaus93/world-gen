@@ -1,12 +1,8 @@
-use std::rc::Rc;
-
 use graphics::{ Mesh, GraphicsError };
-use crate::WorldError;
 use super::ObjectError;
 
-#[derive(Clone)]
 pub struct ObjectPrototype {
-    lod_meshes: Rc<[Mesh; 2]>
+    lod_meshes: [Mesh; 2]
 }
 
 impl ObjectPrototype {
@@ -15,7 +11,7 @@ impl ObjectPrototype {
         let lod0 = Mesh::from_obj(lod0_path)?;
         let lod1 = Mesh::from_obj(lod1_path)?;
         let proto = ObjectPrototype {
-            lod_meshes: Rc::new([lod0, lod1])
+            lod_meshes: [lod0, lod1]
         };
         Ok(proto)
     }

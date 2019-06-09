@@ -1,20 +1,21 @@
+use std::sync::Arc;
 use glm::{ Vector3 };
 
-use graphics::{ Mesh, ShaderProgram, GraphicsError };
+use graphics::{ ShaderProgram, GraphicsError };
 use utility::Float;
 use crate::{ Camera, Model };
 use crate::traits::{ Rotatable, Translatable, Scalable, Renderable };
 use super::ObjectPrototype;
 
 pub struct Object {
-    prototype: ObjectPrototype,
+    prototype: Arc<ObjectPrototype>,
     model: Model
 }
 
 impl Object {
-    pub fn new(prototype: &ObjectPrototype) -> Object {
+    pub fn new(prototype: Arc<ObjectPrototype>) -> Object {
         Object {
-            prototype: prototype.clone(),
+            prototype: prototype,
             model: Model::default()
         }
     }

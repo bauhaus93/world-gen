@@ -61,11 +61,12 @@ impl Chunk {
     pub fn get_clip_coordinates(&self, corner: u8) -> Vector4<Float> {
         debug_assert!(corner < 4);
         let size = self.height_map.get_size() - 1;
+        let resolution = self.height_map.get_resolution();
         match corner {
             0 => self.mvp * Vector4::new(0., 0., self.height_map.get(&[0, 0]), 1.),
-            1 => self.mvp * Vector4::new(size as Float, 0., self.height_map.get(&[size, 0]), 1.),
-            2 => self.mvp * Vector4::new(0., size as Float, self.height_map.get(&[0, size]), 1.),
-            3 => self.mvp * Vector4::new(size as Float, size as Float, self.height_map.get(&[size, size]), 1.), 
+            1 => self.mvp * Vector4::new((size * resolution) as Float, 0., self.height_map.get(&[size, 0]), 1.),
+            2 => self.mvp * Vector4::new(0., (size * resolution) as Float, self.height_map.get(&[0, size]), 1.),
+            3 => self.mvp * Vector4::new((size * resolution) as Float, (size * resolution) as Float, self.height_map.get(&[size, size]), 1.), 
             _ => unreachable!()
         }
     }

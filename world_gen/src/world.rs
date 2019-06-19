@@ -9,7 +9,7 @@ use glm::{ GenNum, Vector3 };
 
 use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
-use utility::Float;
+use utility::{ Config, Float };
 use crate::{ Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
@@ -40,12 +40,8 @@ const TEXTURES: [[u32; 3]; 2] = [
     [1, 0, TEXTURE_LAYER_GRASS]
 ];
 
-const NEAR_RADIUS: i32 = 20;
-const FAR_RADIUS: i32 = 40;
-const ACTIVE_RADIUS: i32 = 60;
-
 impl World {
-    pub fn new() -> Result<World, WorldError> {
+    pub fn new(config: &Config) -> Result<World, WorldError> {
         let surface_shader_program = ShaderProgramBuilder::new()
             .add_vertex_shader("resources/shader/surface/VertexShader.glsl")
             .add_fragment_shader("resources/shader/surface/FragmentShader.glsl")
@@ -68,10 +64,12 @@ impl World {
         }
         let texture_array = builder.finish()?;
 
+        let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
+
         let mut rng = StdRng::seed_from_u64(0);//StdRng::from_entropy();
 
         let mut camera = Camera::default();
-        camera.set_far((ACTIVE_RADIUS * CHUNK_SIZE * 8) as Float);
+        camera.set_far((active_radius * CHUNK_SIZE * 8) as Float);
 
         let mut object_manager = ObjectManager::default();
         object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
@@ -81,12 +79,10 @@ impl World {
         let chunk_loader = ChunkLoader::new(&mut rng, obj_mng_arc.clone());
 
         let mut skybox = Skybox::new("resources/img/sky.png")?;
-        skybox.scale_to_chunk_units(ACTIVE_RADIUS * 2);
+        skybox.scale_to_chunk_units(active_radius * 2);
 
         let mut sun = Sun::default();
         sun.set_day_length(3 * 60);
-
-
 
         let mut test_monkey = obj_mng_arc.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
@@ -102,9 +98,9 @@ impl World {
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
-            lod_near_radius: NEAR_RADIUS,
-            lod_far_radius: FAR_RADIUS,
-            active_chunk_radius: ACTIVE_RADIUS,
+            lod_near_radius: near_radius,
+            lod_far_radius: far_radius,
+            active_chunk_radius: active_radius,
             last_chunk_load: [0, 0],
             object_manager: obj_mng_arc,
             test_monkey: test_monkey
@@ -287,3 +283,20 @@ impl Updatable for World {
     }
 }
 
+fn get_chunk_radii(config: &Config) -> (i32, i32, i32) {
+    let active_radius = match config.get_int("active_radius") {
+        Some(ar) => ar,
+        None => 40
+    };
+    let far_radius = match config.get_int("far_radius") {
+        Some(far) if far <= active_radius => far,
+        Some(_far) => active_radius,
+        None => 3 * active_radius / 2
+    };
+    let near_radius = match config.get_int("near_radius") {
+        Some(near) if near <= far_radius => near,
+        Some(_near) => far_radius,
+        None => active_radius / 3
+    };
+    (near_radius, far_radius, active_radius)
+}

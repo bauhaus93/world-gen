@@ -7,7 +7,7 @@ use glm::{ GenNum, Vector3, normalize, length, cross };
 
 use graphics;
 use world_gen;
-use utility::Float;
+use utility::{ Config, Float };
 use crate::application_error::ApplicationError;
 use crate::window;
 
@@ -26,13 +26,17 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn new(window_size: [f64; 2]) -> Result<Application, ApplicationError> {
+    pub fn new(config_path: &str) -> Result<Application, ApplicationError> {
+        let config = Config::read(config_path)?;
+
+        let window_size = get_window_size(&config);
+
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
 
         window.set_title("world_gen");
         
-        let world = world_gen::World::new()?;
+        let world = world_gen::World::new(&config)?;
         let app = Self {
             events_loop: events_loop,
             window: window,
@@ -213,6 +217,15 @@ impl Application {
             Ok(_) => Ok(()),
             Err(e) => Err(ApplicationError::from(graphics::GraphicsError::from(e)))
         }
+    }
+}
+
+fn get_window_size(config: &Config) -> [f64; 2] {
+    match (config.get_int("window_x"), config.get_int("window_y")) {
+        (Some(x), Some(y)) => [x as f64, y as f64],
+        (Some(x), None) => [x as f64, x as f64 * 0.75],
+        (None, Some(y)) => [y as f64 * 1.333, y as f64],
+        (None, None) => [1024., 768.]
     }
 }
 

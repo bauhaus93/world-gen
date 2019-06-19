@@ -9,7 +9,8 @@ use world_gen;
 pub enum ApplicationError {
     Graphics(graphics::GraphicsError),
     World(world_gen::WorldError),
-    File(utility::FileError)
+    File(utility::FileError),
+    Config(utility::ConfigError)
 }
 
 impl From<graphics::GraphicsError> for ApplicationError {
@@ -30,13 +31,20 @@ impl From<utility::FileError> for ApplicationError {
     }
 }
 
+impl From<utility::ConfigError> for ApplicationError {
+    fn from(err: utility::ConfigError) -> Self {
+        ApplicationError::Config(err)
+    }
+}
+
 impl Error for ApplicationError {
 
     fn description(&self) -> &str {
         match *self {
             ApplicationError::Graphics(_) => "graphics",
             ApplicationError::World(_) => "world",
-            ApplicationError::File(_) => "file"
+            ApplicationError::File(_) => "file",
+            ApplicationError::Config(_) => "config"
         }
     }
 
@@ -44,7 +52,8 @@ impl Error for ApplicationError {
         match *self {
             ApplicationError::Graphics(ref err) => Some(err),
             ApplicationError::World(ref err) => Some(err),
-            ApplicationError::File(ref err) => Some(err)
+            ApplicationError::File(ref err) => Some(err),
+            ApplicationError::Config(ref err) => Some(err)
         }
     }
 }
@@ -54,7 +63,8 @@ impl fmt::Display for ApplicationError {
         match *self {
             ApplicationError::Graphics(ref err) => write!(f, "{}/{}", self.description(), err),
             ApplicationError::World(ref err) => write!(f, "{}/{}", self.description(), err),
-            ApplicationError::File(ref err) => write!(f, "{}/{}", self.description(), err)
+            ApplicationError::File(ref err) => write!(f, "{}/{}", self.description(), err),
+            ApplicationError::Config(ref err) => write!(f, "{}/{}", self.description(), err)
         }
     }
 }

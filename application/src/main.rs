@@ -18,11 +18,11 @@ use log::Record;
 use crate::application::Application;
 
 fn main() {
-    const WINDOW_SIZE: [f64; 2]= [1920., 1080.];
+    const CONFIG_PATH: &'static str = "resources/default.conf";
 
     init_custom_logger();
 
-    let app = match Application::new(WINDOW_SIZE) {
+    let app = match Application::new(CONFIG_PATH) {
         Ok(app) => app,
         Err(e) => {
             error!("{}", e);

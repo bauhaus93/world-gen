@@ -42,9 +42,14 @@ const TEXTURES: [[u32; 3]; 2] = [
 
 impl World {
     pub fn new(config: &Config) -> Result<World, WorldError> {
+        let surface_shader_dir = config.get_str_or_default("surface_shader_dir", "resources/shader/surface");
+        let surface_atlas_path = config.get_str_or_default("surface_atlas_path", "resources/img/atlas.png");
+        let object_prototypes_path = config.get_str_or_default("object_prototype_path", "resources/prototypes.json");
+
+
         let surface_shader_program = ShaderProgramBuilder::new()
-            .add_vertex_shader("resources/shader/surface/VertexShader.glsl")
-            .add_fragment_shader("resources/shader/surface/FragmentShader.glsl")
+            .add_vertex_shader((surface_shader_dir.clone() + "/VertexShader.glsl").as_str())
+            .add_fragment_shader((surface_shader_dir + "/FragmentShader.glsl").as_str())
             .add_resource("texture_array")
             .add_resource("mvp")
             .add_resource("model")
@@ -58,7 +63,7 @@ impl World {
             return Err(GraphicsError::from(e).into());
         }
 
-        let mut builder = TextureBuilder::new_2d_array("resources/img/atlas.png", [32, 32]);
+        let mut builder = TextureBuilder::new_2d_array(&surface_atlas_path, [32, 32]);
         for tex in TEXTURES.iter() {
             builder.add_array_element(*tex);
         }
@@ -71,12 +76,8 @@ impl World {
         let mut camera = Camera::default();
         camera.set_far((active_radius * CHUNK_SIZE * 8) as Float);
 
-        let mut object_manager = ObjectManager::default();
-        object_manager.add_prototype("monkey", "resources/obj/test.obj", "resources/obj/test.obj")?;
-        object_manager.add_prototype("tree", "resources/obj/tree.obj", "resources/obj/tree.obj")?;
-        let obj_mng_arc = Arc::new(object_manager);
-
-        let chunk_loader = ChunkLoader::new(&mut rng, obj_mng_arc.clone());
+        let object_manager = Arc::new(ObjectManager::from_json(&object_prototypes_path)?);
+        let chunk_loader = ChunkLoader::new(&mut rng, object_manager.clone());
 
         let mut skybox = Skybox::new("resources/img/sky.png")?;
         skybox.scale_to_chunk_units(active_radius * 2);
@@ -84,7 +85,7 @@ impl World {
         let mut sun = Sun::default();
         sun.set_day_length(3 * 60);
 
-        let mut test_monkey = obj_mng_arc.create_object("monkey")?;
+        let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
         test_monkey.set_scale(Vector3::from_s(10.));
 
@@ -102,7 +103,7 @@ impl World {
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
             last_chunk_load: [0, 0],
-            object_manager: obj_mng_arc,
+            object_manager: object_manager,
             test_monkey: test_monkey
         };
 

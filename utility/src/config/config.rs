@@ -36,6 +36,13 @@ impl Config {
         }
     }
 
+    pub fn get_str_or_default(&self, key: &str, default: &str) -> String {
+        match self.entry_map.get(key) {
+            Some(Value::Str(str_value)) => str_value.to_owned(),
+            _ => default.to_owned()
+        } 
+    }
+
     pub fn get_int(&self, key: &str) -> Option<i32> {
         match self.entry_map.get(key) {
             Some(Value::Int(int_value)) => Some(*int_value),
@@ -43,10 +50,24 @@ impl Config {
         }
     }
 
+    pub fn get_int_or_default(&self, key: &str, default: i32) -> i32 {
+        match self.entry_map.get(key) {
+            Some(Value::Int(int_value)) => *int_value,
+            _ => default
+        }
+    }
+
     pub fn get_float(&self, key: &str) -> Option<f32> {
         match self.entry_map.get(key) {
             Some(Value::Float(float_value)) => Some(*float_value),
             _ => None
+        }
+    }
+
+    pub fn get_float_or_default(&self, key: &str, default: f32) -> f32 {
+        match self.entry_map.get(key) {
+            Some(Value::Float(float_value)) => *float_value,
+            _ => default
         }
     }
 

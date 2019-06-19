@@ -8,6 +8,8 @@ extern crate num_traits;
 extern crate rand;
 #[macro_use]
 extern crate lazy_static;
+extern crate serde;
+extern crate serde_json;
 
 extern crate graphics;
 extern crate utility;

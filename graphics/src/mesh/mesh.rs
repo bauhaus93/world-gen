@@ -59,7 +59,6 @@ impl Default for Mesh {
 impl TryFrom<&[Triangle]> for Mesh {
     type Error = MeshError;
     fn try_from(triangles: &[Triangle]) -> Result<Self, Self::Error> {
-        info!("Creating mesh from triangles");
         let vb = VertexBuffer::from(triangles);
         let mesh = Self {
             vao: Some(vb.try_into()?)

@@ -10,9 +10,6 @@ pub struct ObjectManager {
     prototype_map: BTreeMap<String, Arc<ObjectPrototype>>
 }
 
-
-
-
 impl ObjectManager {
 
     pub fn from_json(json_path: &str) -> Result<ObjectManager, ObjectError> {

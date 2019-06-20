@@ -83,7 +83,7 @@ impl World {
         skybox.scale_to_chunk_units(active_radius * 2);
 
         let mut sun = Sun::default();
-        sun.set_day_length(3 * 60);
+        sun.set_day_length(3 * 60 / 6);
 
         let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));

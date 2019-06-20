@@ -34,10 +34,7 @@ impl Sun {
         }
     }
     pub fn calculate_light_level(&self) -> f32 {
-        match 1. - self.rotation[1] / PI {
-            t if t < 0. => -t,
-            t => t
-        }
+        (1. - self.rotation[1] / PI).abs()
     }
 }
 

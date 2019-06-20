@@ -28,6 +28,7 @@ pub struct World {
     lod_far_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: [i32; 2],
+    #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object
 }
@@ -45,7 +46,10 @@ impl World {
         let surface_shader_dir = config.get_str_or_default("surface_shader_dir", "resources/shader/surface");
         let surface_atlas_path = config.get_str_or_default("surface_atlas_path", "resources/img/atlas.png");
         let object_prototypes_path = config.get_str_or_default("object_prototype_path", "resources/prototypes.json");
-
+        let day_length: u32 = match config.get_int_or_default("day_length", 3 * 60) {
+            val if val > 0 => val as u32,
+            _ => 3 * 60
+        };
 
         let surface_shader_program = ShaderProgramBuilder::new()
             .add_vertex_shader((surface_shader_dir.clone() + "/VertexShader.glsl").as_str())
@@ -83,7 +87,7 @@ impl World {
         skybox.scale_to_chunk_units(active_radius * 2);
 
         let mut sun = Sun::default();
-        sun.set_day_length(3 * 60 / 6);
+        sun.set_day_length(day_length);
 
         let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));

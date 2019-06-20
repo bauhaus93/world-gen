@@ -70,7 +70,6 @@ impl Config {
             _ => default
         }
     }
-
 }
 
 fn parse_line(line: &str) -> Result<(String, Value), ConfigError> {

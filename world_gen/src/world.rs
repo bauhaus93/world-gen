@@ -10,13 +10,14 @@ use glm::{ GenNum, Vector3 };
 use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
 use utility::{ Config, Float };
-use crate::{ Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
+use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
     texture_array: Texture,
     camera: Camera,
+    player: Player,
     surface_shader_program: ShaderProgram,
     skybox: Skybox,
     sun: Sun,
@@ -65,6 +66,7 @@ impl World {
         let mut world = World {
             texture_array: surface_texture_array,
             camera: Camera::default(),
+            player: Player::default(),
             surface_shader_program: surface_shader_program,
             skybox: Skybox::new(skybox_img_path)?,
             sun: Sun::with_day_length(day_length),
@@ -80,7 +82,6 @@ impl World {
             test_monkey: test_monkey
         };
 
-        world.camera.set_translation(Vector3::new(0., 0., 200.));
         world.update_camera_far();
         world.update_skybox_size();
 
@@ -91,17 +92,12 @@ impl World {
     }
 
 
-
-    pub fn get_camera_direction(&self) -> Vector3<Float> {
-        self.camera.get_direction()
+    pub fn get_player(&self) -> &Player {
+        &self.player
     }
 
-    pub fn move_camera(&mut self, offset: Vector3<Float>) {
-        self.camera.mod_translation(offset);
-    }
-
-    pub fn rotate_camera(&mut self, rotation: Vector3<Float>) {
-        self.camera.mod_rotation(rotation);
+    pub fn get_player_mut(&mut self) -> &mut Player {
+        &mut self.player
     }
 
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
@@ -248,6 +244,7 @@ impl Updatable for World {
 
         self.update_chunk_mvps();
 
+        self.player.align_camera(&mut self.camera);
         self.skybox.set_translation(self.camera.get_translation());
         self.sun.set_rotation_center(self.camera.get_translation());
         self.sun.tick(time_passed)?;

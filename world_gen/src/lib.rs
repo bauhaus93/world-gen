@@ -14,7 +14,22 @@ extern crate serde_json;
 extern crate graphics;
 extern crate utility;
 
+pub mod world;
+pub mod player;
+pub mod world_error;
+pub mod traits;
+mod chunk;
+mod camera;
+mod model;
+mod object;
+mod noise;
+mod timer;
+mod skybox;
+mod sun;
+
+
 pub use self::world::World;
+pub use self::player::Player;
 pub use self::world_error::WorldError;
 
 use self::camera::Camera;
@@ -26,15 +41,6 @@ use self::chunk::CHUNK_SIZE;
 use self::object::ObjectManager;
 use self::object::Object;
 
-pub mod world;
-pub mod world_error;
-mod traits;
-mod chunk;
-mod camera;
-mod model;
-mod object;
-mod noise;
-mod timer;
-mod skybox;
-mod sun;
+
+
 

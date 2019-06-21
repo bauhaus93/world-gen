@@ -6,7 +6,7 @@ use gl::types::GLsizei;
 use glm::{ GenNum, Vector3, normalize, length, cross };
 
 use graphics;
-use world_gen;
+use world_gen::traits::Rotatable;
 use utility::{ Config, Float };
 use crate::application_error::ApplicationError;
 use crate::window;
@@ -123,32 +123,34 @@ impl Application {
             warn!("window.set_cursor position: {}", msg);
         }
         let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
-        self.world.rotate_camera(offset * 0.025 * (self.time_passed as Float / 1000.));
+        let rotation = offset * 0.025 * (self.time_passed as Float / 1000.);
+
+        self.world.get_player_mut().mod_rotation(rotation)
     }
 
     fn handle_movement(&mut self) {
-        let cam_dir = self.world.get_camera_direction();
+        let player_dir = self.world.get_player().get_direction();
         let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
+
         if self.movement_keys_down[0] {
-            move_offset = move_offset.add(cam_dir);
+            move_offset = move_offset.add(player_dir);
         }
         if self.movement_keys_down[1] {
-            let right = cross(cam_dir, Vector3::new(0., 0., 1.));
+            let right = cross(player_dir, Vector3::new(0., 0., 1.));
             move_offset = move_offset.sub(right);
         }
         if self.movement_keys_down[2] {
-            move_offset = move_offset.sub(cam_dir);
+            move_offset = move_offset.sub(player_dir);
         }
         if self.movement_keys_down[3] {
-            let right = cross(cam_dir, Vector3::new(0., 0., 1.));
+            let right = cross(player_dir, Vector3::new(0., 0., 1.));
             move_offset = move_offset.add(right);
         }
         if self.movement_keys_down[4] {
             move_offset = move_offset.add(Vector3::new(0., 0., 1.));
         }
         if length(move_offset) > 1e-3 {
-            const SPEED: Float = 2.;
-            self.world.move_camera(normalize(move_offset) * SPEED);
+            self.world.get_player_mut().move_by_speed(normalize(move_offset));
         }
     }
 
@@ -160,6 +162,8 @@ impl Application {
                 glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
                 glutin::VirtualKeyCode::Space => { self.movement_keys_down[4] = *down; },
+                glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(1.); },
+                glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-1.); },
                 glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },
                 _ => {}
             }

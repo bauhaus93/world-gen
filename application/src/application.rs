@@ -20,7 +20,7 @@ pub struct Application {
     hibernate: bool,
     time_passed: u32,
     sleep_time: time::Duration,
-    movement_keys_down: [bool; 5],
+    movement_keys_down: [bool; 6],
     title_update_passed: u32,
     target_frequency: u32
 }
@@ -49,7 +49,7 @@ impl Application {
             hibernate: false,
             time_passed: 0,
             sleep_time: time::Duration::from_millis(50),
-            movement_keys_down: [false; 5],
+            movement_keys_down: [false; 6],
             title_update_passed: 0,
             target_frequency: 30
         };
@@ -162,7 +162,12 @@ impl Application {
                 glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
                 glutin::VirtualKeyCode::E => { self.movement_keys_down[4] = *down; },
-                glutin::VirtualKeyCode::Space if *down => { self.world.get_player_mut().push_z(4.); },
+                glutin::VirtualKeyCode::Space => {
+                    if !self.movement_keys_down[5] && *down {
+                        self.world.get_player_mut().push_z(4.);
+                    }
+                    self.movement_keys_down[5] = *down;
+                },
                 glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(0.25); },
                 glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-0.25); },
                 glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },

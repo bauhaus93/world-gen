@@ -9,7 +9,7 @@ use glm::{ GenNum, Vector3 };
 
 use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
-use utility::{ Config, Float };
+use utility::{ Config, Float, format_number };
 use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
@@ -261,7 +261,7 @@ impl Updatable for World {
             }
         }
         if self.chunk_build_stats_timer.fires() {
-            info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), self.count_loaded_vertices());
+            info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), format_number(self.count_loaded_vertices()));
         }
 
         // order of these operations matter somehow for a normal world^^

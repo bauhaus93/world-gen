@@ -6,7 +6,7 @@ use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
 use crate::{ Model, Object, Camera };
-use super::{ HeightMap, CHUNK_SIZE };
+use super::{ HeightMap, CHUNK_SIZE, get_chunk_relative_pos, get_world_pos };
 
 pub struct Chunk {
     pos: [i32; 2],
@@ -33,7 +33,6 @@ impl Chunk {
         }
     }
 
-
     pub fn get_pos(&self) -> [i32; 2] {
         self.pos
     }
@@ -52,6 +51,14 @@ impl Chunk {
 
     pub fn update_mvp(&mut self, new_mvp: Matrix4<Float>) {
         self.mvp = new_mvp;
+    }
+
+    pub fn get_height_diff(&self, world_pos: Vector3<Float>) -> Float {
+        let relative_pos = get_chunk_relative_pos(self.model.get_translation(), world_pos, self.height_map.get_resolution());
+        debug_assert!(relative_pos[0] >= 0 && relative_pos[1] >= 0);
+        debug_assert!(relative_pos[0] < CHUNK_SIZE && relative_pos[1] < CHUNK_SIZE);
+        let res = world_pos.z - self.height_map.get(&relative_pos);
+        res
     }
 
     pub fn add_tree(&mut self, tree_object: Object) {

@@ -161,9 +161,10 @@ impl Application {
                 glutin::VirtualKeyCode::A => { self.movement_keys_down[1] = *down; },
                 glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
-                glutin::VirtualKeyCode::Space => { self.movement_keys_down[4] = *down; },
-                glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(1.); },
-                glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-1.); },
+                glutin::VirtualKeyCode::E => { self.movement_keys_down[4] = *down; },
+                glutin::VirtualKeyCode::Space if *down => { self.world.get_player_mut().push_z(4.); },
+                glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(0.25); },
+                glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-0.25); },
                 glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },
                 _ => {}
             }

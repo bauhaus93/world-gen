@@ -171,6 +171,24 @@ impl World {
         vertex_count
     }
 
+    pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
+        self.tick(time_passed)
+    }
+
+    pub fn render(&self) -> Result<(), WorldError> {
+        self.texture_array.activate();
+        self.surface_shader_program.use_program();
+
+        self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
+        self.chunks.values()
+            .filter(|c| c.is_visible())
+            .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
+
+        self.texture_array.deactivate();
+        self.skybox.render(&self.camera)?;
+        Ok(())
+    }
+
     fn lod_by_chunk_distance(&self, distance: i32) -> u8 {
         if distance < self.lod_near_radius {
             0
@@ -206,24 +224,28 @@ impl World {
         for c in self.chunks.values_mut() {
             c.update_mvp(self.camera.create_mvp_matrix(c.get_model()));
         }
-    } 
-
-    pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
-        self.tick(time_passed)
     }
 
-    pub fn render(&self) -> Result<(), WorldError> {
-        self.texture_array.activate();
-        self.surface_shader_program.use_program();
+    fn get_chunk_by_world_pos(&self, world_pos: Vector3<Float>) -> Option<&Chunk> {
+        self.chunks.get(&get_chunk_pos(world_pos))
+    }
 
-        self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
-        self.chunks.values()
-            .filter(|c| c.is_visible())
-            .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
+    fn handle_player_gravity(&mut self) {
+        match self.get_chunk_by_world_pos(self.player.get_translation()) {
+            Some(chunk) => {
+                let height_diff = chunk.get_height_diff(self.player.get_translation());
+                if height_diff > 0. {
+                    self.player.push_z(-0.25);
+                } else {
+                    self.player.clear_momentum_neg_z();
+                    self.player.move_z(-height_diff);
+                }
+            },
+            None => {
+                debug!("Player not on any chunk!");
+            }
+        }
 
-        self.texture_array.deactivate();
-        self.skybox.render(&self.camera)?;
-        Ok(())
     }
 }
 
@@ -242,11 +264,15 @@ impl Updatable for World {
             info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), self.count_loaded_vertices());
         }
 
+        // order of these operations matter somehow for a normal world^^
+        // update the chunk mvps AFTER player/camera is moved!
+        self.player.tick(time_passed)?;
+        self.player.align_camera(&mut self.camera);
         self.update_chunk_mvps();
 
-        self.player.align_camera(&mut self.camera);
-        self.skybox.set_translation(self.camera.get_translation());
-        self.sun.set_rotation_center(self.camera.get_translation());
+        self.handle_player_gravity();
+        self.skybox.set_translation(self.player.get_translation());
+        self.sun.set_rotation_center(self.player.get_translation());
         self.sun.tick(time_passed)?;
 
         self.test_monkey.mod_rotation(Vector3::new(0., 0., 0.25));

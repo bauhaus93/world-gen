@@ -1,32 +1,59 @@
-use glm::Vector3;
+use std::ops::Add;
+
+use glm:: { Vector3, GenNum };
 
 use utility::Float;
 use graphics::create_direction;
-use crate::{ Model, Camera };
-use crate::traits::{ Translatable, Rotatable };
+use crate::{ Model, Camera, WorldError };
+use crate::traits::{ Translatable, Rotatable, Updatable };
 
 pub struct Player {
     model: Model,
+    momentum: Vector3<Float>,
     speed: f32
 }
 
 impl Player {
     pub fn align_camera(&self, camera: &mut Camera) {
         let mut pos = self.get_translation();
-        pos.z += 10.;
+        pos.z += 3.;
         camera.set_translation(pos);
         camera.set_rotation(self.get_rotation());
     }
+
     pub fn move_by_speed(&mut self, normalized_offset: Vector3<Float>) {
         self.mod_translation(normalized_offset * self.speed);
     }
 
+
+    pub fn move_z(&mut self, offset: Float) {
+        self.mod_translation(Vector3::new(0., 0., offset));
+    }
+
     pub fn mod_speed(&mut self, amount: f32) {
-        self.speed += amount;
+        self.speed = f32::max(self.speed + amount, 1e-3);
     }
 
     pub fn get_direction(&self) -> Vector3<Float> {
         create_direction(self.get_rotation())
+    }
+
+    pub fn push(&mut self, additional_momentum: Vector3<Float>) {
+        self.momentum = self.momentum.add(additional_momentum);
+    }
+
+    pub fn push_z(&mut self, additional_momentum_z: Float) {
+        self.momentum.z += additional_momentum_z;
+    }
+
+    pub fn clear_momentum_z(&mut self) {
+        self.momentum.z = 0.;
+    }
+
+    pub fn clear_momentum_neg_z(&mut self) {
+        if self.momentum.z < 0. {
+            self.momentum.z = 0.;
+        }
     }
 }
 
@@ -34,11 +61,19 @@ impl Default for Player {
     fn default() -> Player {
         let mut player = Player {
             model: Model::default(),
+            momentum: Vector3::from_s(0.),
             speed: 2.
         };
         player.set_translation(Vector3::new(0., 0., 200.));
         player.set_rotation(Vector3::new(45f32.to_radians(), 125f32.to_radians(), 0.));
         player
+    }
+}
+
+impl Updatable for Player {
+    fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
+        self.mod_translation(self.momentum);
+        Ok(())
     }
 }
 

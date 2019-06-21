@@ -30,6 +30,9 @@ impl Application {
         let config = Config::read(config_path)?;
 
         let window_size = get_window_size(&config);
+        if window_size[0] <= 0. || window_size[1] <= 0. {
+            return Err(ApplicationError::InvalidWindowSize(window_size[0], window_size[1]));
+        }
 
         let events_loop = glutin::EventsLoop::new();
         let window = window::init_window(window_size, &events_loop)?;
@@ -221,12 +224,8 @@ impl Application {
 }
 
 fn get_window_size(config: &Config) -> [f64; 2] {
-    match (config.get_int("window_x"), config.get_int("window_y")) {
-        (Some(x), Some(y)) => [x as f64, y as f64],
-        (Some(x), None) => [x as f64, x as f64 * 0.75],
-        (None, Some(y)) => [y as f64 * 1.333, y as f64],
-        (None, None) => [1024., 768.]
-    }
+    [config.get_int_or_default("window_x", 1024) as f64,
+     config.get_int_or_default("window_y", 768) as f64]
 }
 
 fn get_keycode(input: glutin::KeyboardInput) -> Option<(glutin::VirtualKeyCode, bool)> {

@@ -10,7 +10,8 @@ pub enum ApplicationError {
     Graphics(graphics::GraphicsError),
     World(world_gen::WorldError),
     File(utility::FileError),
-    Config(utility::ConfigError)
+    Config(utility::ConfigError),
+    InvalidWindowSize(f64, f64)
 }
 
 impl From<graphics::GraphicsError> for ApplicationError {
@@ -44,7 +45,8 @@ impl Error for ApplicationError {
             ApplicationError::Graphics(_) => "graphics",
             ApplicationError::World(_) => "world",
             ApplicationError::File(_) => "file",
-            ApplicationError::Config(_) => "config"
+            ApplicationError::Config(_) => "config",
+            ApplicationError::InvalidWindowSize(_, _) => "invalid window size"
         }
     }
 
@@ -53,7 +55,8 @@ impl Error for ApplicationError {
             ApplicationError::Graphics(ref err) => Some(err),
             ApplicationError::World(ref err) => Some(err),
             ApplicationError::File(ref err) => Some(err),
-            ApplicationError::Config(ref err) => Some(err)
+            ApplicationError::Config(ref err) => Some(err),
+            ApplicationError::InvalidWindowSize(_, _) => None
         }
     }
 }
@@ -64,7 +67,8 @@ impl fmt::Display for ApplicationError {
             ApplicationError::Graphics(ref err) => write!(f, "{}/{}", self.description(), err),
             ApplicationError::World(ref err) => write!(f, "{}/{}", self.description(), err),
             ApplicationError::File(ref err) => write!(f, "{}/{}", self.description(), err),
-            ApplicationError::Config(ref err) => write!(f, "{}/{}", self.description(), err)
+            ApplicationError::Config(ref err) => write!(f, "{}/{}", self.description(), err),
+            ApplicationError::InvalidWindowSize(x, y) => write!(f, "{}: {}x{}, values must be > 0", self.description(), x, y)
         }
     }
 }

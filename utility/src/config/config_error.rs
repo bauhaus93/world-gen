@@ -3,6 +3,7 @@ use std::error::Error;
 use std::num;
 
 use crate::FileError;
+use super::Value;
 
 #[derive(Debug)]
 pub enum ConfigError {
@@ -10,7 +11,9 @@ pub enum ConfigError {
     ParseFloat(num::ParseFloatError),
     ParseInt(num::ParseIntError),
     InvalidFieldCount(usize, usize, String),
-    InvalidFieldType(String, String)
+    InvalidFieldType(String, String),
+    UnknownKey(String),
+    InvalidValueType(String, Value, Value)
 }
 
 impl From<FileError> for ConfigError {
@@ -39,7 +42,9 @@ impl Error for ConfigError {
             ConfigError::ParseFloat(_) => "parse float",
             ConfigError::ParseInt(_) => "parse int",
             ConfigError::InvalidFieldCount(_, _, _) => "invalid field count",
-            ConfigError::InvalidFieldType(_, _) => "invalid field type"
+            ConfigError::InvalidFieldType(_, _) => "invalid field type",
+            ConfigError::UnknownKey(_) => "unknown key",
+            ConfigError::InvalidValueType(_, _, _) => "invalid value type"
         }
     }
 
@@ -49,7 +54,9 @@ impl Error for ConfigError {
             ConfigError::ParseFloat(ref err) => Some(err),
             ConfigError::ParseInt(ref err) => Some(err),
             ConfigError::InvalidFieldCount(_, _, _) => None,
-            ConfigError::InvalidFieldType(_, _) => None
+            ConfigError::InvalidFieldType(_, _) => None,
+            ConfigError::UnknownKey(_) => None,
+            ConfigError::InvalidValueType(_, _, _) => None
         }
     }
 }
@@ -57,13 +64,16 @@ impl Error for ConfigError {
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ConfigError::File(ref err) => write!(f, "{}:{}", self.description(), err),
-            ConfigError::ParseFloat(ref err) => write!(f, "{}:{}", self.description(), err),
-            ConfigError::ParseInt(ref err) => write!(f, "{}:{}", self.description(), err),
+            ConfigError::File(ref err) => write!(f, "{}: {}", self.description(), err),
+            ConfigError::ParseFloat(ref err) => write!(f, "{}: {}", self.description(), err),
+            ConfigError::ParseInt(ref err) => write!(f, "{}: {}", self.description(), err),
             ConfigError::InvalidFieldCount(expect_count, got_count, ref line_str) => write!(f, "{}: expected {} fields, but got {}, line: '{}'",
                 self.description(), expect_count, got_count, line_str),
             ConfigError::InvalidFieldType(ref unknown_field_type, ref line_str) => write!(f, "{}: '{}', line: '{}'",
-                self.description(), unknown_field_type, line_str)
+                self.description(), unknown_field_type, line_str),
+            ConfigError::UnknownKey(ref unknown_key) => write!(f, "{}: '{}'", self.description(), unknown_key),
+            ConfigError::InvalidValueType(ref key, ref expected_type, ref is_type) => write!(f, "{}: key = '{}', requested type = '{}', is type = '{}' ",
+                self.description(), key, expected_type, is_type)
         }
     }
 }

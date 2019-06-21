@@ -43,62 +43,31 @@ const TEXTURES: [[u32; 3]; 2] = [
 
 impl World {
     pub fn new(config: &Config) -> Result<World, WorldError> {
-        let surface_shader_dir = config.get_str_or_default("surface_shader_dir", "resources/shader/surface");
-        let surface_atlas_path = config.get_str_or_default("surface_atlas_path", "resources/img/atlas.png");
-        let object_prototypes_path = config.get_str_or_default("object_prototype_path", "resources/prototypes.json");
-        let day_length: u32 = match config.get_int_or_default("day_length", 3 * 60) {
-            val if val > 0 => val as u32,
-            _ => 3 * 60
-        };
 
-        let surface_shader_program = ShaderProgramBuilder::new()
-            .add_vertex_shader((surface_shader_dir.clone() + "/VertexShader.glsl").as_str())
-            .add_fragment_shader((surface_shader_dir + "/FragmentShader.glsl").as_str())
-            .add_resource("texture_array")
-            .add_resource("mvp")
-            .add_resource("model")
-            .add_resource("view_pos")
-            .add_resource("light_pos")
-            .add_resource("fog_color")
-            .finish()?;
-        
-        // setting texture slot to 0
-        if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
-            return Err(GraphicsError::from(e).into());
-        }
+        let object_prototypes_path = config.get_str("object_prototype_path")?;
+        let day_length = config.get_uint_or_default("day_length", 180);
+        let skybox_img_path = config.get_str("skybox_img_path")?;
 
-        let mut builder = TextureBuilder::new_2d_array(&surface_atlas_path, [32, 32]);
-        for tex in TEXTURES.iter() {
-            builder.add_array_element(*tex);
-        }
-        let texture_array = builder.finish()?;
+        let surface_shader_program = load_surface_shader(config)?;
+        let surface_texture_array = load_surface_texture_array(config)?;
 
         let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
 
         let mut rng = StdRng::seed_from_u64(0);//StdRng::from_entropy();
 
-        let mut camera = Camera::default();
-        camera.set_far((active_radius * CHUNK_SIZE * 8) as Float);
-
         let object_manager = Arc::new(ObjectManager::from_json(&object_prototypes_path)?);
         let chunk_loader = ChunkLoader::new(&mut rng, object_manager.clone());
-
-        let mut skybox = Skybox::new("resources/img/sky.png")?;
-        skybox.scale_to_chunk_units(active_radius * 2);
-
-        let mut sun = Sun::default();
-        sun.set_day_length(day_length);
 
         let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
         test_monkey.set_scale(Vector3::from_s(10.));
 
         let mut world = World {
-            texture_array: texture_array,
-            camera: camera,
+            texture_array: surface_texture_array,
+            camera: Camera::default(),
             surface_shader_program: surface_shader_program,
-            skybox: skybox,
-            sun: sun,
+            skybox: Skybox::new(skybox_img_path)?,
+            sun: Sun::with_day_length(day_length),
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
             chunk_update_timer: Timer::new(500),
@@ -112,12 +81,16 @@ impl World {
         };
 
         world.camera.set_translation(Vector3::new(0., 0., 200.));
+        world.update_camera_far();
+        world.update_skybox_size();
 
         world.chunk_loader.start(8);
         world.request_chunks()?;
 
         Ok(world)
     }
+
+
 
     pub fn get_camera_direction(&self) -> Vector3<Float> {
         self.camera.get_direction()
@@ -212,6 +185,14 @@ impl World {
         }
     }
 
+    fn update_camera_far(&mut self) {
+        self.camera.set_far((self.active_chunk_radius * CHUNK_SIZE * 8) as Float);
+    }
+
+    fn update_skybox_size(&mut self) {
+        self.skybox.scale_to_chunk_units(self.active_chunk_radius * 2);
+    }
+
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
         self.surface_shader_program.use_program();
         self.surface_shader_program.set_resource_vec3("view_pos", &self.camera.get_translation())?;
@@ -285,19 +266,39 @@ impl Updatable for World {
 }
 
 fn get_chunk_radii(config: &Config) -> (i32, i32, i32) {
-    let active_radius = match config.get_int("active_radius") {
-        Some(ar) => ar,
-        None => 40
-    };
-    let far_radius = match config.get_int("far_radius") {
-        Some(far) if far <= active_radius => far,
-        Some(_far) => active_radius,
-        None => 3 * active_radius / 2
-    };
-    let near_radius = match config.get_int("near_radius") {
-        Some(near) if near <= far_radius => near,
-        Some(_near) => far_radius,
-        None => active_radius / 3
-    };
+    let active_radius = config.get_int_or_default("active_radius", 40);
+    let far_radius = i32::min(config.get_int_or_default("far_radius", 3 * active_radius / 2), active_radius);
+    let near_radius = i32::min(config.get_int_or_default("near_radius", active_radius / 3), far_radius);
     (near_radius, far_radius, active_radius)
+}
+
+fn load_surface_shader(config: &Config) -> Result<ShaderProgram, WorldError> {
+    let surface_shader_dir = config.get_str("surface_shader_dir")?.to_owned();
+    let surface_shader_program = ShaderProgramBuilder::new()
+        .add_vertex_shader((surface_shader_dir.clone() + "/VertexShader.glsl").as_str())
+        .add_fragment_shader((surface_shader_dir + "/FragmentShader.glsl").as_str())
+        .add_resource("texture_array")
+        .add_resource("mvp")
+        .add_resource("model")
+        .add_resource("view_pos")
+        .add_resource("light_pos")
+        .add_resource("fog_color")
+        .finish()?;
+    // setting texture slot to 0
+    if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
+        return Err(GraphicsError::from(e).into());
+    }
+    Ok(surface_shader_program)
+}
+
+fn load_surface_texture_array(config: &Config) -> Result<Texture, WorldError> {
+    let surface_atlas_path = config.get_str("surface_atlas_path")?.to_owned();
+
+    let mut builder = TextureBuilder::new_2d_array(&surface_atlas_path, [32, 32]);
+    for tex in TEXTURES.iter() {
+        builder.add_array_element(*tex);
+    }
+    let texture_array = builder.finish()?;
+
+    Ok(texture_array)
 }

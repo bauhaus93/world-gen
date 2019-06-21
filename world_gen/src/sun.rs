@@ -16,6 +16,11 @@ pub struct Sun {
 }
 
 impl Sun {
+    pub fn with_day_length(length_seconds: u32) -> Sun {
+        let mut sun = Sun::default();
+        sun.set_day_length(length_seconds);
+        sun
+    }
     pub fn set_rotation_center(&mut self, mut new_center: Vector3<Float>) {
         new_center[2] = 0.;
         self.rotation_center = new_center;

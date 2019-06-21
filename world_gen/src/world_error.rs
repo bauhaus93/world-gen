@@ -1,6 +1,7 @@
 use std::fmt;
 use std::error::Error;
 
+use utility::ConfigError;
 use graphics::{ GraphicsError, mesh::MeshError };
 use super::chunk::chunk_error::ChunkError;
 use super::object::object_error::ObjectError;
@@ -10,7 +11,8 @@ pub enum WorldError {
     Graphics(GraphicsError),
     Mesh(MeshError),
     Chunk(ChunkError),
-    Object(ObjectError)
+    Object(ObjectError),
+    Config(ConfigError)
 }
 
 impl From<GraphicsError> for WorldError {
@@ -37,6 +39,11 @@ impl From<ObjectError> for WorldError {
     }
 }
 
+impl From<ConfigError> for WorldError {
+    fn from(err: ConfigError) -> Self {
+        WorldError::Config(err)
+    }
+}
 
 impl Error for WorldError {
 
@@ -45,7 +52,8 @@ impl Error for WorldError {
             WorldError::Graphics(_) => "graphics",
             WorldError::Mesh(_) => "mesh",
             WorldError::Chunk(_) => "chunk",
-            WorldError::Object(_) => "object"
+            WorldError::Object(_) => "object",
+            WorldError::Config(_) => "config"
         }
     }
 
@@ -54,7 +62,8 @@ impl Error for WorldError {
             WorldError::Graphics(ref err) => Some(err),
             WorldError::Mesh(ref err) => Some(err),
             WorldError::Chunk(ref err) => Some(err),
-            WorldError::Object(ref err) => Some(err)
+            WorldError::Object(ref err) => Some(err),
+            WorldError::Config(ref err) => Some(err)
         }
     }
 }
@@ -66,6 +75,7 @@ impl fmt::Display for WorldError {
             WorldError::Mesh(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Chunk(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Object(ref err) => write!(f, "{}/{}", self.description(), err),
+            WorldError::Config(ref err) => write!(f, "{}/{}", self.description(), err),
         }
     }
 }

@@ -7,8 +7,7 @@ use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::{ GenNum, Vector3, normalize };
 
-use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
-use graphics::projection::{ create_default_orthographic, create_default_perspective };
+use graphics::{ ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use utility::{ Config, Float, format_number };
 use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
@@ -172,6 +171,16 @@ impl World {
         self.chunks.values()
             .filter(|c| c.is_visible())
             .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
+        /*let render_count = self.chunks.values()
+            .filter(|c| c.is_visible())
+            .try_fold(0, |rc, c| {
+                match c.render(&self.camera, &self.surface_shader_program, 0) {
+                    Ok(_) => Ok(rc + 1),
+                    Err(e) => Err(e)
+                }
+            })?;
+        
+        info!("Render = {:.2}", render_count as Float / self.chunks.len() as Float);*/
 
         self.texture_array.deactivate();
         self.skybox.render(&self.camera)?;

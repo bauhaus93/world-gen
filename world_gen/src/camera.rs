@@ -1,9 +1,9 @@
 use std::ops::Add;
-use glm::{ Vector3, Vector4, Matrix4 };
+use glm::{ Vector3, Matrix4 };
 use glm::ext::{ look_at, perspective };
 use num_traits::One;
 
-use graphics::{ Projection, create_direction, projection::{ create_orthographic_projection_matrix, create_default_perspective } };
+use graphics::{ Projection, create_direction, projection::create_default_perspective };
 use utility::Float;
 use crate::Model;
 use crate::traits::{ Translatable, Rotatable };

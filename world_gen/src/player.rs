@@ -11,7 +11,7 @@ pub struct Player {
     model: Model,
     momentum: Vector3<Float>,
     forward: Vector3<Float>,
-    speed: f32
+    speed: f32,
 }
 
 impl Player {
@@ -40,7 +40,8 @@ impl Player {
             move_offset = move_offset.add(right);
         }
         if length(move_offset) > 1e-3 {
-            self.move_by_speed(normalize(move_offset));
+            let normalized_offset = normalize(move_offset);
+            self.move_by_speed(normalized_offset);
         }
     }  
 
@@ -54,6 +55,10 @@ impl Player {
 
     pub fn move_z(&mut self, offset: Float) {
         self.mod_translation(Vector3::new(0., 0., offset));
+    }
+    
+    pub fn get_z(&self) -> Float {
+        self.model.get_translation().z
     }
 
     pub fn mod_speed(&mut self, amount: f32) {
@@ -89,7 +94,7 @@ impl Default for Player {
             model: Model::default(),
             momentum: Vector3::from_s(0.),
             forward: Vector3::from_s(0.),
-            speed: 2.
+            speed: 0.5,
         };
         player.set_translation(Vector3::new(0., 0., 200.));
         player.set_rotation(Vector3::new(45f32.to_radians(), 125f32.to_radians(), 0.));

@@ -230,28 +230,36 @@ impl World {
         self.chunks.get(&get_chunk_pos(world_pos))
     }
 
-    fn handle_player_momentum(&mut self) {
-        match self.get_chunk_by_world_pos(self.player.get_translation()) {
-            Some(chunk) => {
-                let height_diff = chunk.get_height_diff(self.player.get_translation());
-                let move_foward_xy = normalize(self.player.get_direction().truncate(2) / 8.);
-                let forward_diff = -chunk.get_height_diff(self.player.get_translation() + move_foward_xy.extend(height_diff));
-                let forward = normalize(move_foward_xy.extend(forward_diff));
-                self.player.update_forward(forward);
-                info!("Move forward = {:?}", forward);
+    fn handle_player(&mut self, time_passed: u32) -> Result<(), WorldError> {
+        let player_pos = self.player.get_translation();
 
-                if height_diff > 0. {
-                    self.player.push_z(-0.25);
-                } else {
-                    self.player.clear_momentum_neg_z();
-                    self.player.move_z(-height_diff);
-                }
+        let chunk_height = match self.get_chunk_by_world_pos(player_pos) {
+            Some(chunk) => {
+                let player_pos_xy = player_pos.truncate(2);
+                let height = chunk.get_height(player_pos_xy);
+                let forward_xy = normalize(self.player.get_direction().truncate(2));
+                let forward_height = chunk.get_height(player_pos_xy + forward_xy);
+                let forward_z = forward_height - height;
+
+                self.player.update_forward(forward_xy.extend(forward_z));
+                height
             },
             None => {
                 trace!("Player not on any chunk!");
+                player_pos.z
             }
+        };
+        self.player.tick(time_passed)?;
+
+        let height_diff = self.player.get_z() - chunk_height;
+        if height_diff > 0. {
+            self.player.push_z(-0.25);
+        } else {
+            self.player.clear_momentum_neg_z();
+            self.player.move_z(-height_diff);
         }
 
+        Ok(())
     }
 }
 
@@ -270,13 +278,11 @@ impl Updatable for World {
             info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), format_number(self.count_loaded_vertices()));
         }
 
-        // order of these operations matter somehow for a normal world^^
-        // update the chunk mvps AFTER player/camera is moved!
-        self.player.tick(time_passed)?;
+        self.handle_player(time_passed)?;
+
         self.player.align_camera(&mut self.camera);
         self.update_chunk_mvps();
 
-        self.handle_player_momentum();
         self.skybox.set_translation(self.player.get_translation());
         self.sun.set_rotation_center(self.player.get_translation());
         self.sun.tick(time_passed)?;

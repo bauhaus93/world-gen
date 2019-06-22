@@ -1,6 +1,6 @@
 use num_traits::One;
 
-use glm::{ Vector3, Vector4, Matrix4 };
+use glm::{ Vector2, Vector3, Vector4, Matrix4 };
 
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
@@ -53,11 +53,15 @@ impl Chunk {
         self.mvp = new_mvp;
     }
 
-    pub fn get_height_diff(&self, world_pos: Vector3<Float>) -> Float {
+    pub fn get_height(&self, world_pos: Vector2<Float>) -> Float {
         let chunk_pos = self.model.get_translation();
         let relative_pos = [world_pos.x - chunk_pos.x,
                             world_pos.y - chunk_pos.y];
-        world_pos.z - self.height_map.get_interpolated_height(relative_pos)
+        self.height_map.get_interpolated_height(relative_pos) 
+    }
+
+    pub fn get_height_diff(&self, world_pos: Vector3<Float>) -> Float {
+        world_pos.z - self.get_height(world_pos.truncate(2))
     }
 
     pub fn add_tree(&mut self, tree_object: Object) {

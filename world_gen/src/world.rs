@@ -170,7 +170,7 @@ impl World {
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
         self.chunks.values()
-            .filter(|c| c.is_visible(self.camera.get_frustum()))
+            .filter(|c| c.is_visible())
             .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
 
         self.texture_array.deactivate();

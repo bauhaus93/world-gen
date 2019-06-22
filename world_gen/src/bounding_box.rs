@@ -1,6 +1,6 @@
 use std::fmt;
 
-use glm::{ Vector3, GenNum };
+use glm::{ Vector3, Vector4, Matrix4, GenNum };
 
 use utility::Float;
 
@@ -26,9 +26,37 @@ impl BoundingBox {
         }
     }
 
-    pub fn get_points(&self) -> &[Vector3<Float>] {
-        &self.points
+    pub fn is_visible(&self, mvp: Matrix4<Float>) -> bool {
+        let clip_points: Vec<Vector4<Float>> = self.points.iter().map(|p| mvp * p.extend(1.)).collect();
+        for plane in 0..6 {
+            let mut p_in = 0;
+            let mut p_out = 0;
+            for p in clip_points.iter() {
+                if plane < 3 {
+                    if p[plane] <= p.w {
+                        p_in += 1;
+                    } else {
+                        p_out += 1;
+                    }
+                } else {
+                    if p[plane % 3] >= -p.w {
+                        p_in += 1;
+                    } else {
+                        p_out += 1;
+                    }
+                }
+
+                if p_in > 0 && p_out > 0 {
+                    return true;
+                }
+            }
+            if p_in == 0 {
+                return false;
+            }
+        }
+        true
     }
+
 }
 
 impl Default for BoundingBox {

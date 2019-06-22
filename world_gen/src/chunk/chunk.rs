@@ -5,7 +5,7 @@ use glm::{ Vector2, Vector3, Matrix4 };
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
-use crate::{ Model, Object, Camera, BoundingBox, Frustum };
+use crate::{ Model, Object, Camera, BoundingBox };
 use super::{ HeightMap, CHUNK_SIZE };
 
 pub struct Chunk {
@@ -68,8 +68,8 @@ impl Chunk {
         self.tree_list.push(tree_object);
     }
 
-    pub fn is_visible(&self, frustum: &Frustum) -> bool {
-        frustum.is_visible(&self.bounding_box)
+    pub fn is_visible(&self) -> bool {
+        self.bounding_box.is_visible(self.mvp)
     }
 }
 

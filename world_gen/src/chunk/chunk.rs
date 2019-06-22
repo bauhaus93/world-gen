@@ -5,8 +5,8 @@ use glm::{ Vector2, Vector3, Matrix4 };
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
-use crate::{ Model, Object, Camera, BoundingBox };
-use super::{ HeightMap, CHUNK_SIZE, get_world_pos };
+use crate::{ Model, Object, Camera, BoundingBox, Frustum };
+use super::{ HeightMap, CHUNK_SIZE };
 
 pub struct Chunk {
     pos: [i32; 2],
@@ -68,8 +68,8 @@ impl Chunk {
         self.tree_list.push(tree_object);
     }
 
-    pub fn is_visible(&self) -> bool {
-        self.bounding_box.is_visible(self.mvp)
+    pub fn is_visible(&self, frustum: &Frustum) -> bool {
+        frustum.is_visible(&self.bounding_box)
     }
 }
 
@@ -89,6 +89,6 @@ fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
     let max_xy = ((height_map.get_size() - 1) * height_map.get_resolution()) as Float;
     let min = Vector3::new(0., 0., height_map.get_min());
     let max = Vector3::new(max_xy, max_xy, height_map.get_max());
-    BoundingBox::new(min, max)
+    BoundingBox::from_min_max(min, max)
 }
 

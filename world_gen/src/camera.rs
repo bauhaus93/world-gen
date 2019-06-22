@@ -5,7 +5,7 @@ use num_traits::One;
 
 use graphics::{ Projection, create_direction, projection::{ create_orthographic_projection_matrix, create_default_perspective } };
 use utility::Float;
-use crate::Model;
+use crate::{ Model, Frustum };
 use crate::traits::{ Translatable, Rotatable };
 
 
@@ -13,17 +13,14 @@ pub struct Camera {
     model: Model,
     projection: Projection,
     view_matrix: Matrix4<Float>,
-    projection_matrix: Matrix4<Float>
+    projection_matrix: Matrix4<Float>,
+    frustum: Frustum
 }
 
 impl Camera {
 
-    #[allow(unused)]
-    pub fn point_visible(&self, point_mvp: &Matrix4<Float>) -> bool {
-        let p = point_mvp.clone() * Vector4::new(0., 0., 0., 1.);
-        p.x.abs() < p.w &&
-        p.y.abs() < p.w &&
-        p.z.abs() < p.w
+    pub fn get_frustum(&self) -> &Frustum {
+        &self.frustum
     }
 
     pub fn set_far(&mut self, new_far: Float) {
@@ -67,13 +64,19 @@ impl Camera {
         self.projection_matrix = match self.projection {
             Projection::Perspective { fov, aspect_ratio, near, far } => {
                 trace!("projection update: perspective, fov = {}, aspect ratio = {}, near = {}, far = {}", fov.to_degrees(), aspect_ratio, near, far);
+                self.update_frustum(fov, aspect_ratio, near, far);
                 perspective(fov, aspect_ratio, near, far)
             },
-            Projection::Orthographic { width, aspect_ratio } => {
-                trace!("projection update: orthographic, width = {}, aspect ratio = {}", width, aspect_ratio);
-                create_orthographic_projection_matrix(-width / 2., width / 2., width / 2. / aspect_ratio, -width / 2. / aspect_ratio, -2. * width, 2. * width)
-            }
+            _ => unreachable!()
         }
+        
+    }
+
+    fn update_frustum(&mut self, fov: Float, aspect_ratio: Float, near: Float, far: Float) {
+        self.frustum = Frustum::new(self.model.get_translation(),
+                                    self.model.get_rotation(),
+                                    fov, aspect_ratio, near, far);
+        info!("{}", self.frustum);
     }
 
 }
@@ -84,7 +87,8 @@ impl Default for Camera {
             model: Model::default(),
             projection:  create_default_perspective(),
             view_matrix: Matrix4::<Float>::one(),
-            projection_matrix: Matrix4::<Float>::one()
+            projection_matrix: Matrix4::<Float>::one(),
+            frustum: Frustum::default()
         };
         camera.set_rotation(Vector3::new(45f32.to_radians(), 125f32.to_radians(), 0.));
         camera.update_projection();

@@ -27,6 +27,7 @@ mod timer;
 mod skybox;
 mod sun;
 mod bounding_box;
+mod frustum;
 
 
 pub use self::world::World;
@@ -42,6 +43,7 @@ use self::chunk::CHUNK_SIZE;
 use self::object::ObjectManager;
 use self::object::Object;
 use self::bounding_box::BoundingBox;
+use self::frustum::Frustum;
 
 
 

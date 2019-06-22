@@ -153,17 +153,6 @@ impl World {
         Ok(())
     }
 
-    pub fn toggle_camera_projection(&mut self) {
-        match self.camera.get_projection() {
-            Projection::Orthographic { .. } => {
-                self.camera.set_projection(create_default_perspective());
-            },
-            Projection::Perspective { .. } => {
-                self.camera.set_projection(create_default_orthographic());
-            }
-        }
-    }
-
     #[allow(dead_code)]
     pub fn count_loaded_vertices(&self) -> u32 {
         let mut vertex_count = 0;
@@ -181,7 +170,7 @@ impl World {
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
         self.chunks.values()
-            .filter(|c| c.is_visible())
+            .filter(|c| c.is_visible(self.camera.get_frustum()))
             .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
 
         self.texture_array.deactivate();

@@ -148,7 +148,6 @@ impl Application {
                 glutin::VirtualKeyCode::Space => { self.movement_keys_down[5] = *down; },
                 glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(0.25); },
                 glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-0.25); },
-                glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },
                 _ => {}
             }
         }

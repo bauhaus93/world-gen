@@ -1,5 +1,6 @@
+use std::fmt;
 
-use glm::{ Vector3, Vector4, Matrix4 };
+use glm::{ Vector3, Vector4, Matrix4, normalize };
 
 use utility::Float;
 
@@ -27,6 +28,7 @@ impl BoundingBox {
     pub fn is_visible(&self, bb_mvp: Matrix4<Float>) -> bool {
         for p in self.points.iter() {
             let clip = bb_mvp * *p;
+
             if clip.x.abs() <= clip.w &&
                clip.y.abs() <= clip.w &&
                clip.z.abs() <= clip.w {
@@ -34,5 +36,12 @@ impl BoundingBox {
             }
         }
         false
+    }
+}
+
+impl fmt::Display for BoundingBox {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BoundingBox:")?;
+        self.points.iter().try_for_each(|p| write!(f, " {}/{}/{}", p.x, p.y, p.z))
     }
 }

@@ -1,12 +1,12 @@
 use num_traits::One;
 
-use glm::{ Vector2, Vector3, Vector4, Matrix4 };
+use glm::{ Vector2, Vector3, Matrix4 };
 
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
 use crate::{ Model, Object, Camera, BoundingBox };
-use super::{ HeightMap, CHUNK_SIZE };
+use super::{ HeightMap, CHUNK_SIZE, get_world_pos };
 
 pub struct Chunk {
     pos: [i32; 2],
@@ -23,7 +23,8 @@ impl Chunk {
     pub fn new(pos: [i32; 2], height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
         let mut model = Model::default();
         model.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
-        let bounding_box = (&height_map).into();
+        let bounding_box = build_bounding_box(&height_map);
+
         Self {
             pos: pos,
             model: model,
@@ -82,5 +83,12 @@ impl Renderable for Chunk {
         }
         Ok(())
     }
+}
+
+fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
+    let max_xy = ((height_map.get_size() - 1) * height_map.get_resolution()) as Float;
+    let min = Vector3::new(0., 0., height_map.get_min());
+    let max = Vector3::new(max_xy, max_xy, height_map.get_max());
+    BoundingBox::new(min, max)
 }
 

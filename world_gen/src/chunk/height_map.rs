@@ -1,9 +1,6 @@
 use std::cmp::Ordering;
 
-use glm::Vector3;
-
 use utility::Float;
-use crate::BoundingBox;
 
 pub struct HeightMap {
     size: i32,
@@ -128,16 +125,4 @@ fn interpolate(p: [Float; 2], reference: [Float; 4]) -> Float {
 fn clamp<T>(value: T, min: T, max: T) -> T
 where T: Ord {
     T::min(T::max(value, min), max)
-}
-
-impl Into<BoundingBox> for &HeightMap {
-    fn into(self) -> BoundingBox {
-        BoundingBox::new(
-            Vector3::new(0., 0., self.get_min()),
-            Vector3::new(
-                (self.get_size() - 1) as Float,
-                (self.get_size() - 1) as Float,
-                 self.get_max())
-        )
-    }
 }

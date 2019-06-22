@@ -135,7 +135,7 @@ impl Default for Player {
 }
 
 impl Updatable for Player {
-    fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
+    fn tick(&mut self, _time_passed: u32) -> Result<(), WorldError> {
         self.apply_momentum();
         if !self.jumping {
             self.clear_momentum();

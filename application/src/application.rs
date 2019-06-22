@@ -129,29 +129,7 @@ impl Application {
     }
 
     fn handle_movement(&mut self) {
-        let player_dir = self.world.get_player().get_direction();
-        let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
-
-        if self.movement_keys_down[0] {
-            move_offset = move_offset.add(player_dir);
-        }
-        if self.movement_keys_down[1] {
-            let right = cross(player_dir, Vector3::new(0., 0., 1.));
-            move_offset = move_offset.sub(right);
-        }
-        if self.movement_keys_down[2] {
-            move_offset = move_offset.sub(player_dir);
-        }
-        if self.movement_keys_down[3] {
-            let right = cross(player_dir, Vector3::new(0., 0., 1.));
-            move_offset = move_offset.add(right);
-        }
-        if self.movement_keys_down[4] {
-            move_offset = move_offset.add(Vector3::new(0., 0., 1.));
-        }
-        if length(move_offset) > 1e-3 {
-            self.world.get_player_mut().move_by_speed(normalize(move_offset));
-        }
+        self.world.get_player_mut().move_by_forward(&self.movement_keys_down[..4]);
     }
 
     fn handle_pressed_keys(&mut self, key_list: &[(glutin::VirtualKeyCode, bool)]) {

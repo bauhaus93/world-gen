@@ -5,7 +5,7 @@ use rand;
 #[allow(unused)]
 use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
-use glm::{ GenNum, Vector3 };
+use glm::{ GenNum, Vector3, normalize };
 
 use graphics::{ Projection, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use graphics::projection::{ create_default_orthographic, create_default_perspective };
@@ -230,10 +230,16 @@ impl World {
         self.chunks.get(&get_chunk_pos(world_pos))
     }
 
-    fn handle_player_gravity(&mut self) {
+    fn handle_player_momentum(&mut self) {
         match self.get_chunk_by_world_pos(self.player.get_translation()) {
             Some(chunk) => {
                 let height_diff = chunk.get_height_diff(self.player.get_translation());
+                let move_foward_xy = normalize(self.player.get_direction().truncate(2) / 8.);
+                let forward_diff = -chunk.get_height_diff(self.player.get_translation() + move_foward_xy.extend(height_diff));
+                let forward = normalize(move_foward_xy.extend(forward_diff));
+                self.player.update_forward(forward);
+                info!("Move forward = {:?}", forward);
+
                 if height_diff > 0. {
                     self.player.push_z(-0.25);
                 } else {
@@ -242,7 +248,7 @@ impl World {
                 }
             },
             None => {
-                debug!("Player not on any chunk!");
+                trace!("Player not on any chunk!");
             }
         }
 
@@ -270,7 +276,7 @@ impl Updatable for World {
         self.player.align_camera(&mut self.camera);
         self.update_chunk_mvps();
 
-        self.handle_player_gravity();
+        self.handle_player_momentum();
         self.skybox.set_translation(self.player.get_translation());
         self.sun.set_rotation_center(self.player.get_translation());
         self.sun.tick(time_passed)?;

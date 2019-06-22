@@ -54,11 +54,10 @@ impl Chunk {
     }
 
     pub fn get_height_diff(&self, world_pos: Vector3<Float>) -> Float {
-        let relative_pos = get_chunk_relative_pos(self.model.get_translation(), world_pos, self.height_map.get_resolution());
-        debug_assert!(relative_pos[0] >= 0 && relative_pos[1] >= 0);
-        debug_assert!(relative_pos[0] < CHUNK_SIZE && relative_pos[1] < CHUNK_SIZE);
-        let res = world_pos.z - self.height_map.get(&relative_pos);
-        res
+        let chunk_pos = self.model.get_translation();
+        let relative_pos = [world_pos.x - chunk_pos.x,
+                            world_pos.y - chunk_pos.y];
+        world_pos.z - self.height_map.get_interpolated_height(relative_pos)
     }
 
     pub fn add_tree(&mut self, tree_object: Object) {

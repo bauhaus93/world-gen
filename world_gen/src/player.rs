@@ -1,6 +1,6 @@
-use std::ops::Add;
+use std::ops::{ Add, Sub };
 
-use glm:: { Vector3, GenNum };
+use glm:: { Vector3, GenNum, normalize, cross, length };
 
 use utility::Float;
 use graphics::create_direction;
@@ -10,6 +10,7 @@ use crate::traits::{ Translatable, Rotatable, Updatable };
 pub struct Player {
     model: Model,
     momentum: Vector3<Float>,
+    forward: Vector3<Float>,
     speed: f32
 }
 
@@ -21,10 +22,35 @@ impl Player {
         camera.set_rotation(self.get_rotation());
     }
 
+    pub fn move_by_forward(&mut self, directions: &[bool]) {
+        debug_assert!(directions.len() >= 4);
+        let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
+        if directions[0] {
+            move_offset = move_offset.add(self.forward);
+        }
+        if directions[1] {
+            let right = cross(self.forward, Vector3::new(0., 0., 1.));
+            move_offset = move_offset.sub(right);
+        }
+        if directions[2] {
+            move_offset = move_offset.sub(self.forward);
+        }
+        if directions[3] {
+            let right = cross(self.forward, Vector3::new(0., 0., 1.));
+            move_offset = move_offset.add(right);
+        }
+        if length(move_offset) > 1e-3 {
+            self.move_by_speed(normalize(move_offset));
+        }
+    }  
+
+    pub fn update_forward(&mut self, forward: Vector3<Float>) {
+        self.forward = forward;
+    }
+
     pub fn move_by_speed(&mut self, normalized_offset: Vector3<Float>) {
         self.mod_translation(normalized_offset * self.speed);
     }
-
 
     pub fn move_z(&mut self, offset: Float) {
         self.mod_translation(Vector3::new(0., 0., offset));
@@ -62,6 +88,7 @@ impl Default for Player {
         let mut player = Player {
             model: Model::default(),
             momentum: Vector3::from_s(0.),
+            forward: Vector3::from_s(0.),
             speed: 2.
         };
         player.set_translation(Vector3::new(0., 0., 200.));

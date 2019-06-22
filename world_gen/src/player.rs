@@ -12,6 +12,7 @@ pub struct Player {
     momentum: Vector3<Float>,
     forward: Vector3<Float>,
     speed: f32,
+    jumping: bool
 }
 
 impl Player {
@@ -22,7 +23,33 @@ impl Player {
         camera.set_rotation(self.get_rotation());
     }
 
-    pub fn move_by_forward(&mut self, directions: &[bool]) {
+    pub fn is_jumping(&self) -> bool {
+        self.jumping
+    }
+
+    pub fn toggle_jump(&mut self) {
+        self.jumping = !self.jumping;
+    }
+
+    pub fn jump(&mut self, force: Float) {
+        self.jumping = true;
+        let momentum_xy = self.momentum.truncate(2);
+        let jump_momentum = match length(momentum_xy) {
+            mom_xy if mom_xy < 1e-3 => {
+                Vector3::new(0., 0., 1.) * force
+            },
+            _ => {
+                (normalize(momentum_xy) * self.speed).extend(force)
+            }
+        };
+        self.push(jump_momentum);
+    }
+
+    pub fn land(&mut self) {
+        self.jumping = false;
+    }
+
+    pub fn add_move_momentum(&mut self, directions: &[bool]) {
         debug_assert!(directions.len() >= 4);
         let mut move_offset: Vector3<Float> = Vector3::from_s(0.);
         if directions[0] {
@@ -41,16 +68,16 @@ impl Player {
         }
         if length(move_offset) > 1e-3 {
             let normalized_offset = normalize(move_offset);
-            self.move_by_speed(normalized_offset);
+            self.push(normalized_offset * self.speed);
         }
-    }  
+    }
+
+    pub fn apply_momentum(&mut self) {
+        self.mod_translation(self.momentum);
+    }
 
     pub fn update_forward(&mut self, forward: Vector3<Float>) {
         self.forward = forward;
-    }
-
-    pub fn move_by_speed(&mut self, normalized_offset: Vector3<Float>) {
-        self.mod_translation(normalized_offset * self.speed);
     }
 
     pub fn move_z(&mut self, offset: Float) {
@@ -77,6 +104,10 @@ impl Player {
         self.momentum.z += additional_momentum_z;
     }
 
+    pub fn clear_momentum(&mut self) {
+        self.momentum = Vector3::from_s(0.);
+    }
+
     pub fn clear_momentum_z(&mut self) {
         self.momentum.z = 0.;
     }
@@ -95,6 +126,7 @@ impl Default for Player {
             momentum: Vector3::from_s(0.),
             forward: Vector3::from_s(0.),
             speed: 0.5,
+            jumping: false
         };
         player.set_translation(Vector3::new(0., 0., 200.));
         player.set_rotation(Vector3::new(45f32.to_radians(), 125f32.to_radians(), 0.));
@@ -104,7 +136,10 @@ impl Default for Player {
 
 impl Updatable for Player {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
-        self.mod_translation(self.momentum);
+        self.apply_momentum();
+        if !self.jumping {
+            self.clear_momentum();
+        }
         Ok(())
     }
 }

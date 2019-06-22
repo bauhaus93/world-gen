@@ -129,7 +129,12 @@ impl Application {
     }
 
     fn handle_movement(&mut self) {
-        self.world.get_player_mut().move_by_forward(&self.movement_keys_down[..4]);
+        if !self.world.get_player().is_jumping() {
+            self.world.get_player_mut().add_move_momentum(&self.movement_keys_down[..4]);
+        }
+        if self.movement_keys_down[5] && !self.world.get_player().is_jumping() {
+            self.world.get_player_mut().jump(4.)
+        }
     }
 
     fn handle_pressed_keys(&mut self, key_list: &[(glutin::VirtualKeyCode, bool)]) {
@@ -140,12 +145,7 @@ impl Application {
                 glutin::VirtualKeyCode::S => { self.movement_keys_down[2] = *down; },
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
                 glutin::VirtualKeyCode::E => { self.movement_keys_down[4] = *down; },
-                glutin::VirtualKeyCode::Space => {
-                    if !self.movement_keys_down[5] && *down {
-                        self.world.get_player_mut().push_z(4.);
-                    }
-                    self.movement_keys_down[5] = *down;
-                },
+                glutin::VirtualKeyCode::Space => { self.movement_keys_down[5] = *down; },
                 glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(0.25); },
                 glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-0.25); },
                 glutin::VirtualKeyCode::P if *down => { self.world.toggle_camera_projection(); },

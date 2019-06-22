@@ -253,9 +253,14 @@ impl World {
 
         let height_diff = self.player.get_z() - chunk_height;
         if height_diff > 0. {
+            if height_diff > 0.1 && !self.player.is_jumping() {
+                self.player.toggle_jump();
+            }
             self.player.push_z(-0.25);
         } else {
-            self.player.clear_momentum_neg_z();
+            if self.player.is_jumping() {
+                self.player.land();
+            }
             self.player.move_z(-height_diff);
         }
 

@@ -3,7 +3,7 @@ use std::{ thread, time, ops::{ Add, Sub } };
 use glutin;
 use gl;
 use gl::types::GLsizei;
-use glm::{ GenNum, Vector3, normalize, length, cross };
+use glm::Vector3;
 
 use graphics;
 use world_gen::traits::Rotatable;

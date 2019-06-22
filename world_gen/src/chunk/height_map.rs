@@ -1,11 +1,15 @@
+use std::cmp::Ordering;
+
+use glm::Vector3;
+
 use utility::Float;
+use crate::BoundingBox;
 
 pub struct HeightMap {
     size: i32,
     resolution: i32,
     height_list: Vec<Float>
 }
-
 
 impl HeightMap {
 
@@ -44,6 +48,36 @@ impl HeightMap {
 
     pub fn get_resolution(&self) -> i32 {
         self.resolution
+    }
+
+    pub fn get_min(&self) -> Float {
+        match self.height_list.iter().min_by(|a, b| {
+            if a > b {
+                Ordering::Greater
+            } else if a < b {
+                Ordering::Less
+            } else {
+                Ordering::Equal
+            }
+        }) {
+            Some(value) => *value,
+            None => unreachable!()
+        }
+    }
+
+    pub fn get_max(&self) -> Float {
+        match self.height_list.iter().max_by(|a, b| {
+            if a > b {
+                Ordering::Greater
+            } else if a < b {
+                Ordering::Less
+            } else {
+                Ordering::Equal
+            }
+        }) {
+            Some(value) => *value,
+            None => unreachable!()
+        }
     }
 
     pub fn set(&mut self, pos: &[i32; 2], height: Float) {
@@ -94,4 +128,16 @@ fn interpolate(p: [Float; 2], reference: [Float; 4]) -> Float {
 fn clamp<T>(value: T, min: T, max: T) -> T
 where T: Ord {
     T::min(T::max(value, min), max)
+}
+
+impl Into<BoundingBox> for &HeightMap {
+    fn into(self) -> BoundingBox {
+        BoundingBox::new(
+            Vector3::new(0., 0., self.get_min()),
+            Vector3::new(
+                (self.get_size() - 1) as Float,
+                (self.get_size() - 1) as Float,
+                 self.get_max())
+        )
+    }
 }

@@ -26,6 +26,7 @@ mod noise;
 mod timer;
 mod skybox;
 mod sun;
+mod bounding_box;
 
 
 pub use self::world::World;
@@ -40,6 +41,7 @@ use self::sun::Sun;
 use self::chunk::CHUNK_SIZE;
 use self::object::ObjectManager;
 use self::object::Object;
+use self::bounding_box::BoundingBox;
 
 
 

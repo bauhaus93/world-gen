@@ -5,8 +5,8 @@ use glm::{ Vector2, Vector3, Vector4, Matrix4 };
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
 use utility::Float;
 use crate::traits::{ Translatable, Renderable };
-use crate::{ Model, Object, Camera };
-use super::{ HeightMap, CHUNK_SIZE, get_chunk_relative_pos, get_world_pos };
+use crate::{ Model, Object, Camera, BoundingBox };
+use super::{ HeightMap, CHUNK_SIZE };
 
 pub struct Chunk {
     pos: [i32; 2],
@@ -15,13 +15,15 @@ pub struct Chunk {
     height_map: HeightMap,
     mvp: Matrix4<Float>,
     lod: u8,
-    tree_list: Vec<Object>
+    tree_list: Vec<Object>,
+    bounding_box: BoundingBox
 }
 
 impl Chunk {
     pub fn new(pos: [i32; 2], height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
         let mut model = Model::default();
         model.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
+        let bounding_box = (&height_map).into();
         Self {
             pos: pos,
             model: model,
@@ -29,7 +31,8 @@ impl Chunk {
             height_map: height_map,
             mvp: Matrix4::one(),
             lod: lod,
-            tree_list: Vec::new()
+            tree_list: Vec::new(),
+            bounding_box: bounding_box
         }
     }
 
@@ -60,37 +63,12 @@ impl Chunk {
         self.height_map.get_interpolated_height(relative_pos) 
     }
 
-    pub fn get_height_diff(&self, world_pos: Vector3<Float>) -> Float {
-        world_pos.z - self.get_height(world_pos.truncate(2))
-    }
-
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }
 
-    pub fn get_clip_coordinates(&self, corner: u8) -> Vector4<Float> {
-        debug_assert!(corner < 4);
-        let size = self.height_map.get_size() - 1;
-        let resolution = self.height_map.get_resolution();
-        match corner {
-            0 => self.mvp * Vector4::new(0., 0., self.height_map.get(&[0, 0]), 1.),
-            1 => self.mvp * Vector4::new((size * resolution) as Float, 0., self.height_map.get(&[size, 0]), 1.),
-            2 => self.mvp * Vector4::new(0., (size * resolution) as Float, self.height_map.get(&[0, size]), 1.),
-            3 => self.mvp * Vector4::new((size * resolution) as Float, (size * resolution) as Float, self.height_map.get(&[size, size]), 1.), 
-            _ => unreachable!()
-        }
-    }
-
     pub fn is_visible(&self) -> bool {
-        for i in 0..4 {
-            let clip = self.get_clip_coordinates(i);
-            if clip.x.abs() < clip.w &&
-               clip.y.abs() < clip.w &&
-               clip.z.abs() < clip.w {
-                return true;
-            }
-        }
-        false
+        self.bounding_box.is_visible(self.mvp)
     }
 }
 

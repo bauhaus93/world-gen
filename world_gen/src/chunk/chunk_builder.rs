@@ -13,37 +13,38 @@ pub struct ChunkBuilder {
     pos: [i32; 2],
     lod: u8,
     height_map: HeightMap,
-    tree_list: Vec<Object>,
-    vertex_buffer: Option<VertexBuffer>
+    surface_vertices: VertexBuffer,
+    tree_list: Vec<Object>
 }
 
 impl ChunkBuilder {
 
-    pub fn new(pos: [i32; 2], lod: u8, architect: &Architect) -> Self {
+    pub fn new(pos: [i32; 2], lod: u8, architect: &Architect, object_manager: &ObjectManager) -> Result<Self, ChunkError> {
         let height_map = match lod {
             0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
             _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
         };
-        Self {
+        let surface_buffer = create_surface_buffer(&height_map);
+        let mut builder = Self {
             pos: pos,
             lod: lod,
             height_map: height_map,
+            surface_vertices: surface_buffer,
             tree_list: Vec::new(),
-            vertex_buffer: None
-        }
+        };
+
+        builder.load_trees(architect, object_manager)?;
+        Ok(builder)
     }
 
     pub fn finish(self) -> Result<Chunk, ChunkError> {
-        let mesh = match self.vertex_buffer {
-            Some(vb) => Mesh::try_from(vb)?,
-            _ => { return Err(ChunkError::NoBufferBuilt(self.pos)); }
-        };
+        let mesh = Mesh::try_from(self.surface_vertices)?;
         let mut chunk = Chunk::new(self.pos, self.height_map, self.lod, mesh);
         self.tree_list.into_iter().for_each(|t| chunk.add_tree(t));
         Ok(chunk)
     }
 
-    pub fn load_trees(&mut self, architect: &Architect, object_manager: &ObjectManager) -> Result<(), ChunkError> {
+    fn load_trees(&mut self, architect: &Architect, object_manager: &ObjectManager) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
@@ -62,18 +63,17 @@ impl ChunkBuilder {
         }
         Ok(())
     }
+}
 
-    pub fn create_surface_buffer(&mut self) {
-        let size = self.height_map.get_size();
-        let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
-        for y in 0..size - 1 {
-            for x in 0..size - 1 {
-                triangles.extend(&add_quad_triangles(&[x, y], &self.height_map));
-            }
+fn create_surface_buffer(height_map: &HeightMap) -> VertexBuffer {
+    let size = height_map.get_size();
+    let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
+    for y in 0..size - 1 {
+        for x in 0..size - 1 {
+            triangles.extend(&add_quad_triangles(&[x, y], height_map));
         }
-        trace!("Created chunk vertices for {}/{}: triangle count = {}", self.pos[0], self.pos[1], triangles.len());
-        self.vertex_buffer = Some(VertexBuffer::from(triangles.as_slice()));
     }
+    VertexBuffer::from(triangles.as_slice())
 }
 
 fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2] {

@@ -58,9 +58,7 @@ impl Worker {
     }
 
     fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
-        let mut builder = ChunkBuilder::new(chunk_pos, lod, &self.architect);
-        builder.load_trees(&self.architect, &self.object_manager)?;
-        builder.create_surface_buffer();
+        let builder = ChunkBuilder::new(chunk_pos, lod, &self.architect, &self.object_manager)?;
 
         match self.output_queue.lock() {
             Ok(mut guard) => (*guard).push(builder),

@@ -8,7 +8,7 @@ use rand::rngs::StdRng;
 use glm::{ GenNum, Vector3, normalize };
 
 use graphics::{ ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
-use utility::{ Config, Float, format_number };
+use utility::{ Config, Float, format_number, get_distance_2d_from_zero };
 use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
@@ -101,28 +101,16 @@ impl World {
 
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
         let mut request_list: Vec<([i32; 2], u8)> = Vec::new();
-        let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
+        let player_chunk_pos = get_chunk_pos(self.player.get_translation());
         for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
             for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-                let distance = f32::sqrt((x * x + y * y) as f32).round() as i32;
-                if distance < self.active_chunk_radius {
-                    let lod = self.lod_by_chunk_distance(distance);
-                    let chunk_pos = [cam_chunk_pos[0] + x,
-                                     cam_chunk_pos[1] + y];
-                    if let Some(c) = self.chunks.get(&chunk_pos) {
-                        let old_lod = c.get_lod();
-                        if lod != old_lod && (lod < 2 || old_lod < 2) {
-                           request_list.push((chunk_pos, lod)); 
-                        }
-                    } else {
-                        request_list.push((chunk_pos, lod));
-                    }
-
+                if let Some(pos_lod) = self.should_load_chunk([x, y], player_chunk_pos) {
+                    request_list.push(pos_lod);
                 }
             }
         }
         self.chunk_loader.request(&request_list)?;
-        self.last_chunk_load = cam_chunk_pos;
+        self.last_chunk_load = player_chunk_pos;
         trace!("Requested chunks: {}", request_list.len());
         Ok(())
     }
@@ -185,6 +173,28 @@ impl World {
         self.texture_array.deactivate();
         self.skybox.render(&self.camera)?;
         Ok(())
+    }
+
+    fn should_load_chunk(&self, pos: [i32; 2], player_pos: [i32; 2]) -> Option<([i32; 2], u8)> {
+        let distance = get_distance_2d_from_zero(pos).round() as i32;
+        if distance < self.active_chunk_radius {
+            let lod = self.lod_by_chunk_distance(distance);
+            let chunk_pos = [player_pos[0] + pos[0],
+                             player_pos[1] + pos[1]];
+            match self.chunks.get(&chunk_pos) {
+                Some(c) => {
+                    let old_lod = c.get_lod();
+                    if lod != old_lod && (lod < 2 || old_lod < 2) {
+                        Some((chunk_pos, lod))
+                    } else {
+                        None
+                    }
+                },
+                None => Some((chunk_pos, lod))
+            }
+        } else {
+            None
+        }
     }
 
     fn lod_by_chunk_distance(&self, distance: i32) -> u8 {

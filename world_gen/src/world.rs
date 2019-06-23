@@ -7,7 +7,7 @@ use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
 use glm::{ GenNum, Vector3, normalize };
 
-use graphics::{ ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
+use graphics::{ ShaderProgram, ShaderProgramBuilder, GraphicsError };
 use utility::{ Config, Float, format_number, get_distance_2d_from_zero };
 use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object, SurfaceTexture };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };

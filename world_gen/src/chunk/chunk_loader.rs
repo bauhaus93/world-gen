@@ -16,12 +16,15 @@ pub struct ChunkLoader {
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<[i32; 2]>,
-    thread_handles: Vec<thread::JoinHandle<()>>
+    thread_handles: Vec<thread::JoinHandle<()>>,
+    random_state: [u8; 16]
 }
 
 
 impl ChunkLoader {
     pub fn new<R: Rng + ?Sized>(rng: &mut R, object_manager: Arc<ObjectManager>) -> Self {
+        let mut random_state = [0; 16];
+        rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
             architect: Arc::new(Architect::from_rng(rng)),
@@ -30,7 +33,8 @@ impl ChunkLoader {
             output_queue: Arc::new(Mutex::new(Vec::new())),
             build_stats: Arc::new(Mutex::new(BuildStats::default())),
             handeled_positions: BTreeSet::new(),
-            thread_handles: Vec::new()
+            thread_handles: Vec::new(),
+            random_state: random_state
         }
     }
     pub fn start(&mut self, thread_count: usize) {
@@ -44,7 +48,8 @@ impl ChunkLoader {
             self.stop.clone(),
             self.input_queue.clone(),
             self.output_queue.clone(),
-            self.build_stats.clone()
+            self.build_stats.clone(),
+            self.random_state
         );
         for _i in 0..thread_count {
             let next_worker = worker.clone();

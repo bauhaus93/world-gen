@@ -14,7 +14,8 @@ pub struct Worker {
     stop: Arc<AtomicBool>,
     input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
-    build_stats: Arc<Mutex<BuildStats>>
+    build_stats: Arc<Mutex<BuildStats>>,
+    random_state: [u8; 16]
 }
 
 impl Worker {
@@ -24,7 +25,8 @@ impl Worker {
         stop: Arc<AtomicBool>,
         input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
         output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
-        build_stats: Arc<Mutex<BuildStats>>
+        build_stats: Arc<Mutex<BuildStats>>,
+        random_state: [u8; 16]
     ) -> Worker {
         Worker {
             architect: architect,
@@ -32,7 +34,8 @@ impl Worker {
             stop: stop,
             input_queue: input_queue,
             output_queue: output_queue,
-            build_stats: build_stats
+            build_stats: build_stats,
+            random_state: random_state
         }
     }
 
@@ -58,7 +61,7 @@ impl Worker {
     }
 
     fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
-        let builder = ChunkBuilder::new(chunk_pos, lod, &self.architect, &self.object_manager)?;
+        let builder = ChunkBuilder::new(chunk_pos, lod, &self.architect, &self.object_manager, &self.random_state)?;
 
         match self.output_queue.lock() {
             Ok(mut guard) => (*guard).push(builder),

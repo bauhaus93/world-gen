@@ -19,7 +19,7 @@ pub struct ChunkBuilder {
 
 impl ChunkBuilder {
 
-    pub fn new(pos: [i32; 2], lod: u8, architect: &Architect, object_manager: &ObjectManager) -> Result<Self, ChunkError> {
+    pub fn new(pos: [i32; 2], lod: u8, architect: &Architect, object_manager: &ObjectManager, random_state: &[u8; 16]) -> Result<Self, ChunkError> {
         let height_map = match lod {
             0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
             _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
@@ -34,8 +34,9 @@ impl ChunkBuilder {
         };
 
         let mut seed: [u8; 16] = [0; 16];
+        seed.copy_from_slice(random_state);
         for i in 0..8 {
-            seed[i] = (pos[i / 4] >> (8 * (i % 4))) as u8;
+            seed[i] += (pos[i / 4] >> (8 * (i % 4))) as u8;
         }
         let mut rng = SmallRng::from_seed(seed);
 

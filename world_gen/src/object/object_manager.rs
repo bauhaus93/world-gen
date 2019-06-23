@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-
 use utility::read_file;
 use super::{ Object, ObjectPrototype, ObjectError, FilePrototype };
 

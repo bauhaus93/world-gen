@@ -4,6 +4,8 @@ extern crate log;
 extern crate glm;
 extern crate gl;
 extern crate num_traits;
+extern crate serde;
+extern crate serde_yaml;
 
 pub mod file;
 pub mod cmp;

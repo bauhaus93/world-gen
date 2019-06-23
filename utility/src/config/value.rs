@@ -1,6 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, Clone)]
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
 pub enum Value {
     Str(String),
     Int(i32),
@@ -11,10 +13,10 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Value::Str(_) => write!(f, "String"),
-            Value::Int(_) => write!(f, "Integer"),
-            Value::Uint(_) => write!(f, "UnsignedInteger"),
-            Value::Float(_) => write!(f, "Float")
+            Value::Str(v) => write!(f, "String('{}')", v),
+            Value::Int(v) => write!(f, "Integer({})", v),
+            Value::Uint(v) => write!(f, "UnsignedInteger({})", v),
+            Value::Float(v) => write!(f, "Float({})", v)
         }
     }
 }

@@ -1,5 +1,7 @@
 use std::collections::{ BTreeMap };
 
+use serde_yaml;
+
 use crate::read_file;
 use super::{ Value, ConfigError };
 
@@ -11,19 +13,9 @@ pub struct Config {
 impl Config {
     pub fn read(config_path: &str) -> Result<Config, ConfigError> {
         let content = read_file(config_path)?;
-        let mut entry_map = BTreeMap::new();
-
-        for line in content.lines() {
-            if line.len() > 0 {
-                let (key, value) = parse_line(line)?;
-                if let Some(_old) = entry_map.insert(key.clone(), value) {
-                    warn!("Duplicate key '{}' in file, overwriting older entry.", key);
-                }
-            }
-        }
+        let entry_map: BTreeMap<String, Value> = serde_yaml::from_str(&content)?;
 
         debug!("Read {} key/value pairs from config file '{}'", entry_map.len(), config_path);
-
 
         let config = Config {
             entry_map: entry_map
@@ -90,23 +82,4 @@ impl Config {
             _ => default
         }
     }
-}
-
-fn parse_line(line: &str) -> Result<(String, Value), ConfigError> {
-    let fields: Vec<&str> = line.split_whitespace().collect();
-    if fields.len() != 3 {
-        return Err(ConfigError::InvalidFieldCount(3, fields.len(), line.to_owned()));
-    }
-    let key = fields[0].to_lowercase().to_owned();
-    let value = match (fields[1].to_lowercase().as_str(), fields[2]) {
-        ("str", raw_value) => Value::Str(raw_value.to_owned()),
-        ("int", raw_value) => Value::Int(raw_value.parse()?),
-        ("uint", raw_value) => Value::Uint(raw_value.parse()?),
-        ("float", raw_value) => Value::Float(raw_value.parse()?),
-        (unknown_type, _) => {
-            return Err(ConfigError::InvalidFieldType(unknown_type.to_owned(), line.to_owned()));
-        }
-    };
-
-    Ok((key, value))
 }

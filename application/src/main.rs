@@ -18,7 +18,7 @@ use log::Record;
 use crate::application::Application;
 
 fn main() {
-    const CONFIG_PATH: &'static str = "resources/default.conf";
+    const CONFIG_PATH: &'static str = "resources/default.yaml";
 
     init_custom_logger();
 

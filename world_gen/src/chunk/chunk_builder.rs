@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::collections::BTreeSet;
 
 use rand::{ Rng, rngs::SmallRng, SeedableRng };
 use glm::{ Vector2, Vector3 };
@@ -6,7 +7,7 @@ use glm::{ Vector2, Vector3 };
 use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, VertexBuffer };
 use crate::{ Object, ObjectManager };
-use crate::traits::{ Translatable };
+use crate::traits::{ Translatable, Rotatable, Scalable };
 use super::{ Chunk, ChunkError, HeightMap, Architect, CHUNK_SIZE };
 
 pub struct ChunkBuilder {
@@ -51,18 +52,29 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> {
+    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> { 
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
             let tree_count = rng.gen_range(2, 20);
-            for _ in 0..tree_count {
-                let rel_pos = [rng.gen_range(0, size), rng.gen_range(0, size)];
-                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
-                                   ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
-                    let mut tree = object_manager.create_object("tree")?;
-                    tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos)));
-                    self.tree_list.push(tree);
+            let mut positions: BTreeSet<[i32; 2]> = BTreeSet::default();
+            for _ in 0..tree_count {    // ignore if less trees, bc would tree would be spawned on same pos
+                positions.insert([rng.gen_range(0, size), rng.gen_range(0, size)]);
+            }
+            for rel_pos in positions.into_iter() {
+                let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
+                                ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
+                let mut tree = object_manager.create_object("tree")?;
+                tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos)));
+                let scale_xy = rng.gen_range(0.8, 1.2);
+                let scale_z = rng.gen_range(0.8, 1.4);
+                tree.set_scale(Vector3::new(scale_xy, scale_xy, scale_z));
+                let orientation = Vector3::new(
+                    rng.gen_range(-0.2, 0.2),
+                    rng.gen_range(-0.2, 0.2),
+                    rng.gen_range(-0.2, 0.2));
+                tree.set_rotation(orientation);
+                self.tree_list.push(tree);
             }
         }
         Ok(())

@@ -9,7 +9,7 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 extern crate serde;
-extern crate serde_json;
+extern crate serde_yaml;
 
 extern crate graphics;
 extern crate utility;

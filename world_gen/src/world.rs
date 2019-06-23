@@ -55,7 +55,7 @@ impl World {
 
         let mut rng = StdRng::seed_from_u64(0);//StdRng::from_entropy();
 
-        let object_manager = Arc::new(ObjectManager::from_json(&object_prototypes_path)?);
+        let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
         let chunk_loader = ChunkLoader::new(&mut rng, object_manager.clone());
 
         let mut test_monkey = object_manager.create_object("monkey")?;

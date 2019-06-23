@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 
-
 use utility::read_file;
 use super::{ Object, ObjectPrototype, ObjectError, FilePrototype };
 
@@ -12,10 +11,10 @@ pub struct ObjectManager {
 
 impl ObjectManager {
 
-    pub fn from_json(json_path: &str) -> Result<ObjectManager, ObjectError> {
-        info!("Creating object manager by json...");
-        let file = read_file(json_path)?;
-        let parsed_file: FilePrototype = serde_json::from_str(file.as_str())?;
+    pub fn from_yaml(file_path: &str) -> Result<ObjectManager, ObjectError> {
+        info!("Creating object manager by yaml, path = '{}'", file_path);
+        let file = read_file(file_path)?;
+        let parsed_file: FilePrototype = serde_yaml::from_str(file.as_str())?;
 
         let mut obj_manager = ObjectManager::default();
 

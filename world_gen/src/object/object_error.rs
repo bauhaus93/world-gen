@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error;
 
-use serde_json;
+use serde_yaml;
 
 use graphics::mesh::MeshError;
 use utility::FileError;
@@ -10,7 +10,7 @@ use utility::FileError;
 pub enum ObjectError {
     Mesh(MeshError),
     File(FileError),
-    Json(serde_json::Error),
+    Yaml(serde_yaml::Error),
     PrototypeNotExisting(String)
 }
 
@@ -26,9 +26,9 @@ impl From<FileError> for ObjectError {
     }
 }
 
-impl From<serde_json::Error> for ObjectError {
-    fn from(err: serde_json::Error) -> Self {
-        ObjectError::Json(err)
+impl From<serde_yaml::Error> for ObjectError {
+    fn from(err: serde_yaml::Error) -> Self {
+        ObjectError::Yaml(err)
     }
 }
 
@@ -39,7 +39,7 @@ impl Error for ObjectError {
         match *self {
             ObjectError::Mesh(_) => "mesh",
             ObjectError::File(_) => "file",
-            ObjectError::Json(_) => "json",
+            ObjectError::Yaml(_) => "yaml",
             ObjectError::PrototypeNotExisting(_) => "protoype not existing",
         }
     }
@@ -48,7 +48,7 @@ impl Error for ObjectError {
         match *self {
             ObjectError::Mesh(ref err) => Some(err),
             ObjectError::File(ref err) => Some(err),
-            ObjectError::Json(ref err) => Some(err),
+            ObjectError::Yaml(ref err) => Some(err),
             ObjectError::PrototypeNotExisting(_) => None,
         }
     }
@@ -59,7 +59,7 @@ impl fmt::Display for ObjectError {
         match *self {
             ObjectError::Mesh(ref err) => write!(f, "{}/{}", self.description(), err),
             ObjectError::File(ref err) => write!(f, "{}/{}", self.description(), err),
-            ObjectError::Json(ref err) => write!(f, "{}/{}", self.description(), err),
+            ObjectError::Yaml(ref err) => write!(f, "{}/{}", self.description(), err),
             ObjectError::PrototypeNotExisting(ref name) => write!(f, "{}: '{}'", self.description(), name)
         }
     }

@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
-use std::cmp::{ min, max };
 
+use rand::{ Rng, rngs::SmallRng, SeedableRng };
 use glm::{ Vector2, Vector3 };
 
 use utility::Float;
@@ -33,7 +33,13 @@ impl ChunkBuilder {
             tree_list: Vec::new(),
         };
 
-        builder.load_trees(architect, object_manager)?;
+        let mut seed: [u8; 16] = [0; 16];
+        for i in 0..8 {
+            seed[i] = (pos[i / 4] >> (8 * (i % 4))) as u8;
+        }
+        let mut rng = SmallRng::from_seed(seed);
+
+        builder.load_trees(object_manager, &mut rng)?;
         Ok(builder)
     }
 
@@ -44,21 +50,18 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    fn load_trees(&mut self, architect: &Architect, object_manager: &ObjectManager) -> Result<(), ChunkError> {
+    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
-            for y in 0..size {
-                for x in 0..size {
-                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + x * resolution) as Float,
-                                   ((self.pos[1] * CHUNK_SIZE) + y * resolution) as Float];
-                    if architect.has_tree(abs_pos) {
-                        let mut tree = object_manager.create_object("tree")?;
-
-                        tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&[x, y])));
-                        self.tree_list.push(tree);
-                    }
-                }
+            let tree_count = rng.gen_range(2, 20);
+            for _ in 0..tree_count {
+                let rel_pos = [rng.gen_range(0, size), rng.gen_range(0, size)];
+                    let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
+                                   ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
+                    let mut tree = object_manager.create_object("tree")?;
+                    tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos)));
+                    self.tree_list.push(tree);
             }
         }
         Ok(())
@@ -91,8 +94,8 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
                                          Vertex::default(),
                                          Vertex::default()];
         for (vert, off) in vertices.iter_mut().zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3)) {
-                let map_pos = [offset[0] + max(0, min(1, off[0] as i32)),
-                               offset[1] + max(0, min(1, off[1] as i32))];
+                let map_pos = [offset[0] + i32::max(0, i32::min(1, off[0] as i32)),
+                               offset[1] + i32::max(0, i32::min(1, off[1] as i32))];
                 let height = height_map.get(&map_pos);
                 vert.set_pos(Vector3::new((offset[0] as Float + off[0]) * resolution,
                                           (offset[1] as Float + off[1]) * resolution,

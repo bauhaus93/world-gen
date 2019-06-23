@@ -9,7 +9,6 @@ pub struct Architect {
     height_noise: OctavedNoise,
     hill_noise: OctavedNoise,
     mountain_noise: OctavedNoise,
-    tree_noise: OctavedNoise
 }
 
 impl Architect {
@@ -29,17 +28,10 @@ impl Architect {
         mountain_noise.set_roughness(2.);
         mountain_noise.set_range([-1., 1.]);
 
-        let mut tree_noise = OctavedNoise::from_rng(&mut local_rng);
-        tree_noise.set_octaves(3);
-        tree_noise.set_scale(1e-1);
-        tree_noise.set_roughness(10.);
-        tree_noise.set_range([0., 1.]);
-
         Self {
             height_noise: height_noise,
             hill_noise: hill_noise,
-            mountain_noise: mountain_noise,
-            tree_noise: tree_noise
+            mountain_noise: mountain_noise
         }
     }
 
@@ -73,9 +65,5 @@ impl Architect {
         } else {
             1
         }
-    }
-
-    pub fn has_tree(&self, absolute_pos: [Float; 2]) -> bool {
-        self.tree_noise.get_noise(absolute_pos) > 0.90
     }
 }

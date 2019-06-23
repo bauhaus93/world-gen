@@ -1,18 +1,20 @@
+use std::collections::BTreeSet;
 use rand::{ Rng, rngs::SmallRng, SeedableRng };
 
 use utility::Float;
 use crate::noise::{ Noise, OctavedNoise };
+use crate::{ Terrain, TerrainType, TerrainSet };
 use super::height_map::HeightMap;
 use super::get_world_pos;
 
 pub struct Architect {
     height_noise: OctavedNoise,
-    hill_noise: OctavedNoise,
     mountain_noise: OctavedNoise,
+    terrain_set: TerrainSet
 }
 
 impl Architect {
-    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Architect {
+    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R, terrain_set: &TerrainSet) -> Architect {
         let mut local_rng = SmallRng::from_rng(rng).unwrap();
 
         let mut height_noise = OctavedNoise::from_rng(&mut local_rng);
@@ -21,7 +23,6 @@ impl Architect {
         height_noise.set_roughness(0.5);
         height_noise.set_range([0., 100.]);
 
-        let hill_noise = OctavedNoise::from_rng(&mut local_rng);
         let mut mountain_noise = OctavedNoise::from_rng(&mut local_rng);
         mountain_noise.set_octaves(4);
         mountain_noise.set_scale(1e-4);
@@ -30,8 +31,8 @@ impl Architect {
 
         Self {
             height_noise: height_noise,
-            hill_noise: hill_noise,
-            mountain_noise: mountain_noise
+            mountain_noise: mountain_noise,
+            terrain_set: terrain_set.clone()
         }
     }
 
@@ -47,23 +48,32 @@ impl Architect {
         height_map
     }
 
-    fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
-        let raw_height = self.height_noise.get_noise(absolute_pos);
-        let _hill_val = self.hill_noise.get_noise(absolute_pos);
+    pub fn get_terrain(&self, absolute_pos: [Float; 2]) -> &Terrain {
         let mountain_val = self.mountain_noise.get_noise(absolute_pos);
-        if mountain_val > 0. {
-            raw_height * (1. +  (10. * mountain_val.powf(2.)))
+        let terrain = if mountain_val > 0.5 {
+            self.terrain_set.get(&TerrainType::Rock)
         } else {
-            raw_height
+            self.terrain_set.get(&TerrainType::Grass)
+        };
+        match terrain {
+            Some(t) => t,
+            None => {
+                error!("Requested terrain type did not exist!");
+                panic!();
+            }
         }
     }
-    #[allow(dead_code)]
-    pub fn get_ground_texture(&self, absolute_pos: [Float; 2]) -> i32 {
-        let mountain_val = self.mountain_noise.get_noise(absolute_pos);
-        if mountain_val > 0. {
-            0
-        } else {
-            1
+
+    fn get_mountain_factor(&self, absolute_pos: [Float; 2]) -> Float {
+        match self.mountain_noise.get_noise(absolute_pos) {
+            val if val > 0. => (1. +  (10. * val.powf(2.))),
+            _ => 1.
         }
+    }
+
+    fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
+        let raw_height = self.height_noise.get_noise(absolute_pos);
+        let mountain_factor = self.get_mountain_factor(absolute_pos);
+        mountain_factor * raw_height
     }
 }

@@ -5,7 +5,7 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use crate::{ ObjectManager };
+use crate::{ ObjectManager, TerrainSet };
 use super::{ Chunk, ChunkBuilder, Architect, ChunkError, BuildStats, Worker };
 
 pub struct ChunkLoader {
@@ -17,17 +17,17 @@ pub struct ChunkLoader {
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<[i32; 2]>,
     thread_handles: Vec<thread::JoinHandle<()>>,
-    random_state: [u8; 16]
+    random_state: [u8; 16],
 }
 
 
 impl ChunkLoader {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R, object_manager: Arc<ObjectManager>) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R, object_manager: Arc<ObjectManager>, terrain_set: &TerrainSet) -> Self {
         let mut random_state = [0; 16];
         rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(Architect::from_rng(rng)),
+            architect: Arc::new(Architect::from_rng(rng, terrain_set)),
             object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),

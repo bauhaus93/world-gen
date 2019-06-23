@@ -27,7 +27,7 @@ mod timer;
 mod skybox;
 mod sun;
 mod bounding_box;
-mod surface_texture;
+mod surface;
 
 pub use self::world::World;
 pub use self::player::Player;
@@ -42,7 +42,7 @@ use self::chunk::CHUNK_SIZE;
 use self::object::ObjectManager;
 use self::object::Object;
 use self::bounding_box::BoundingBox;
-use self::surface_texture::SurfaceTexture;
+use self::surface::{ SurfaceTexture, Terrain, TerrainSet, TerrainType };
 
 
 

@@ -4,7 +4,7 @@ use std::time::{ Instant, Duration };
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
-use crate::ObjectManager;
+use crate::{ ObjectManager };
 use super::{ ChunkBuilder, Architect, ChunkError, BuildStats };
 
 #[derive(Clone)]
@@ -61,7 +61,12 @@ impl Worker {
     }
 
     fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
-        let builder = ChunkBuilder::new(chunk_pos, lod, &self.architect, &self.object_manager, &self.random_state)?;
+        let builder = ChunkBuilder::new(
+            chunk_pos,
+            lod,
+            &self.architect,
+            &self.object_manager,
+            &self.random_state)?;
 
         match self.output_queue.lock() {
             Ok(mut guard) => (*guard).push(builder),

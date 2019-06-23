@@ -8,7 +8,7 @@ use utility::Float;
 use graphics::mesh::{ Vertex, Triangle, Mesh, VertexBuffer };
 use crate::{ Object, ObjectManager };
 use crate::traits::{ Translatable, Rotatable, Scalable };
-use super::{ Chunk, ChunkError, HeightMap, Architect, CHUNK_SIZE };
+use super::{ Chunk, ChunkError, HeightMap, Architect, CHUNK_SIZE, get_world_pos };
 
 pub struct ChunkBuilder {
     pos: [i32; 2],
@@ -20,12 +20,18 @@ pub struct ChunkBuilder {
 
 impl ChunkBuilder {
 
-    pub fn new(pos: [i32; 2], lod: u8, architect: &Architect, object_manager: &ObjectManager, random_state: &[u8; 16]) -> Result<Self, ChunkError> {
+    pub fn new(
+        pos: [i32; 2],
+        lod: u8,
+        architect: &Architect,
+        object_manager: &ObjectManager,
+        random_state: &[u8; 16]) -> Result<Self, ChunkError> {
+
         let height_map = match lod {
             0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
             _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
         };
-        let surface_buffer = create_surface_buffer(&height_map);
+        let surface_buffer = create_surface_buffer(pos, architect, &height_map);
         let mut builder = Self {
             pos: pos,
             lod: lod,
@@ -81,18 +87,21 @@ impl ChunkBuilder {
     }
 }
 
-fn create_surface_buffer(height_map: &HeightMap) -> VertexBuffer {
+fn create_surface_buffer(origin: [i32; 2], architect: &Architect, height_map: &HeightMap) -> VertexBuffer {
     let size = height_map.get_size();
+    let resolution = height_map.get_resolution();
     let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
     for y in 0..size - 1 {
         for x in 0..size - 1 {
-            triangles.extend(&add_quad_triangles(&[x, y], height_map));
+            let abs_pos = get_world_pos(&origin, &[x, y], resolution);
+            let terrain = architect.get_terrain(abs_pos);
+            triangles.extend(&add_quad_triangles(&[x, y], height_map, terrain.get_layer()));
         }
     }
     VertexBuffer::from(triangles.as_slice())
 }
 
-fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2] {
+fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap, texture_layer: u32) -> [Triangle; 2] {
     const OFFSET: Float = 1.;
     const VERTEX_OFFSETS: [[Float; 2]; 6] = [
         [0., 0.],         [OFFSET, OFFSET], [0., OFFSET],
@@ -118,6 +127,6 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap) -> [Triangle; 2
         }
         triangles[i] = Triangle::new(vertices);
     }
-    triangles.iter_mut().for_each(|t| t.set_uv_layer(1));
+    triangles.iter_mut().for_each(|t| t.set_uv_layer(texture_layer));
     triangles
 }

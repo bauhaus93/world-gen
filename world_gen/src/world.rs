@@ -9,12 +9,12 @@ use glm::{ GenNum, Vector3, normalize };
 
 use graphics::{ ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError };
 use utility::{ Config, Float, format_number, get_distance_2d_from_zero };
-use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object };
+use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object, SurfaceTexture };
 use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
-    texture_array: Texture,
+    surface_texture: SurfaceTexture,
     camera: Camera,
     player: Player,
     surface_shader_program: ShaderProgram,
@@ -47,9 +47,10 @@ impl World {
         let object_prototypes_path = config.get_str("object_prototype_path")?;
         let day_length = config.get_uint_or_default("day_length", 180);
         let skybox_img_path = config.get_str("skybox_img_path")?;
+        let surface_texture_info_path = config.get_str("surface_info_path")?;
 
         let surface_shader_program = load_surface_shader(config)?;
-        let surface_texture_array = load_surface_texture_array(config)?;
+        let surface_texture = SurfaceTexture::load(surface_texture_info_path)?;
 
         let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
 
@@ -63,7 +64,7 @@ impl World {
         test_monkey.set_scale(Vector3::from_s(10.));
 
         let mut world = World {
-            texture_array: surface_texture_array,
+            surface_texture: surface_texture,
             camera: Camera::default(),
             player: Player::default(),
             surface_shader_program: surface_shader_program,
@@ -152,7 +153,7 @@ impl World {
     }
 
     pub fn render(&self) -> Result<(), WorldError> {
-        self.texture_array.activate();
+        self.surface_texture.activate();
         self.surface_shader_program.use_program();
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
@@ -170,7 +171,7 @@ impl World {
         
         info!("Render = {:.2}", render_count as Float / self.chunks.len() as Float);*/
 
-        self.texture_array.deactivate();
+        self.surface_texture.deactivate();
         self.skybox.render(&self.camera)?;
         Ok(())
     }
@@ -337,16 +338,4 @@ fn load_surface_shader(config: &Config) -> Result<ShaderProgram, WorldError> {
         return Err(GraphicsError::from(e).into());
     }
     Ok(surface_shader_program)
-}
-
-fn load_surface_texture_array(config: &Config) -> Result<Texture, WorldError> {
-    let surface_atlas_path = config.get_str("surface_atlas_path")?.to_owned();
-
-    let mut builder = TextureBuilder::new_2d_array(&surface_atlas_path, [32, 32]);
-    for tex in TEXTURES.iter() {
-        builder.add_array_element(*tex);
-    }
-    let texture_array = builder.finish()?;
-
-    Ok(texture_array)
 }

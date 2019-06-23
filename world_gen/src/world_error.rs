@@ -1,7 +1,9 @@
 use std::fmt;
 use std::error::Error;
 
-use utility::ConfigError;
+use serde_yaml;
+
+use utility::{ ConfigError, FileError };
 use graphics::{ GraphicsError, mesh::MeshError };
 use super::chunk::chunk_error::ChunkError;
 use super::object::object_error::ObjectError;
@@ -12,7 +14,9 @@ pub enum WorldError {
     Mesh(MeshError),
     Chunk(ChunkError),
     Object(ObjectError),
-    Config(ConfigError)
+    Config(ConfigError),
+    File(FileError),
+    Yaml(serde_yaml::Error)
 }
 
 impl From<GraphicsError> for WorldError {
@@ -45,6 +49,18 @@ impl From<ConfigError> for WorldError {
     }
 }
 
+impl From<FileError> for WorldError {
+    fn from(err: FileError) -> Self {
+        WorldError::File(err)
+    }
+}
+
+impl From<serde_yaml::Error> for WorldError {
+    fn from(err: serde_yaml::Error) -> Self {
+        WorldError::Yaml(err)
+    }
+}
+
 impl Error for WorldError {
 
     fn description(&self) -> &str {
@@ -53,7 +69,9 @@ impl Error for WorldError {
             WorldError::Mesh(_) => "mesh",
             WorldError::Chunk(_) => "chunk",
             WorldError::Object(_) => "object",
-            WorldError::Config(_) => "config"
+            WorldError::Config(_) => "config",
+            WorldError::File(_) => "file",
+            WorldError::Yaml(_) => "yaml"
         }
     }
 
@@ -63,7 +81,9 @@ impl Error for WorldError {
             WorldError::Mesh(ref err) => Some(err),
             WorldError::Chunk(ref err) => Some(err),
             WorldError::Object(ref err) => Some(err),
-            WorldError::Config(ref err) => Some(err)
+            WorldError::Config(ref err) => Some(err),
+            WorldError::File(ref err) => Some(err),
+            WorldError::Yaml(ref err) => Some(err)
         }
     }
 }
@@ -76,6 +96,8 @@ impl fmt::Display for WorldError {
             WorldError::Chunk(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Object(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Config(ref err) => write!(f, "{}/{}", self.description(), err),
+            WorldError::File(ref err) => write!(f, "{}/{}", self.description(), err),
+            WorldError::Yaml(ref err) => write!(f, "{}/{}", self.description(), err)
         }
     }
 }

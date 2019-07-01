@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use rand::{ Rng, rngs::SmallRng, SeedableRng };
 
 use utility::Float;
@@ -49,7 +48,7 @@ impl Architect {
     }
 
     pub fn get_terrain(&self, absolute_pos: [Float; 2]) -> &Terrain {
-        let mountain_val = self.mountain_noise.get_noise(absolute_pos);
+        let mountain_val = self.mountain_noise.get_noise([absolute_pos[0] as f64, absolute_pos[1] as f64]);
         let terrain = if mountain_val > 0.5 {
             self.terrain_set.get(&TerrainType::Rock)
         } else {
@@ -64,15 +63,15 @@ impl Architect {
         }
     }
 
-    fn get_mountain_factor(&self, absolute_pos: [Float; 2]) -> Float {
-        match self.mountain_noise.get_noise(absolute_pos) {
-            val if val > 0. => (1. +  (10. * val.powf(2.))),
+    fn get_mountain_factor(&self, absolute_pos: [Float; 2]) -> f64 {
+        match self.mountain_noise.get_noise([absolute_pos[0] as f64, absolute_pos[1] as f64]) {
+            val if val > 0. => 1. +  (10. * val.powf(2.)),
             _ => 1.
         }
     }
 
-    fn get_height(&self, absolute_pos: [Float; 2]) -> Float {
-        let raw_height = self.height_noise.get_noise(absolute_pos);
+    fn get_height(&self, absolute_pos: [Float; 2]) -> f64 {
+        let raw_height = self.height_noise.get_noise([absolute_pos[0] as f64, absolute_pos[1] as f64]);
         let mountain_factor = self.get_mountain_factor(absolute_pos);
         mountain_factor * raw_height
     }

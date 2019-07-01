@@ -1,6 +1,5 @@
-use utility::Float;
 
 pub trait Noise: Sync + Send {
-    fn get_noise(&self, point: [Float; 2]) -> Float;
-    fn get_range(&self) -> [Float; 2];
+    fn get_noise(&self, point: [f64; 2]) -> f64;
+    fn get_range(&self) -> [f64; 2];
 }

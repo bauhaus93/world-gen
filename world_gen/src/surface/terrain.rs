@@ -20,6 +20,7 @@ impl Terrain {
         }
     }
 
+    #[allow(unused)]
     pub fn get_type(&self) -> TerrainType {
         self.terrain_type
     }

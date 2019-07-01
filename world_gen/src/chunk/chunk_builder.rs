@@ -58,7 +58,7 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> { 
+    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
@@ -71,7 +71,7 @@ impl ChunkBuilder {
                 let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
                                 ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
                 let mut tree = object_manager.create_object("tree")?;
-                tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos)));
+                tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos) as Float));
                 let scale_xy = rng.gen_range(0.8, 1.2);
                 let scale_z = rng.gen_range(0.8, 1.4);
                 tree.set_scale(Vector3::new(scale_xy, scale_xy, scale_z));
@@ -121,7 +121,7 @@ fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap, texture_layer: 
                 let height = height_map.get(&map_pos);
                 vert.set_pos(Vector3::new((offset[0] as Float + off[0]) * resolution,
                                           (offset[1] as Float + off[1]) * resolution,
-                                          height));
+                                          height as Float));
                 debug_assert!(off[0] <= 1., off[1] <= 1.);
                 vert.set_uv(Vector2::new(off[0], off[1]));
         }

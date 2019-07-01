@@ -1,20 +1,19 @@
 
 use rand::Rng;
 
-use utility::Float;
 use super::{ Noise, SimplexNoise };
 
 const DEFAULT_OCTAVES: u8 = 4;
-const DEFAULT_ROUGHNESS: Float = 0.8;
-const DEFAULT_SCALE: Float = 1e-2;
-const DEFAULT_RANGE: [Float; 2]= [-1., 1.];
+const DEFAULT_ROUGHNESS: f64 = 0.8;
+const DEFAULT_SCALE: f64 = 1e-2;
+const DEFAULT_RANGE: [f64; 2]= [-1., 1.];
 
 pub struct OctavedNoise {
     noise: Box<dyn Noise>,
     octaves: u8,
-    roughness: Float,
-    scale: Float,
-    range: [Float; 2]
+    roughness: f64,
+    scale: f64,
+    range: [f64; 2]
 }
 
 impl OctavedNoise {
@@ -34,15 +33,15 @@ impl OctavedNoise {
         self.octaves = octave_count;
     }
 
-    pub fn set_roughness(&mut self, roughness: Float) {
+    pub fn set_roughness(&mut self, roughness: f64) {
         self.roughness = roughness;
     }
 
-    pub fn set_scale(&mut self, scale: Float) {
+    pub fn set_scale(&mut self, scale: f64) {
         self.scale = scale;
     }
 
-    pub fn set_range(&mut self, new_range: [Float; 2]) {
+    pub fn set_range(&mut self, new_range: [f64; 2]) {
         self.range = new_range;
     }
 }
@@ -53,11 +52,11 @@ impl OctavedNoise {
 */
 
 impl Noise for OctavedNoise {
-    fn get_noise(&self, p: [Float; 2]) -> Float {
-        let mut sum: Float = 0.;
+    fn get_noise(&self, p: [f64; 2]) -> f64 {
+        let mut sum: f64 = 0.;
         let mut freq = self.scale;
-        let mut weight: Float = 1.;
-        let mut weight_sum: Float = 0.;
+        let mut weight: f64 = 1.;
+        let mut weight_sum: f64 = 0.;
 
         for _oct in 0..self.octaves {
             sum += self.noise.get_noise([p[0] * freq, p[1] * freq]) * weight;
@@ -68,10 +67,11 @@ impl Noise for OctavedNoise {
         let sub_range = self.noise.get_range();
         let normalized =  (-sub_range[0] + (sum / weight_sum)) / (sub_range[1] - sub_range[0]);
         debug_assert!(normalized >= 0. && normalized <= 1.);
-        self.range[0] + (self.range[1] - self.range[0]) * normalized
+        let value = self.range[0] + (self.range[1] - self.range[0]) * normalized;
+        value
     }
 
-    fn get_range(&self) -> [Float; 2] {
+    fn get_range(&self) -> [f64; 2] {
         self.range
     }
 }

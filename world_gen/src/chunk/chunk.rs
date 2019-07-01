@@ -44,7 +44,7 @@ impl Chunk {
     pub fn get_lod(&self) -> u8 {
         self.lod
     }
-    
+
     pub fn get_vertex_count(&self) -> u32 {
         self.mesh.get_vertex_count()
     }
@@ -57,11 +57,11 @@ impl Chunk {
         self.mvp = new_mvp;
     }
 
-    pub fn get_height(&self, world_pos: Vector2<Float>) -> Float {
+    pub fn get_height(&self, world_pos: Vector2<Float>) -> f64 {
         let chunk_pos = self.model.get_translation();
-        let relative_pos = [world_pos.x - chunk_pos.x,
-                            world_pos.y - chunk_pos.y];
-        self.height_map.get_interpolated_height(relative_pos) 
+        let relative_pos = [(world_pos.x as f64) - (chunk_pos.x as f64),
+                            (world_pos.y as f64) - (chunk_pos.y as f64)];
+        self.height_map.get_interpolated_height(relative_pos)
     }
 
     pub fn add_tree(&mut self, tree_object: Object) {
@@ -87,8 +87,8 @@ impl Renderable for Chunk {
 
 fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
     let max_xy = ((height_map.get_size() - 1) * height_map.get_resolution()) as Float;
-    let min = Vector3::new(0., 0., height_map.get_min());
-    let max = Vector3::new(max_xy, max_xy, height_map.get_max());
+    let min = Vector3::new(0., 0., height_map.get_min() as Float);
+    let max = Vector3::new(max_xy, max_xy, height_map.get_max() as Float);
     BoundingBox::from_min_max(min, max)
 }
 

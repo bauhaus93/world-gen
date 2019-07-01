@@ -15,6 +15,7 @@ pub fn get_chunk_pos(world_pos: Vector3<Float>) -> [i32; 2] {
      chunk_pos
 }
 
+#[allow(unused)]
 pub fn get_chunk_relative_pos(chunk_pos: Vector3<Float>, world_pos: Vector3<Float>, resolution: i32) -> [i32; 2] {
      [(world_pos.x - chunk_pos.x).round() as i32 / resolution,
       (world_pos.y - chunk_pos.y).round() as i32 / resolution]

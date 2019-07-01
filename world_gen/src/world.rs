@@ -125,7 +125,7 @@ impl World {
             self.chunks.remove(&pos);
         }
     }
-    
+
     pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
         let finished_chunks = self.chunk_loader.get()?;
         if finished_chunks.len() > 0 {
@@ -162,7 +162,7 @@ impl World {
                     Err(e) => Err(e)
                 }
             })?;
-        
+
         info!("Render = {:.2}", render_count as Float / self.chunks.len() as Float);*/
 
         self.surface_texture.deactivate();
@@ -244,17 +244,17 @@ impl World {
                 let forward_height = chunk.get_height(player_pos_xy + forward_xy);
                 let forward_z = forward_height - height;
 
-                self.player.update_forward(forward_xy.extend(forward_z));
+                self.player.update_forward(forward_xy.extend(forward_z as Float));
                 height
             },
             None => {
                 trace!("Player not on any chunk!");
-                player_pos.z
+                player_pos.z as f64
             }
         };
         self.player.tick(time_passed)?;
 
-        let height_diff = self.player.get_z() - chunk_height;
+        let height_diff = self.player.get_z() as f64 - chunk_height;
         if height_diff > 0. {
             if height_diff > 0.1 && !self.player.is_jumping() {
                 self.player.toggle_jump();
@@ -264,7 +264,7 @@ impl World {
             if self.player.is_jumping() {
                 self.player.land();
             }
-            self.player.move_z(-height_diff);
+            self.player.move_z(-height_diff as Float);
         }
 
         Ok(())
@@ -300,7 +300,7 @@ impl Updatable for World {
         if self.test_monkey.get_translation()[0] >= 500. {
             self.test_monkey.mod_translation(Vector3::new(-500., 0., 0.));
         }
-        
+
         self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;
         self.chunk_build_stats_timer.tick(time_passed)?;

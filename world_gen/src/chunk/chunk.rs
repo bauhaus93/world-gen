@@ -1,5 +1,6 @@
-use num_traits::One;
+use std::cmp::Ordering;
 
+use num_traits::One;
 use glm::{ Vector2, Vector3, Matrix4 };
 
 use graphics::{ ShaderProgram, GraphicsError, Mesh };
@@ -16,7 +17,7 @@ pub struct Chunk {
     mvp: Matrix4<Float>,
     lod: u8,
     tree_list: Vec<Object>,
-    bounding_box: BoundingBox
+    bounding_box: BoundingBox<i32>
 }
 
 impl Chunk {
@@ -67,10 +68,6 @@ impl Chunk {
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }
-
-    pub fn is_visible(&self) -> bool {
-        self.bounding_box.is_visible(self.mvp)
-    }
 }
 
 impl Renderable for Chunk {
@@ -85,10 +82,36 @@ impl Renderable for Chunk {
     }
 }
 
-fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
-    let max_xy = ((height_map.get_size() - 1) * height_map.get_resolution()) as Float;
-    let min = Vector3::new(0., 0., height_map.get_min() as Float);
-    let max = Vector3::new(max_xy, max_xy, height_map.get_max() as Float);
+fn build_bounding_box(height_map: &HeightMap) -> BoundingBox<i32> {
+    let max_xy = (height_map.get_size() - 1) * height_map.get_resolution();
+    let min = Vector3::new(0, 0, height_map.get_min().round() as i32);
+    let max = Vector3::new(max_xy, max_xy, height_map.get_max().round() as i32);
     BoundingBox::from_min_max(min, max)
 }
+
+impl Ord for Chunk {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self.pos, other.pos) {
+            (lhs, rhs) if lhs < rhs => Ordering::Less,
+            (lhs, rhs) if lhs > rhs => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    }
+}
+
+impl Eq for Chunk {}
+
+impl PartialOrd for Chunk {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Chunk {
+    fn eq(&self, other: &Self) -> bool {
+        self.pos == other.pos
+    }
+}
+
+
 

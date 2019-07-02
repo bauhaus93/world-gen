@@ -10,7 +10,7 @@ use glm::{ GenNum, Vector3, normalize };
 use graphics::{ ShaderProgram, ShaderProgramBuilder, GraphicsError };
 use utility::{ Config, Float, format_number, get_distance_2d_from_zero };
 use crate::{ Player, Timer, Camera, WorldError, Skybox, Sun, ObjectManager, Object, SurfaceTexture };
-use crate::chunk::{ Chunk, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
+use crate::chunk::{ Chunk, ChunkTree, ChunkLoader, CHUNK_SIZE, chunk_size::get_chunk_pos };
 use crate::traits::{ Translatable, Rotatable, Scalable, Updatable, Renderable };
 
 pub struct World {
@@ -21,7 +21,7 @@ pub struct World {
     skybox: Skybox,
     sun: Sun,
     chunk_loader: ChunkLoader,
-    chunks: BTreeMap<[i32; 2], Chunk>,
+    chunk_tree: Box<ChunkTree>,
     chunk_update_timer: Timer,
     chunk_build_stats_timer: Timer,
     lod_near_radius: i32,
@@ -65,7 +65,7 @@ impl World {
             skybox: Skybox::new(skybox_img_path)?,
             sun: Sun::with_day_length(day_length),
             chunk_loader: chunk_loader,
-            chunks: BTreeMap::new(),
+            chunks: Box::new(ChunkTree::new()),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: near_radius,

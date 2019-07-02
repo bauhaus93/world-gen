@@ -41,7 +41,7 @@ use self::sun::Sun;
 use self::chunk::CHUNK_SIZE;
 use self::object::ObjectManager;
 use self::object::Object;
-use self::bounding_box::BoundingBox;
+use self::bounding_box::{ BoundingBox, Visibility };
 use self::surface::{ SurfaceTexture, Terrain, TerrainSet, TerrainType };
 
 

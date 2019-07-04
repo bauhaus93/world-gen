@@ -1,4 +1,5 @@
 use rand::{ Rng, rngs::SmallRng, SeedableRng };
+use glm::Vector2;
 
 use utility::Float;
 use crate::noise::{ Noise, OctavedNoise };
@@ -35,7 +36,7 @@ impl Architect {
         }
     }
 
-    pub fn create_height_map(&self, chunk_pos: [i32; 2], chunk_size: i32, resolution: i32) -> HeightMap {
+    pub fn create_height_map(&self, chunk_pos: Vector2<i32>, chunk_size: i32, resolution: i32) -> HeightMap {
         let size = chunk_size + 1;
         let mut height_map = HeightMap::new(size, resolution);
         for y in 0..size {

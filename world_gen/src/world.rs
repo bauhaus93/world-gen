@@ -1,11 +1,11 @@
-use std::collections::BTreeMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use rand;
 #[allow(unused)]
 use rand::{ Rng, FromEntropy, SeedableRng };
 use rand::rngs::StdRng;
-use glm::{ GenNum, Vector3, normalize };
+use glm::{ GenNum, Vector2, Vector3, normalize, length };
 
 use graphics::{ ShaderProgram, ShaderProgramBuilder, GraphicsError };
 use utility::{ Config, Float, format_number, get_distance_2d_from_zero };
@@ -27,7 +27,7 @@ pub struct World {
     lod_near_radius: i32,
     lod_far_radius: i32,
     active_chunk_radius: i32,
-    last_chunk_load: [i32; 2],
+    last_chunk_load: Vector2<i32>,
     #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object
@@ -57,6 +57,9 @@ impl World {
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
         test_monkey.set_scale(Vector3::from_s(10.));
 
+        let player = Player::default();
+        let chunk_tree = ChunkTree::new(get_chunk_pos(player.get_translation()), active_radius);
+
         let mut world = World {
             surface_texture: surface_texture,
             camera: Camera::default(),
@@ -65,13 +68,13 @@ impl World {
             skybox: Skybox::new(skybox_img_path)?,
             sun: Sun::with_day_length(day_length),
             chunk_loader: chunk_loader,
-            chunks: Box::new(ChunkTree::new()),
+            chunk_tree: Box::new(chunk_tree),
             chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: near_radius,
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
-            last_chunk_load: [0, 0],
+            last_chunk_load: Vector2::from_s(0),
             object_manager: object_manager,
             test_monkey: test_monkey
         };
@@ -80,7 +83,7 @@ impl World {
         world.update_skybox_size();
 
         world.chunk_loader.start(8);
-        world.request_chunks()?;
+        world.update_chunktree()?;
 
         Ok(world)
     }
@@ -94,52 +97,27 @@ impl World {
         &mut self.player
     }
 
-    pub fn request_chunks(&mut self) -> Result<(), WorldError> {
-        let mut request_list: Vec<([i32; 2], u8)> = Vec::new();
-        let player_chunk_pos = get_chunk_pos(self.player.get_translation());
-        for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-            for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-                if let Some(pos_lod) = self.should_load_chunk([x, y], player_chunk_pos) {
-                    request_list.push(pos_lod);
-                }
-            }
-        }
-        self.chunk_loader.request(&request_list)?;
-        self.last_chunk_load = player_chunk_pos;
-        trace!("Requested chunks: {}", request_list.len());
+    pub fn update_chunktree(&mut self) -> Result<(), WorldError> {
+        let center = get_chunk_pos(self.player.get_translation());
+        let new_tree = self.chunk_tree.rebuild(center, self.active_chunk_radius);
+        let missing_chunks = new_tree.get_missing_chunks(self.lod_near_radius, self.lod_far_radius);
+        self.chunk_loader.request(&missing_chunks)?;
+
+        self.chunk_tree = Box::new(new_tree);
+
+        debug!("Requested chunks: {}", missing_chunks.len());
         Ok(())
     }
 
-    pub fn unload_distant_chunks(&mut self) {
-        let mut unload_list = Vec::new();
-        let cam_pos = get_chunk_pos(self.camera.get_translation());
-        for chunk_pos in self.chunks.keys() {
-            let vec = [cam_pos[0] - chunk_pos[0], cam_pos[1] - chunk_pos[1]];
-            let distance = f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32).round() as i32;
-            if distance >= self.active_chunk_radius {
-                unload_list.push(*chunk_pos);
-            }
-        }
-        trace!("Unloading {} chunks", unload_list.len());
-        for pos in unload_list {
-            self.chunks.remove(&pos);
-        }
-    }
 
     pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
         let finished_chunks = self.chunk_loader.get()?;
         if finished_chunks.len() > 0 {
-            trace!("Finished chunks: {}", finished_chunks.len());
-            self.chunks.extend(finished_chunks);
+            debug!("Finished chunks: {}", finished_chunks.len());
+            finished_chunks.into_iter()
+                .for_each(|chunk| self.chunk_tree.insert(Rc::new(chunk)));
         }
         Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub fn count_loaded_vertices(&self) -> u32 {
-        let mut vertex_count = 0;
-        self.chunks.iter().for_each(|(_, c)| vertex_count += c.get_vertex_count());
-        vertex_count
     }
 
     pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
@@ -151,55 +129,12 @@ impl World {
         self.surface_shader_program.use_program();
 
         self.test_monkey.render(&self.camera, &self.surface_shader_program, 0)?;
-        self.chunks.values()
-            .filter(|c| c.is_visible())
-            .try_for_each(|c| c.render(&self.camera, &self.surface_shader_program, 0))?;
-        /*let render_count = self.chunks.values()
-            .filter(|c| c.is_visible())
-            .try_fold(0, |rc, c| {
-                match c.render(&self.camera, &self.surface_shader_program, 0) {
-                    Ok(_) => Ok(rc + 1),
-                    Err(e) => Err(e)
-                }
-            })?;
 
-        info!("Render = {:.2}", render_count as Float / self.chunks.len() as Float);*/
+        self.chunk_tree.render(&self.camera, &self.surface_shader_program, 0)?;
 
         self.surface_texture.deactivate();
         self.skybox.render(&self.camera)?;
         Ok(())
-    }
-
-    fn should_load_chunk(&self, pos: [i32; 2], player_pos: [i32; 2]) -> Option<([i32; 2], u8)> {
-        let distance = get_distance_2d_from_zero(pos).round() as i32;
-        if distance < self.active_chunk_radius {
-            let lod = self.lod_by_chunk_distance(distance);
-            let chunk_pos = [player_pos[0] + pos[0],
-                             player_pos[1] + pos[1]];
-            match self.chunks.get(&chunk_pos) {
-                Some(c) => {
-                    let old_lod = c.get_lod();
-                    if lod != old_lod && (lod < 2 || old_lod < 2) {
-                        Some((chunk_pos, lod))
-                    } else {
-                        None
-                    }
-                },
-                None => Some((chunk_pos, lod))
-            }
-        } else {
-            None
-        }
-    }
-
-    fn lod_by_chunk_distance(&self, distance: i32) -> u8 {
-        if distance < self.lod_near_radius {
-            0
-        } else if distance < self.lod_far_radius {
-            1
-        } else {
-            2
-        }
     }
 
     fn update_camera_far(&mut self) {
@@ -223,14 +158,8 @@ impl World {
         Ok(())
     }
 
-    fn update_chunk_mvps(&mut self) {
-        for c in self.chunks.values_mut() {
-            c.update_mvp(self.camera.create_mvp_matrix(c.get_model()));
-        }
-    }
-
-    fn get_chunk_by_world_pos(&self, world_pos: Vector3<Float>) -> Option<&Chunk> {
-        self.chunks.get(&get_chunk_pos(world_pos))
+    fn get_chunk_by_world_pos(&self, world_pos: Vector3<Float>) -> Option<Rc<Chunk>> {
+        self.chunk_tree.get_chunk(get_chunk_pos(world_pos))
     }
 
     fn handle_player(&mut self, time_passed: u32) -> Result<(), WorldError> {
@@ -275,21 +204,18 @@ impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), WorldError> {
         if self.chunk_update_timer.fires() {
             self.get_finished_chunks()?;
-            let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
-            let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
-            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > 2. {
-                self.unload_distant_chunks();
-                self.request_chunks()?;
+            if self.chunk_tree.needs_update(get_chunk_pos(self.player.get_translation())) {
+                self.update_chunktree()?;
             }
         }
         if self.chunk_build_stats_timer.fires() {
-            info!("Avg chunk build time = {:.2} ms, loaded vertices = {}", self.chunk_loader.get_avg_build_time(), format_number(self.count_loaded_vertices()));
+            info!("Avg chunk build time = {:.2} ms", self.chunk_loader.get_avg_build_time());
         }
 
         self.handle_player(time_passed)?;
 
         self.player.align_camera(&mut self.camera);
-        self.update_chunk_mvps();
+        self.chunk_tree.update_mvps(&self.camera);
 
         self.skybox.set_translation(self.player.get_translation());
         self.sun.set_rotation_center(self.player.get_translation());

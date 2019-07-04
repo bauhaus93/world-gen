@@ -10,7 +10,7 @@ use crate::{ Model, Object, Camera, BoundingBox };
 use super::{ HeightMap, CHUNK_SIZE };
 
 pub struct Chunk {
-    pos: [i32; 2],
+    pos: Vector2<i32>,
     model: Model,
     mesh: Mesh,
     height_map: HeightMap,
@@ -21,13 +21,13 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(pos: [i32; 2], height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
+    pub fn new(pos: Vector2<i32>, height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
         let mut model = Model::default();
         model.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
         let bounding_box = build_bounding_box(&height_map);
 
         Self {
-            pos: pos,
+            pos: Vector2::new(pos[0], pos[1]),
             model: model,
             mesh: mesh,
             height_map: height_map,
@@ -38,7 +38,7 @@ impl Chunk {
         }
     }
 
-    pub fn get_pos(&self) -> [i32; 2] {
+    pub fn get_pos(&self) -> Vector2<i32>{
         self.pos
     }
 
@@ -68,6 +68,12 @@ impl Chunk {
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }
+
+    pub fn get_distance(&self, point: Vector2<i32>) -> i32 {
+        f32::sqrt((
+         (point.x - self.pos.x).pow(2) +
+         (point.y - self.pos.y).pow(2)) as f32).round() as i32
+    }
 }
 
 impl Renderable for Chunk {
@@ -92,8 +98,10 @@ fn build_bounding_box(height_map: &HeightMap) -> BoundingBox<i32> {
 impl Ord for Chunk {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self.pos, other.pos) {
-            (lhs, rhs) if lhs < rhs => Ordering::Less,
-            (lhs, rhs) if lhs > rhs => Ordering::Greater,
+            (lhs, rhs) if lhs.x < rhs.x => Ordering::Less,
+            (lhs, rhs) if lhs.x > rhs.y => Ordering::Greater,
+            (lhs, rhs) if lhs.x == rhs.x && lhs.y < rhs.y => Ordering::Less,
+            (lhs, rhs) if lhs.x == rhs.x && lhs.y > rhs.y => Ordering::Greater,
             _ => Ordering::Equal,
         }
     }

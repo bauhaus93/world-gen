@@ -4,6 +4,7 @@ use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
+use glm::Vector2;
 
 use crate::{ ObjectManager, TerrainSet };
 use super::{ Chunk, ChunkBuilder, Architect, ChunkError, BuildStats, Worker };
@@ -12,7 +13,7 @@ pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
     object_manager: Arc<ObjectManager>,
-    input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<(Vector2<i32>, u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<[i32; 2]>,
@@ -77,15 +78,15 @@ impl ChunkLoader {
         info!("Stopped {} chunk loader threads", stop_count);
     }
 
-    pub fn get(&mut self) -> Result<BTreeMap<[i32; 2], Chunk>, ChunkError> {
-        let mut chunks = BTreeMap::new();
+    pub fn get(&mut self) -> Result<Vec<Chunk>, ChunkError> {
+        let mut chunks = Vec::new();
         match self.output_queue.lock() {
             Ok(mut guard) => {
                 while let Some(cb) = (*guard).pop() {
                     let chunk = cb.finish()?;
                     let pos = chunk.get_pos();
-                    self.handeled_positions.remove(&pos);
-                    chunks.insert(pos, chunk);
+                       self.handeled_positions.remove(&[pos.x, pos.y]);
+                    chunks.push(chunk);
                 }
             },
             Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
@@ -93,11 +94,11 @@ impl ChunkLoader {
         Ok(chunks)
     }
 
-    pub fn request(&mut self, chunk_pos: &[([i32; 2], u8)]) -> Result<(), ChunkError> {
+    pub fn request(&mut self, chunk_pos: &[(Vector2<i32>, u8)]) -> Result<(), ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => {
                 for (pos, lod) in chunk_pos {
-                    if self.handeled_positions.insert(*pos) {
+                    if self.handeled_positions.insert([pos.x, pos.y]) {
                         (*guard).push_back((*pos, *lod));
                     }
                 }

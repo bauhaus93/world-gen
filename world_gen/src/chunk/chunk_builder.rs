@@ -11,7 +11,7 @@ use crate::traits::{ Translatable, Rotatable, Scalable };
 use super::{ Chunk, ChunkError, HeightMap, Architect, CHUNK_SIZE, get_world_pos };
 
 pub struct ChunkBuilder {
-    pos: [i32; 2],
+    pos: Vector2<i32>,
     lod: u8,
     height_map: HeightMap,
     surface_vertices: VertexBuffer,
@@ -21,7 +21,7 @@ pub struct ChunkBuilder {
 impl ChunkBuilder {
 
     pub fn new(
-        pos: [i32; 2],
+        pos: Vector2<i32>,
         lod: u8,
         architect: &Architect,
         object_manager: &ObjectManager,
@@ -87,7 +87,7 @@ impl ChunkBuilder {
     }
 }
 
-fn create_surface_buffer(origin: [i32; 2], architect: &Architect, height_map: &HeightMap) -> VertexBuffer {
+fn create_surface_buffer(origin: Vector2<i32>, architect: &Architect, height_map: &HeightMap) -> VertexBuffer {
     let size = height_map.get_size();
     let resolution = height_map.get_resolution();
     let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);

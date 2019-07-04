@@ -4,6 +4,8 @@ use std::time::{ Instant, Duration };
 use std::thread;
 use std::sync::atomic::{ AtomicBool, Ordering };
 
+use glm::Vector2;
+
 use crate::{ ObjectManager };
 use super::{ ChunkBuilder, Architect, ChunkError, BuildStats };
 
@@ -12,7 +14,7 @@ pub struct Worker {
     architect: Arc<Architect>,
     object_manager: Arc<ObjectManager>,
     stop: Arc<AtomicBool>,
-    input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<(Vector2<i32>, u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     random_state: [u8; 16]
@@ -23,7 +25,7 @@ impl Worker {
         architect: Arc<Architect>,
         object_manager: Arc<ObjectManager>,
         stop: Arc<AtomicBool>,
-        input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+        input_queue: Arc<Mutex<VecDeque<(Vector2<i32>, u8)>>>,
         output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
         build_stats: Arc<Mutex<BuildStats>>,
         random_state: [u8; 16]
@@ -60,7 +62,7 @@ impl Worker {
         Ok(())
     }
 
-    fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
+    fn build_chunk(&self, chunk_pos: Vector2<i32>, lod: u8) -> Result<(), ChunkError> {
         let builder = ChunkBuilder::new(
             chunk_pos,
             lod,
@@ -84,7 +86,7 @@ impl Worker {
         Ok(())
     }
 
-    fn get_chunk_pos(&self) -> Result<Option<([i32; 2], u8)>, ChunkError> {
+    fn get_chunk_pos(&self) -> Result<Option<(Vector2<i32>, u8)>, ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => Ok((*guard).pop_back()),
             Err(_poisoned) =>  Err(ChunkError::MutexPoison)

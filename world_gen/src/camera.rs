@@ -30,7 +30,7 @@ impl Camera {
         self.update_projection();
     }
 
-     pub fn create_mvp_matrix(&self, model: &Model) -> Matrix4<Float> {
+    pub fn create_mvp_matrix(&self, model: &Model) -> Matrix4<Float> {
         self.projection_matrix * self.view_matrix * model.get_matrix()
     }
 

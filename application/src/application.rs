@@ -146,6 +146,7 @@ impl Application {
                 glutin::VirtualKeyCode::D => { self.movement_keys_down[3] = *down; },
                 glutin::VirtualKeyCode::E => { self.movement_keys_down[4] = *down; },
                 glutin::VirtualKeyCode::Space => { self.movement_keys_down[5] = *down; },
+		glutin::VirtualKeyCode::Escape => { self.quit = true; },
                 glutin::VirtualKeyCode::F1 => { self.world.get_player_mut().mod_speed(0.25); },
                 glutin::VirtualKeyCode::F2 => { self.world.get_player_mut().mod_speed(-0.25); },
                 _ => {}

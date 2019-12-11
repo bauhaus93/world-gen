@@ -1,21 +1,20 @@
 [package]
-name = "world_gen"
+name = "core"
 version = "0.1.0"
 authors = ["Jakob <jakobfischer93@gmail.com>"]
 edition = "2018"
 
-[[bin]]
-name = "world_gen"
-path = "./main.rs"
+[lib]
+name = "core"
+path = "./src/lib.rs"
 
 [dependencies]
-core = { path = "./core" }
-world = { path = "./world" }
 
 gl = "0.11"
 glutin = "0.19"
 glm = "0.2"
 log = "0.4"
+image = "0.22.3"
 env_logger = "0.6"
 chrono = "0.4"
 rand = "0.6"

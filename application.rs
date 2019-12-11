@@ -1,8 +1,10 @@
 use glutin;
+use glm::Vector3;
 
 use core::{ Core, CoreError, Config, Camera, Player, Float };
 use core::traits::{Updatable, Renderable, Rotatable};
 use world::World;
+use crate::ApplicationError;
 
 pub struct Application {
 	core: Core,
@@ -15,8 +17,8 @@ impl Application {
 	pub fn new(config_path: &str) -> Result<Application, ApplicationError> {
         let config = Config::read(config_path)?;
 		let core = Core::new(&config)?;
-		let mut camera = Camera::new()?;
-		let player = Player::new();
+		let mut camera = Camera::default();
+		let player = Player::default();
 		let world = World::new(&config)?;
 
         camera.set_far(world.get_active_radius() * 8.);
@@ -40,6 +42,7 @@ impl Application {
 				// self.core.render(&self.world)?;
 			}
 		}
+		Ok(())
 	}
 
 	fn update_player(&mut self) -> Result<(), ApplicationError> {
@@ -48,6 +51,7 @@ impl Application {
 		self.world.interact(&mut self.player);
 
 		self.player.tick(self.core.get_time_passed())?;
+		Ok(())
 	}
 
 	fn update_camera(&mut self) {
@@ -56,13 +60,14 @@ impl Application {
 
 	fn update_world(&mut self) -> Result<(), ApplicationError> {
 		self.world.tick(self.core.get_time_passed())?;
+		Ok(())
 	}
 
 	fn update_player_direction(&mut self) {
 		if self.core.has_mouse_delta() {
 			let delta = self.core.get_mouse_delta();
 			let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
-			let rotation = offset * 0.025 * (self.time_passed as Float / 1000.);
+			let rotation = offset * 0.025 * (self.core.get_time_passed() as Float / 1000.);
 			self.player.mod_rotation(rotation);
 			self.core.center_mouse();
 	   }
@@ -83,13 +88,13 @@ impl Application {
 	}
 
     fn update_player_momentum(&mut self) {
-        if !player.is_jumping() {
+        if !self.player.is_jumping() {
 			if let Some(move_keys) = self.get_movement_keys() {
-				player.add_move_momentum(move_keys);
+				self.player.add_move_momentum(&move_keys);
 			}
 
 			if self.core.key_pressed(glutin::VirtualKeyCode::Space) {
-				player.jump(4.);
+				self.player.jump(4.);
 			}
         }
     }

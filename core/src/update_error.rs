@@ -3,26 +3,20 @@ use std::error::Error;
 
 #[derive(Debug)]
 pub enum UpdateError {
-	SomeError
+	Resource(String)
 }
-
-/*impl From<utility::ConfigError> for CoreError {
-    fn from(err: utility::ConfigError) -> Self {
-        CoreError::Config(err)
-    }
-}*/
 
 impl Error for UpdateError {
 
     fn description(&self) -> &str {
         match *self {
-            UpdateError::SomeError => "Placeholder error"
+            UpdateError::Resource(_) => "resource"
         }
     }
 
     fn cause(&self) -> Option<&dyn Error> {
         match *self {
-            UpdateError::SomeError => None
+            UpdateError::Resource(_) => None, 
         }
     }
 }
@@ -30,7 +24,7 @@ impl Error for UpdateError {
 impl fmt::Display for UpdateError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            UpdateError::SomeError => write!(f, "{}: Generic placeholder", self.description())
+            UpdateError::Resource(ref s) => write!(f, "{}:{}", self.description(), s)
         }
     }
 }

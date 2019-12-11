@@ -7,12 +7,13 @@ extern crate core;
 extern crate world;
 
 mod application;
+mod application_error;
 
 use std::io::Write;
 use env_logger::{ Builder, fmt::Formatter };
 use log::Record;
 
-use crate::application::Application;
+use crate::{application::Application, application_error::ApplicationError};
 
 fn main() {
     const CONFIG_PATH: &'static str = "resources/default.yaml";

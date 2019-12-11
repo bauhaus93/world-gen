@@ -1,8 +1,8 @@
 use glutin;
 
-use core::{ Core, Config, Camera, Player, Float };
-use world_gen::World;
-use self::ApplicationError;
+use core::{ Core, CoreError, Config, Camera, Player, Float };
+use core::traits::{Updatable, Renderable, Rotatable};
+use world::World;
 
 pub struct Application {
 	core: Core,
@@ -17,16 +17,17 @@ impl Application {
 		let core = Core::new(&config)?;
 		let mut camera = Camera::new()?;
 		let player = Player::new();
-		let world = World::new();
+		let world = World::new(&config)?;
 
-        camera.set_far(world.get_active_radius() * 8);
+        camera.set_far(world.get_active_radius() * 8.);
 
 		let app = Application {
-			core: Core,
-			player: Player,
-			world: World
+			core: core,
+			camera: camera,
+			player: player,
+			world: world
 		};
-		Ok(app);
+		Ok(app)
 	}
 
 	pub fn run(mut self) -> Result<(), ApplicationError> {
@@ -36,7 +37,7 @@ impl Application {
 				self.update_player()?;
 				self.update_camera();
 				self.update_world()?;
-				self.core.render(&self.world)?;
+				// self.core.render(&self.world)?;
 			}
 		}
 	}
@@ -50,7 +51,7 @@ impl Application {
 	}
 
 	fn update_camera(&mut self) {
-		self.player.align_camera(&self.camera);
+		self.player.align_camera(&mut self.camera);
 	}
 
 	fn update_world(&mut self) -> Result<(), ApplicationError> {
@@ -62,7 +63,7 @@ impl Application {
 			let delta = self.core.get_mouse_delta();
 			let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
 			let rotation = offset * 0.025 * (self.time_passed as Float / 1000.);
-			self.player.mod_rotation(rotation)
+			self.player.mod_rotation(rotation);
 			self.core.center_mouse();
 	   }
     }
@@ -76,7 +77,7 @@ impl Application {
 
 		if move_down.iter().any(|&e| e) {
 			Some(move_down)
-		} else 
+		} else  {
 			None
 		}
 	}
@@ -84,11 +85,11 @@ impl Application {
     fn update_player_momentum(&mut self) {
         if !player.is_jumping() {
 			if let Some(move_keys) = self.get_movement_keys() {
-				player.add_move_momentum(move_keys),
+				player.add_move_momentum(move_keys);
 			}
 
 			if self.core.key_pressed(glutin::VirtualKeyCode::Space) {
-				player.jump(4.)
+				player.jump(4.);
 			}
         }
     }

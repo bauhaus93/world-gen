@@ -3,13 +3,10 @@ extern crate log;
 extern crate env_logger;
 extern crate chrono;
 
-extern crate world_gen;
-extern crate graphics;
-extern crate utility;
+extern crate core;
+extern crate world;
 
 mod application;
-mod application_error;
-mod window;
 
 use std::io::Write;
 use env_logger::{ Builder, fmt::Formatter };

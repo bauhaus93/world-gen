@@ -78,7 +78,6 @@ impl World {
             test_monkey: test_monkey
         };
 
-        world.update_camera_far();
         world.update_skybox_size();
 
         world.chunk_loader.start(8);
@@ -175,10 +174,6 @@ impl World {
         vertex_count
     }
 
-    pub fn update(&mut self, time_passed: u32) -> Result<(), WorldError> {
-        self.tick(time_passed)
-    }
-
     pub fn render(&self) -> Result<(), WorldError> {
         self.surface_texture.activate();
         self.surface_shader_program.use_program();
@@ -236,7 +231,7 @@ impl World {
     }
 
     fn update_skybox_size(&mut self) {
-        self.skybox.scale_to_chunk_units(self.active_chunk_radius * 2);
+        self.skybox.scale((self.active_chunk_radius * CHUNK_SIZE * 2) as Float);
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
@@ -266,12 +261,16 @@ impl World {
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
         if self.chunk_update_timer.fires() {
-            self.get_finished_chunks()?;
+            if let Err(e) = self.get_finished_chunks() {
+				error!("{}", e);	// TODO: handle error
+			}
             let cam_chunk_pos = get_chunk_pos(self.camera.get_translation());
             let vec = [cam_chunk_pos[0] - self.last_chunk_load[0], cam_chunk_pos[1] - self.last_chunk_load[1]];
             if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > 2. {
                 self.unload_distant_chunks();
-                self.request_chunks()?;
+                if let Err(e) = self.request_chunks() {
+					error!("{}", e);	// TODO: handle error
+				}
             }
         }
         if self.chunk_build_stats_timer.fires() {
@@ -290,7 +289,9 @@ impl Updatable for World {
             self.test_monkey.mod_translation(Vector3::new(-500., 0., 0.));
         }
 
-        self.update_shader_resources()?;
+        if let Err(e) = self.update_shader_resources() {
+			error!("{}", e);	// TODO: handle error
+		}
         self.chunk_update_timer.tick(time_passed)?;
         self.chunk_build_stats_timer.tick(time_passed)?;
         Ok(())

@@ -14,7 +14,7 @@ pub struct Skybox {
 }
 
 impl Skybox {
-    pub fn new(img_file: &str) -> Result<Self, SkyBoxError> {
+    pub fn new(img_file: &str) -> Result<Self, CoreError> {
         const CUBE_PATH: &'static str = "resources/obj/cube_inward.obj";
         info!("Creating skybox from obj '{}' with img '{}'", CUBE_PATH, img_file);
 

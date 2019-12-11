@@ -3,19 +3,26 @@ use std::error::Error;
 
 use serde_yaml;
 
-use core::{ config::ConfigError, file::FileError, object::ObjectError };
+use core::{ CoreError, config::ConfigError, file::FileError, object::ObjectError };
 use core::graphics::{ GraphicsError, mesh::MeshError };
 use super::chunk::ChunkError;
 
 #[derive(Debug)]
 pub enum WorldError {
     Graphics(GraphicsError),
+	Core(CoreError),
     Mesh(MeshError),
     Chunk(ChunkError),
     Object(ObjectError),
     Config(ConfigError),
     File(FileError),
     Yaml(serde_yaml::Error)
+}
+
+impl From<CoreError> for WorldError {
+    fn from(err: CoreError) -> Self {
+        WorldError::Core(err)
+    }
 }
 
 impl From<GraphicsError> for WorldError {
@@ -64,6 +71,7 @@ impl Error for WorldError {
 
     fn description(&self) -> &str {
         match *self {
+			WorldError::Core(_) => "core",
             WorldError::Graphics(_) => "graphics",
             WorldError::Mesh(_) => "mesh",
             WorldError::Chunk(_) => "chunk",
@@ -76,6 +84,7 @@ impl Error for WorldError {
 
     fn cause(&self) -> Option<&dyn Error> {
         match *self {
+            WorldError::Core(ref err) => Some(err),
             WorldError::Graphics(ref err) => Some(err),
             WorldError::Mesh(ref err) => Some(err),
             WorldError::Chunk(ref err) => Some(err),
@@ -90,6 +99,7 @@ impl Error for WorldError {
 impl fmt::Display for WorldError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            WorldError::Core(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Graphics(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Mesh(ref err) => write!(f, "{}/{}", self.description(), err),
             WorldError::Chunk(ref err) => write!(f, "{}/{}", self.description(), err),

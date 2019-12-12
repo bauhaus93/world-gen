@@ -1,11 +1,11 @@
 use num_traits::One;
 
-use glm::{ Vector2, Vector3, Matrix4 };
+use glm::{Matrix4, Vector2, Vector3};
 
-use core::{Float,  Model, Object, Camera, BoundingBox };
-use core::graphics::{ ShaderProgram, GraphicsError, Mesh };
-use core::traits::{ Translatable, Renderable, RenderInfo };
-use super::{ HeightMap, CHUNK_SIZE };
+use super::{HeightMap, CHUNK_SIZE};
+use core::graphics::{GraphicsError, Mesh};
+use core::traits::{RenderInfo, Renderable, Translatable};
+use core::{BoundingBox, Float, Model, Object};
 
 pub struct Chunk {
     pos: [i32; 2],
@@ -15,13 +15,17 @@ pub struct Chunk {
     mvp: Matrix4<Float>,
     lod: u8,
     tree_list: Vec<Object>,
-    bounding_box: BoundingBox
+    bounding_box: BoundingBox,
 }
 
 impl Chunk {
     pub fn new(pos: [i32; 2], height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
         let mut model = Model::default();
-        model.set_translation(Vector3::new((pos[0] * CHUNK_SIZE) as Float, (pos[1] * CHUNK_SIZE) as Float, 0.));
+        model.set_translation(Vector3::new(
+            (pos[0] * CHUNK_SIZE) as Float,
+            (pos[1] * CHUNK_SIZE) as Float,
+            0.,
+        ));
         let bounding_box = build_bounding_box(&height_map);
 
         Self {
@@ -32,7 +36,7 @@ impl Chunk {
             mvp: Matrix4::one(),
             lod: lod,
             tree_list: Vec::new(),
-            bounding_box: bounding_box
+            bounding_box: bounding_box,
         }
     }
 
@@ -58,8 +62,10 @@ impl Chunk {
 
     pub fn get_height(&self, world_pos: Vector2<Float>) -> f64 {
         let chunk_pos = self.model.get_translation();
-        let relative_pos = [(world_pos.x as f64) - (chunk_pos.x as f64),
-                            (world_pos.y as f64) - (chunk_pos.y as f64)];
+        let relative_pos = [
+            (world_pos.x as f64) - (chunk_pos.x as f64),
+            (world_pos.y as f64) - (chunk_pos.y as f64),
+        ];
         self.height_map.get_interpolated_height(relative_pos)
     }
 
@@ -74,7 +80,7 @@ impl Chunk {
 
 impl Renderable for Chunk {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
-		let shader = info.get_active_shader();
+        let shader = info.get_active_shader();
         shader.set_resource_mat4("mvp", &self.mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
         self.mesh.render(info)?;
@@ -91,4 +97,3 @@ fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
     let max = Vector3::new(max_xy, max_xy, height_map.get_max() as Float);
     BoundingBox::from_min_max(min, max)
 }
-

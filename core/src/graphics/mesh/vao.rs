@@ -29,7 +29,7 @@ impl VAO {
 }
 
 impl Renderable for VAO {
-    fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
+    fn render<'a>(&self, _info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         unsafe {
             gl::BindVertexArray(self.vao);
             gl::DrawElements(

@@ -14,10 +14,7 @@ use crate::WorldError;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{distance::get_distance_2d_from_zero, format::format_number};
-use core::{
-    Camera, Config, CoreError, Float, Object, ObjectManager, Player, Skybox, Sun, Timer,
-    UpdateError,
-};
+use core::{Camera, Config, Float, Object, ObjectManager, Player, Skybox, Sun, Timer, UpdateError};
 
 pub struct World {
     surface_texture: SurfaceTexture,
@@ -35,7 +32,7 @@ pub struct World {
     #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
-	center: Vector3<Float>
+    center: Vector3<Float>,
 }
 
 impl World {
@@ -80,7 +77,7 @@ impl World {
             last_chunk_load: [0, 0],
             object_manager: object_manager,
             test_monkey: test_monkey,
-			center: Vector3::from_s(0.)
+            center: Vector3::from_s(0.),
         };
 
         world.update_skybox_size();
@@ -117,16 +114,17 @@ impl World {
 
         let height_diff = player.get_z() as f64 - chunk_height;
         if height_diff > 0. {
-            if height_diff > 0.1 && !player.is_jumping() {
+            if height_diff > 0.25 && !player.is_jumping() {
                 player.toggle_jump();
+            player.set_z(chunk_height as Float);
             } else {
-				player.push_z(-0.25);
-			}
+                player.push_z(Float::max(-0.25, -height_diff as Float));
+            }
         } else {
             if player.is_jumping() {
                 player.land();
             }
-			player.set_z(chunk_height as Float);
+            player.set_z(chunk_height as Float);
             // player.move_z(-height_diff as Float);
         }
 
@@ -183,9 +181,9 @@ impl World {
         vertex_count
     }
 
-	pub fn set_center(&mut self, pos: Vector3<Float>) {
-		self.center = pos;
-	}
+    pub fn set_center(&mut self, pos: Vector3<Float>) {
+        self.center = pos;
+    }
 
     fn should_load_chunk(&self, pos: [i32; 2], player_pos: [i32; 2]) -> Option<([i32; 2], u8)> {
         let distance = get_distance_2d_from_zero(pos).round() as i32;

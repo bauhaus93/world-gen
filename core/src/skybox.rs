@@ -3,7 +3,7 @@ use glm::{ Vector3, GenNum };
 
 use crate::graphics::{ Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError, texture::Orientation };
 use crate::graphics::mesh::vertex_buffer::{ BUFFER_POSTION };
-use crate::{ Float, Camera, UpdateError, CoreError};
+use crate::{ Float, CoreError};
 use crate::traits::{ Translatable, Scalable, Renderable, RenderInfo };
 
 pub struct Skybox {

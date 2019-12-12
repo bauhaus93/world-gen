@@ -9,11 +9,11 @@ use gl::types::GLsizei;
 use glutin;
 
 use crate::traits::{RenderInfo, Renderable};
+use crate::Config;
 use crate::{
     graphics::{check_opengl_error, GraphicsError},
-    window, CoreError, Rotatable,
+    window, CoreError,
 };
-use crate::{Config, Float};
 
 pub struct Core {
     window: glutin::GlWindow,

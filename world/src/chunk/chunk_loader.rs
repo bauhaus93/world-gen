@@ -56,7 +56,7 @@ impl ChunkLoader {
             let next_worker = worker.clone();
             let handle = thread::spawn(move || {
                 match next_worker.work() {
-                    Ok(_) => debug!("Worker finished successfully"),
+                    Ok(_) => trace!("Worker finished successfully"),
                     Err(e) =>  error!("Worker error: {}", e)
                  }
             });

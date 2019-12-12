@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use glm::{ Vector3 };
 
-use crate::graphics::{ ShaderProgram, GraphicsError };
-use crate::{ Camera, Model, Float };
+use crate::graphics::GraphicsError;
+use crate::{ Model, Float };
 use crate::traits::{ Rotatable, Translatable, Scalable, Renderable, RenderInfo };
 use super::ObjectPrototype;
 

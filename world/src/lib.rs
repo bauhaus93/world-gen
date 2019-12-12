@@ -21,8 +21,7 @@ mod surface;
 pub use self::world::World;
 pub use self::world_error::WorldError;
 
-use self::chunk::CHUNK_SIZE;
-use self::surface::{ SurfaceTexture, Terrain, TerrainSet, TerrainType };
+use self::surface::{ Terrain, TerrainSet, TerrainType };
 
 
 

@@ -2,7 +2,7 @@ use glm::Vector3;
 use glutin;
 
 use crate::ApplicationError;
-use core::traits::{RenderInfo, Renderable, Translatable, Rotatable, Updatable};
+use core::traits::{RenderInfo, Renderable, Rotatable, Translatable, Updatable};
 use core::{Camera, Config, Core, CoreError, Float, Player};
 use world::World;
 
@@ -40,8 +40,8 @@ impl Application {
                 self.update_camera();
                 self.update_world()?;
 
-        		let mut render_info = RenderInfo::new(&self.camera);
-				self.core.render(&self.world, &mut render_info)?;
+                let mut render_info = RenderInfo::new(&self.camera);
+                self.core.render(&self.world, &mut render_info)?;
             }
         }
         Ok(())
@@ -61,8 +61,8 @@ impl Application {
     }
 
     fn update_world(&mut self) -> Result<(), ApplicationError> {
-		self.world.set_center(self.player.get_translation());
-		self.world.update_chunk_mvps(&self.camera);
+        self.world.set_center(self.player.get_translation());
+        self.world.update_chunk_mvps(&self.camera);
         self.world.tick(self.core.get_time_passed())?;
         Ok(())
     }
@@ -71,7 +71,7 @@ impl Application {
         if self.core.has_mouse_delta() {
             let delta = self.core.get_mouse_delta();
             let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
-            let rotation = offset * 0.025 * (self.core.get_time_passed() as Float / 1000.);
+            let rotation = offset * 0.2 * (self.core.get_time_passed() as Float / 1000.);
             self.player.mod_rotation(rotation);
             self.core.center_mouse();
         }

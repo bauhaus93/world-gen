@@ -81,6 +81,12 @@ impl Player {
     pub fn move_z(&mut self, offset: Float) {
         self.mod_translation(Vector3::new(0., 0., offset));
     }
+
+	pub fn set_z(&mut self, pos_z: Float) {
+		let mut pos = self.get_translation();
+		pos.z = pos_z;
+		self.set_translation(pos);
+	}
     
     pub fn get_z(&self) -> Float {
         self.model.get_translation().z

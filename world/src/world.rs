@@ -119,13 +119,15 @@ impl World {
         if height_diff > 0. {
             if height_diff > 0.1 && !player.is_jumping() {
                 player.toggle_jump();
-            }
-            player.push_z(-0.25);
+            } else {
+				player.push_z(-0.25);
+			}
         } else {
             if player.is_jumping() {
                 player.land();
             }
-            player.move_z(-height_diff as Float);
+			player.set_z(chunk_height as Float);
+            // player.move_z(-height_diff as Float);
         }
 
         Ok(())

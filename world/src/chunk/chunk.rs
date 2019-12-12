@@ -4,7 +4,7 @@ use glm::{ Vector2, Vector3, Matrix4 };
 
 use core::{Float,  Model, Object, Camera, BoundingBox };
 use core::graphics::{ ShaderProgram, GraphicsError, Mesh };
-use core::traits::{ Translatable, Renderable };
+use core::traits::{ Translatable, Renderable, RenderInfo };
 use super::{ HeightMap, CHUNK_SIZE };
 
 pub struct Chunk {
@@ -73,12 +73,13 @@ impl Chunk {
 }
 
 impl Renderable for Chunk {
-    fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
+    fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
+		let shader = info.get_active_shader();
         shader.set_resource_mat4("mvp", &self.mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
-        self.mesh.render()?;
+        self.mesh.render(info)?;
         for tree in &self.tree_list {
-            tree.render(camera, shader, lod)?;
+            tree.render(info)?;
         }
         Ok(())
     }

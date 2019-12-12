@@ -1,10 +1,12 @@
-use std::convert::{ TryFrom, TryInto };
+use std::convert::{TryFrom, TryInto};
 
-use super::{ VAO, Triangle, MeshError, VertexBuffer, read_obj, triangles_to_buffers };
-use super::vertex_buffer::{ BUFFER_POSTION, BUFFER_UV, BUFFER_NORMAL };
+use super::vertex_buffer::{BUFFER_NORMAL, BUFFER_POSTION, BUFFER_UV};
+use super::{read_obj, triangles_to_buffers, MeshError, Triangle, VertexBuffer, VAO};
+use crate::graphics::GraphicsError;
+use crate::traits::{RenderInfo, Renderable};
 
 pub struct Mesh {
-    vao: Option<VAO>
+    vao: Option<VAO>,
 }
 
 impl Mesh {
@@ -36,23 +38,24 @@ impl Mesh {
     pub fn get_vertex_count(&self) -> u32 {
         match self.vao {
             Some(ref vao) => vao.get_index_count(),
-            _ => 0
+            _ => 0,
         }
     }
+}
 
-    pub fn render(&self) -> Result<(), MeshError> {
+impl Renderable for Mesh {
+    fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         match self.vao {
-            Some(ref vao) => vao.render(),
-            None => { Ok(()) }
+            Some(ref vao) => vao.render(info)?,
+            None => {}
         }
+        Ok(())
     }
 }
 
 impl Default for Mesh {
     fn default() -> Self {
-        Self {
-            vao: None
-        }
+        Self { vao: None }
     }
 }
 
@@ -61,7 +64,7 @@ impl TryFrom<&[Triangle]> for Mesh {
     fn try_from(triangles: &[Triangle]) -> Result<Self, Self::Error> {
         let vb = VertexBuffer::from(triangles);
         let mesh = Self {
-            vao: Some(vb.try_into()?)
+            vao: Some(vb.try_into()?),
         };
         Ok(mesh)
     }
@@ -71,7 +74,7 @@ impl TryFrom<VertexBuffer> for Mesh {
     type Error = MeshError;
     fn try_from(vb: VertexBuffer) -> Result<Self, Self::Error> {
         let mesh = Self {
-            vao: Some(vb.try_into()?)
+            vao: Some(vb.try_into()?),
         };
         Ok(mesh)
     }

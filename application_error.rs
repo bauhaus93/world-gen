@@ -1,15 +1,16 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
-use core::{UpdateError, CoreError, config::ConfigError};
+use core::{config::ConfigError, graphics::GraphicsError, CoreError, UpdateError};
 use world::WorldError;
 
 #[derive(Debug)]
 pub enum ApplicationError {
     Core(CoreError),
-	Update(UpdateError),
-	Config(ConfigError),
-	World(WorldError)
+    Update(UpdateError),
+    Config(ConfigError),
+    World(WorldError),
+    Graphics(GraphicsError),
 }
 
 impl From<CoreError> for ApplicationError {
@@ -36,14 +37,20 @@ impl From<WorldError> for ApplicationError {
     }
 }
 
-impl Error for ApplicationError {
+impl From<GraphicsError> for ApplicationError {
+    fn from(err: GraphicsError) -> Self {
+        ApplicationError::Graphics(err)
+    }
+}
 
+impl Error for ApplicationError {
     fn description(&self) -> &str {
         match *self {
             ApplicationError::Core(_) => "core",
             ApplicationError::Update(_) => "update",
             ApplicationError::Config(_) => "config",
             ApplicationError::World(_) => "world",
+            ApplicationError::Graphics(_) => "graphics",
         }
     }
 
@@ -53,6 +60,7 @@ impl Error for ApplicationError {
             ApplicationError::Update(ref err) => Some(err),
             ApplicationError::Config(ref err) => Some(err),
             ApplicationError::World(ref err) => Some(err),
+            ApplicationError::Graphics(ref err) => Some(err),
         }
     }
 }
@@ -64,6 +72,7 @@ impl fmt::Display for ApplicationError {
             ApplicationError::Update(ref err) => write!(f, "{}/{}", self.description(), err),
             ApplicationError::Config(ref err) => write!(f, "{}/{}", self.description(), err),
             ApplicationError::World(ref err) => write!(f, "{}/{}", self.description(), err),
+            ApplicationError::Graphics(ref err) => write!(f, "{}/{}", self.description(), err),
         }
     }
 }

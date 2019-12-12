@@ -3,7 +3,7 @@ use glm::{ Vector3 };
 
 use crate::graphics::{ ShaderProgram, GraphicsError };
 use crate::{ Camera, Model, Float };
-use crate::traits::{ Rotatable, Translatable, Scalable, Renderable };
+use crate::traits::{ Rotatable, Translatable, Scalable, Renderable, RenderInfo };
 use super::ObjectPrototype;
 
 pub struct Object {
@@ -21,12 +21,13 @@ impl Object {
 }
 
 impl Renderable for Object {
-    fn render(&self, camera: &Camera, shader: &ShaderProgram, lod: u8) -> Result<(), GraphicsError> {
-        let mvp = camera.create_mvp_matrix(&self.model);
+	fn render<'a> (&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
+        let mvp = info.get_camera().create_mvp_matrix(&self.model);
+		let shader = info.get_active_shader();
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
-        self.prototype.render(lod)
-    }
+        self.prototype.render(info)
+	}
 }
 
 impl Translatable for Object {

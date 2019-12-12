@@ -9,3 +9,5 @@ pub use self::rotatable::Rotatable;
 pub use self::scalable::Scalable;
 pub use self::renderable::Renderable;
 pub use self::updatable::Updatable;
+
+pub use self::renderable::RenderInfo;

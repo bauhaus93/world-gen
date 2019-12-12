@@ -1,13 +1,14 @@
+use std::rc::Rc;
 use glm::{ Vector3, GenNum };
 
 use crate::graphics::{ Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder, GraphicsError, texture::Orientation };
 use crate::graphics::mesh::vertex_buffer::{ BUFFER_POSTION };
 use crate::{ Float, Camera, UpdateError, CoreError};
-use crate::traits::{ Translatable, Scalable };
+use crate::traits::{ Translatable, Scalable, Renderable, RenderInfo };
 
 pub struct Skybox {
     texture: Texture,
-    shader: ShaderProgram,
+    shader: Rc<ShaderProgram>,
     model: Model,
     mesh: Mesh,
     origin_z: Float
@@ -47,7 +48,7 @@ impl Skybox {
 		};
 
         let sb = Skybox {
-            shader: shader,
+            shader: Rc::new(shader),
             texture: texture,
             model: model,
             mesh: mesh,
@@ -66,19 +67,22 @@ impl Skybox {
         self.shader.set_resource_float("light_level", light_level)?;
         Ok(())
     }
+}
 
-    // caller must restore previously set shader/textures after call
-    pub fn render(&self, camera: &Camera) -> Result<(), GraphicsError> {
-        self.texture.activate();
-        self.shader.use_program();
+impl Renderable for Skybox {
+	fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(),GraphicsError> {
+		self.texture.activate();
+		info.push_shader(self.shader.clone());
 
-        let mvp = camera.create_mvp_matrix(&self.model);
-        self.shader.set_resource_mat4("mvp", &mvp)?;
-        self.mesh.render()?;
+        let mvp = info.get_camera().create_mvp_matrix(&self.model);
+        info.get_active_shader().set_resource_mat4("mvp", &mvp)?;
+        self.mesh.render(info)?;
 
+		info.pop_shader();
         self.texture.deactivate();
         Ok(())
-    }
+
+	}
 }
 
 impl Translatable for Skybox {

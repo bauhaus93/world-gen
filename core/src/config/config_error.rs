@@ -2,7 +2,6 @@ use std::fmt;
 use std::error::Error;
 
 use crate::file::FileError;
-use super::Value;
 
 use serde_yaml;
 
@@ -11,7 +10,7 @@ pub enum ConfigError {
     File(FileError),
     Yaml(serde_yaml::Error),
     UnknownKey(String),
-    InvalidValueType(String, Value, Value)
+    InvalidValueType(String, String)
 }
 
 impl From<FileError> for ConfigError {
@@ -33,7 +32,7 @@ impl Error for ConfigError {
             ConfigError::File(_) => "file",
             ConfigError::Yaml(_) => "yaml",
             ConfigError::UnknownKey(_) => "unknown key",
-            ConfigError::InvalidValueType(_, _, _) => "invalid value type"
+            ConfigError::InvalidValueType(_, _) => "invalid value type"
         }
     }
 
@@ -42,7 +41,7 @@ impl Error for ConfigError {
             ConfigError::File(ref err) => Some(err),
             ConfigError::Yaml(ref err) => Some(err),
             ConfigError::UnknownKey(_) => None,
-            ConfigError::InvalidValueType(_, _, _) => None
+            ConfigError::InvalidValueType(_, _) => None
         }
     }
 }
@@ -53,8 +52,8 @@ impl fmt::Display for ConfigError {
             ConfigError::File(ref err) => write!(f, "{}: {}", self.description(), err),
             ConfigError::Yaml(ref err) => write!(f, "{}: {}", self.description(), err),
             ConfigError::UnknownKey(ref unknown_key) => write!(f, "{}: '{}'", self.description(), unknown_key),
-            ConfigError::InvalidValueType(ref key, ref expected_type, ref is_type) => write!(f, "{}: key = '{}', requested type = '{}', is type = '{}' ",
-                self.description(), key, expected_type, is_type)
+            ConfigError::InvalidValueType(ref key, ref requested_type) => write!(f, "{}: key = '{}', requested type was '{}', but stored value isn't of that type",
+                self.description(), key, requested_type)
         }
     }
 }

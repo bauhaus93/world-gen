@@ -1,6 +1,4 @@
-use num_traits::One;
-
-use glm::{Matrix4, Vector2, Vector3};
+use glm::{Vector2, Vector3};
 
 use super::{HeightMap, CHUNK_SIZE};
 use core::graphics::{GraphicsError, Mesh};

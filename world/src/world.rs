@@ -14,7 +14,7 @@ use crate::WorldError;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{distance::get_distance_2d_from_zero, format::format_number};
-use core::{Camera, Config, Float, Object, ObjectManager, Player, Skybox, Sun, Timer, UpdateError};
+use core::{Config, Float, Object, ObjectManager, Player, Skybox, Sun, Timer, UpdateError};
 
 pub struct World {
     surface_texture: SurfaceTexture,
@@ -33,7 +33,7 @@ pub struct World {
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
     center: Vector3<Float>,
-	gravity: Float
+    gravity: Float,
 }
 
 impl World {
@@ -42,7 +42,7 @@ impl World {
         let day_length = config.get_uint_or_default("day_length", 180);
         let skybox_img_path = config.get_str("skybox_img_path")?;
         let surface_texture_info_path = config.get_str("surface_info_path")?;
-		let gravity = config.get_float_or_default("gravity", 0.25);
+        let gravity = config.get_float_or_default("gravity", 0.25);
 
         let surface_shader_program = load_surface_shader(config)?;
         let surface_texture = SurfaceTexture::load(surface_texture_info_path)?;
@@ -50,8 +50,10 @@ impl World {
         let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
 
         info!("Day length is {}s", day_length);
+        info!("Gravity is {}", gravity);
 
-        let mut rng = StdRng::seed_from_u64(0); //StdRng::from_entropy();
+        //let mut rng = StdRng::seed_from_u64(0);
+        let mut rng = StdRng::from_entropy();
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
         let chunk_loader = ChunkLoader::new(
@@ -80,7 +82,7 @@ impl World {
             object_manager: object_manager,
             test_monkey: test_monkey,
             center: Vector3::from_s(0.),
-			gravity: gravity
+            gravity: gravity,
         };
 
         world.update_skybox_size();
@@ -280,7 +282,7 @@ impl Updatable for World {
         }
         if self.chunk_build_stats_timer.fires() {
             info!(
-                "Avg chunk build time = {:.2} ms, loaded vertices = {}",
+                "Avg chunk build time = {:.2} ms, total chunk vertices = {}",
                 self.chunk_loader.get_avg_build_time(),
                 format_number(self.count_loaded_vertices())
             );

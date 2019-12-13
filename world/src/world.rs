@@ -52,8 +52,8 @@ impl World {
         info!("Day length is {}s", day_length);
         info!("Gravity is {}", gravity);
 
-        //let mut rng = StdRng::seed_from_u64(0);
-        let mut rng = StdRng::from_entropy();
+        let mut rng = StdRng::seed_from_u64(0);
+        // let mut rng = StdRng::from_entropy();
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
         let chunk_loader = ChunkLoader::new(
@@ -145,6 +145,10 @@ impl World {
                 }
             }
         }
+
+		request_list.clear();
+		request_list.push(([0, 0], 0));
+
         self.chunk_loader.request(&request_list)?;
         self.last_chunk_load = player_chunk_pos;
         trace!("Requested chunks: {}", request_list.len());

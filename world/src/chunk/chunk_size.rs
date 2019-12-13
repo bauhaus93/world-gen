@@ -2,7 +2,7 @@ use glm::Vector3;
 
 use core::Float;
 
-pub const CHUNK_SIZE: i32 = 64;
+pub const CHUNK_SIZE: i32 = 16;
 
 pub fn get_chunk_pos(world_pos: Vector3<Float>) -> [i32; 2] {
      let mut chunk_pos = [0; 2];

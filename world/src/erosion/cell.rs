@@ -1,4 +1,4 @@
-use glm::{ Vector2, Vector3, GenNum, dot, sin, acos, length };
+use glm::{acos, dot, length, sin, GenNum, Vector2, Vector3};
 
 use super::direction::Direction;
 
@@ -18,8 +18,7 @@ impl Cell {
         self.water_height > 0.
     }
     pub fn has_velocity(&self) -> bool {
-        self.velocity[0].abs() > 0. ||
-        self.velocity[1].abs() > 0.
+        self.velocity[0].abs() > 0. || self.velocity[1].abs() > 0.
     }
     pub fn set_terrain_height(&mut self, new_height: f64) {
         debug_assert!(!new_height.is_nan());
@@ -82,12 +81,14 @@ impl Cell {
         debug_assert!(!self.transport_capacacity.is_nan());
         debug_assert!(!self.suspended_sediment.is_nan());
         if self.transport_capacacity > self.suspended_sediment {
-            let dissolved_sediment = dissolving_constant * (self.transport_capacacity - self.suspended_sediment);
+            let dissolved_sediment =
+                dissolving_constant * (self.transport_capacacity - self.suspended_sediment);
             debug_assert!(!dissolved_sediment.is_nan());
             self.terrain_height -= dissolved_sediment;
             self.suspended_sediment += dissolved_sediment;
         } else {
-            let deposited_sediment = deposition_constant * (self.suspended_sediment - self.transport_capacacity);
+            let deposited_sediment =
+                deposition_constant * (self.suspended_sediment - self.transport_capacacity);
             debug_assert!(!deposited_sediment.is_nan());
             self.terrain_height += deposited_sediment;
             self.suspended_sediment -= deposited_sediment;
@@ -118,5 +119,3 @@ impl Default for Cell {
         }
     }
 }
-
-

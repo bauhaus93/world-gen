@@ -17,6 +17,7 @@ pub mod world_error;
 mod chunk;
 mod noise;
 mod surface;
+mod erosion;
 
 pub use self::world::World;
 pub use self::world_error::WorldError;

@@ -12,7 +12,6 @@ pub struct Chunk {
     model: Model,
     mesh: Mesh,
     height_map: HeightMap,
-    mvp: Matrix4<Float>,
     lod: u8,
     tree_list: Vec<Object>,
     bounding_box: BoundingBox,
@@ -33,7 +32,6 @@ impl Chunk {
             model: model,
             mesh: mesh,
             height_map: height_map,
-            mvp: Matrix4::one(),
             lod: lod,
             tree_list: Vec::new(),
             bounding_box: bounding_box,
@@ -52,14 +50,6 @@ impl Chunk {
         self.mesh.get_vertex_count()
     }
 
-    pub fn get_model(&self) -> &Model {
-        &self.model
-    }
-
-    pub fn update_mvp(&mut self, new_mvp: Matrix4<Float>) {
-        self.mvp = new_mvp;
-    }
-
     pub fn get_height(&self, world_pos: Vector2<Float>) -> f64 {
         let chunk_pos = self.model.get_translation();
         let relative_pos = [
@@ -72,20 +62,21 @@ impl Chunk {
     pub fn add_tree(&mut self, tree_object: Object) {
         self.tree_list.push(tree_object);
     }
-
-    pub fn is_visible(&self) -> bool {
-        self.bounding_box.is_visible(self.mvp)
-    }
 }
 
 impl Renderable for Chunk {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         let shader = info.get_active_shader();
-        shader.set_resource_mat4("mvp", &self.mvp)?;
-        shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
-        self.mesh.render(info)?;
-        for tree in &self.tree_list {
-            tree.render(info)?;
+        let mvp = info.get_camera().create_mvp_matrix(&self.model);
+        if self.bounding_box.is_visible(mvp) {
+            shader.set_resource_mat4("mvp", &mvp)?;
+            shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
+            self.mesh.render(info)?;
+            if info.get_lod() == 0 {
+                for tree in &self.tree_list {
+                    tree.render(info)?;
+                }
+            }
         }
         Ok(())
     }

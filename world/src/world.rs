@@ -33,6 +33,7 @@ pub struct World {
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
     center: Vector3<Float>,
+	gravity: Float
 }
 
 impl World {
@@ -41,6 +42,7 @@ impl World {
         let day_length = config.get_uint_or_default("day_length", 180);
         let skybox_img_path = config.get_str("skybox_img_path")?;
         let surface_texture_info_path = config.get_str("surface_info_path")?;
+		let gravity = config.get_float_or_default("gravity", 0.25);
 
         let surface_shader_program = load_surface_shader(config)?;
         let surface_texture = SurfaceTexture::load(surface_texture_info_path)?;
@@ -78,6 +80,7 @@ impl World {
             object_manager: object_manager,
             test_monkey: test_monkey,
             center: Vector3::from_s(0.),
+			gravity: gravity
         };
 
         world.update_skybox_size();
@@ -104,28 +107,27 @@ impl World {
                 let forward_z = forward_height - height;
 
                 player.update_forward(forward_xy.extend(forward_z as Float));
-                height
+                height as Float
             }
             None => {
                 trace!("Player not on any chunk!");
-                player_pos.z as f64
+                player_pos.z as Float
             }
         };
 
-        let height_diff = player.get_z() as f64 - chunk_height;
+        let height_diff = player.get_z() - chunk_height;
         if height_diff > 0. {
-            if height_diff > 0.25 && !player.is_jumping() {
+            if height_diff > self.gravity && !player.is_jumping() {
                 player.toggle_jump();
-            player.set_z(chunk_height as Float);
+                player.set_z(chunk_height as Float);
             } else {
-                player.push_z(Float::max(-0.25, -height_diff as Float));
+                player.push_z(Float::max(-self.gravity, -height_diff as Float));
             }
         } else {
             if player.is_jumping() {
                 player.land();
             }
             player.set_z(chunk_height as Float);
-            // player.move_z(-height_diff as Float);
         }
 
         Ok(())
@@ -237,12 +239,6 @@ impl World {
         Ok(())
     }
 
-    pub fn update_chunk_mvps(&mut self, camera: &Camera) {
-        for c in self.chunks.values_mut() {
-            c.update_mvp(camera.create_mvp_matrix(c.get_model()));
-        }
-    }
-
     fn get_chunk_by_world_pos(&self, world_pos: Vector3<Float>) -> Option<&Chunk> {
         self.chunks.get(&get_chunk_pos(world_pos))
     }
@@ -254,10 +250,7 @@ impl Renderable for World {
         info.push_shader(self.surface_shader_program.clone());
 
         self.test_monkey.render(info)?;
-        self.chunks
-            .values()
-            .filter(|c| c.is_visible())
-            .try_for_each(|c| c.render(info))?;
+        self.chunks.values().try_for_each(|c| c.render(info))?;
 
         info.pop_shader();
 

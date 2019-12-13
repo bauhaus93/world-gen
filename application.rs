@@ -51,6 +51,12 @@ impl Application {
         self.update_player_direction();
         self.update_player_momentum();
         self.world.interact(&mut self.player)?;
+		if self.core.key_pressed(glutin::VirtualKeyCode::F1) {
+			self.player.mod_speed(0.1);
+		}
+		if self.core.key_pressed(glutin::VirtualKeyCode::F2) {
+			self.player.mod_speed(-0.1);
+		}
 
         self.player.tick(self.core.get_time_passed())?;
         Ok(())
@@ -62,7 +68,6 @@ impl Application {
 
     fn update_world(&mut self) -> Result<(), ApplicationError> {
         self.world.set_center(self.player.get_translation());
-        self.world.update_chunk_mvps(&self.camera);
         self.world.tick(self.core.get_time_passed())?;
         Ok(())
     }

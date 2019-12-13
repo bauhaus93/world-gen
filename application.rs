@@ -11,6 +11,7 @@ pub struct Application {
     camera: Camera,
     player: Player,
     world: World,
+	mouse_sensitivity: f32
 }
 
 impl Application {
@@ -28,6 +29,7 @@ impl Application {
             camera: camera,
             player: player,
             world: world,
+			mouse_sensitivity: config.get_float_or_default("mouse_sensitivity", 0.3)
         };
         Ok(app)
     }
@@ -76,7 +78,7 @@ impl Application {
         if self.core.has_mouse_delta() {
             let delta = self.core.get_mouse_delta();
             let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
-            let rotation = offset * 0.3 * (self.core.get_time_passed() as Float / 1000.);
+            let rotation = offset * self.mouse_sensitivity * (self.core.get_time_passed() as Float / 1000.);
             self.player.mod_rotation(rotation);
             self.core.center_mouse();
         }

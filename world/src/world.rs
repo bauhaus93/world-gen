@@ -113,6 +113,7 @@ impl World {
             }
             None => {
                 trace!("Player not on any chunk!");
+                player.update_forward(player.get_direction());
                 player_pos.z as Float
             }
         };

@@ -38,12 +38,10 @@ impl ChunkBuilder {
             _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
         };
 
-        let mut erosion = HydraulicErosion::new(&height_map, &mut rng);
-        for _ in 0..10 {
-            erosion.rain(100, 0.5);
-            erosion.simulate(100);
-        }
-        let eroded_heightmap = erosion.create_heightmap();
+        let mut erosion = HydraulicErosion::from(height_map);
+		erosion.rain(100., 1);
+		erosion.simulate(100);
+        let eroded_heightmap: HeightMap = erosion.into();
 
         let surface_buffer = create_surface_buffer(pos, architect, &eroded_heightmap);
         let mut builder = Self {

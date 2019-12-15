@@ -1,19 +1,34 @@
 use glm::{acos, dot, length, sin, GenNum, Vector2, Vector3};
 
-use super::direction::Direction;
+use super::{Direction, Parameter};
 
+#[derive(Clone)]
 pub struct Cell {
+    pos: [i32; 2],
     terrain_height: f64,
     water_height: f64,
     normal: Vector3<f64>,
     outflow: [f64; 4],
     velocity: Vector2<f64>,
-    transport_capacacity: f64,
+    transport_capacity: f64,
     suspended_sediment: f64,
     transported_sediment: f64,
 }
 
 impl Cell {
+
+    pub fn new(pos: [i32; 2]) -> Self {
+        let mut cell = Cell::default();
+        cell.pos = pos;
+        cell
+    }
+
+    pub fn get_total_height_diff(&self, other: &Cell) -> f64 {
+        self.get_total_height() - other.get_total_height()
+    }
+    pub fn get_pos(&self) -> &[i32; 2] {
+        &self.pos
+    }
     pub fn has_water(&self) -> bool {
         self.water_height > 0.
     }
@@ -38,7 +53,7 @@ impl Cell {
     pub fn get_water_height(&self) -> f64 {
         self.water_height
     }
-    pub fn get_water_level(&self) -> f64 {
+    pub fn get_total_height(&self) -> f64 {
         self.terrain_height + self.water_height
     }
     pub fn get_flow(&self, dir: Direction) -> f64 {
@@ -54,9 +69,6 @@ impl Cell {
         debug_assert!(!new_velocity.y.is_nan());
         self.velocity = new_velocity;
     }
-    pub fn get_sediment_source_offset(&self, time_delta: f64) -> Vector2<f64> {
-        -self.velocity * time_delta
-    }
     pub fn set_normal(&mut self, new_normal: Vector3<f64>) {
         debug_assert!(!new_normal.x.is_nan() || !new_normal.y.is_nan() || !new_normal.z.is_nan());
         self.normal = new_normal;
@@ -69,51 +81,23 @@ impl Cell {
         self.transported_sediment = transported_sediment;
     }
 
-    pub fn update_transport_capacity(&mut self, sediment_capacity_constant: f64) {
-        debug_assert!(self.water_height > 0.);
-        debug_assert!(!length(self.velocity).is_nan());
-        let cosa = dot(self.normal, Vector3::new(0., 0., 1.));
-        let sin_alpha = f64::max(0.01, sin(acos(cosa)));
-        self.transport_capacacity = sediment_capacity_constant * sin_alpha * length(self.velocity);
-        debug_assert!(!self.transport_capacacity.is_nan());
-    }
-    pub fn apply_erosion_deposition(&mut self, dissolving_constant: f64, deposition_constant: f64) {
-        debug_assert!(!self.transport_capacacity.is_nan());
-        debug_assert!(!self.suspended_sediment.is_nan());
-        if self.transport_capacacity > self.suspended_sediment {
-            let dissolved_sediment =
-                dissolving_constant * (self.transport_capacacity - self.suspended_sediment);
-            debug_assert!(!dissolved_sediment.is_nan());
-            self.terrain_height -= dissolved_sediment;
-            self.suspended_sediment += dissolved_sediment;
-        } else {
-            let deposited_sediment =
-                deposition_constant * (self.suspended_sediment - self.transport_capacacity);
-            debug_assert!(!deposited_sediment.is_nan());
-            self.terrain_height += deposited_sediment;
-            self.suspended_sediment -= deposited_sediment;
-        }
-    }
-    pub fn apply_sediment_transportation(&mut self) {
-        debug_assert!(!self.transported_sediment.is_nan());
-        self.suspended_sediment = self.transported_sediment;
-    }
-    pub fn apply_water_evaporation(&mut self, evaporation_factor: f64) {
-        debug_assert!(evaporation_factor >= 0.);
-        debug_assert!(evaporation_factor <= 1.);
-        self.water_height *= evaporation_factor;
+    pub fn calculate_flow(&self, dir: Direction, neighbour: &Cell, params: &Parameter) -> f64 {
+        let height_diff = self.get_total_height_diff(neighbour);
+        let flow_delta = height_diff * params.get_flow_factor();
+        f64::max(0., self.get_flow(dir) + flow_delta)
     }
 }
 
 impl Default for Cell {
     fn default() -> Self {
         Self {
+            pos: [0, 0],
             terrain_height: 0.,
             water_height: 0.,
             normal: Vector3::from_s(0.),
             outflow: [0., 0., 0., 0.],
             velocity: Vector2::from_s(0.),
-            transport_capacacity: 0.,
+            transport_capacity: 0.,
             suspended_sediment: 0.,
             transported_sediment: 0.,
         }

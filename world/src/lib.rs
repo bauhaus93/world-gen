@@ -14,13 +14,15 @@ extern crate core;
 
 pub mod world;
 pub mod world_error;
-mod chunk;
+pub mod chunk;
+pub mod erosion;
 mod noise;
 mod surface;
-mod erosion;
 
 pub use self::world::World;
 pub use self::world_error::WorldError;
+pub use self::chunk::HeightMap;
+pub use self::erosion::HydraulicErosion;
 
 use self::surface::{ Terrain, TerrainSet, TerrainType };
 

@@ -8,7 +8,12 @@ edition = "2018"
 name = "world_gen"
 path = "./main.rs"
 
+[[example]]
+name = "check_erosion"
+path = "examples/check_erosion.rs"
+
 [dependencies]
+
 core = { path = "./core" }
 world = { path = "./world" }
 
@@ -23,3 +28,7 @@ num-traits = "0.2"
 lazy_static = "1.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+
+[dev-dependencies]
+
+ncurses = "5.99"

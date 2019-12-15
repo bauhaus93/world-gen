@@ -7,6 +7,29 @@ pub enum Direction {
     LEFT
 }
 
+pub struct DirectionIterator {
+	index: u8
+}
+
+impl Default for DirectionIterator {
+	fn default() -> Self {
+		Self {
+			index: 0
+		}
+	}
+}
+
+impl Iterator for DirectionIterator {
+	type Item = Direction;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self.index {
+			i if i < 4 => { self.index += 1; Some(i.into()) },
+			_ => None
+		}
+	}
+}
+
 impl Into<u8> for Direction {
     fn into(self) -> u8 {
         match self {
@@ -16,6 +39,18 @@ impl Into<u8> for Direction {
             Direction::LEFT => 3,
         }
     }
+}
+
+impl Into<Direction> for u8 {
+	fn into(self) -> Direction {
+		match self {
+			0 => Direction::TOP,
+			1 => Direction::RIGHT,
+			2 => Direction::BOTTOM,
+			3 => Direction::LEFT,
+			_ => unreachable!()
+		}
+	}
 }
 
 impl Into<usize> for Direction {

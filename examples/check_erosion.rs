@@ -17,8 +17,8 @@ fn main() {
 	let hm = HeightMap::new(16, 1);
 	let mut erosion = HydraulicErosion::from(hm);
 	erosion.rain(100., 1);
-	for i in 0..100 {
-		erosion.simulate(10);
+	for _ in 0..500 {
+		erosion.simulate(50);
 		let state = erosion.get_state();
 		clear();
 		mvaddstr(0, 0, "age");
@@ -28,7 +28,10 @@ fn main() {
 
 		for y in 0..state.get_size() {
 			for x in 0..state.get_size() {
-				mvaddstr(5 + y, 8 * x, &format!("{:5.2}", state.get_cell(&[x, y]).unwrap().get_water_height()));
+				let cell = state.get_cell(&[x, y]).unwrap();
+				let w = cell.get_water_height();
+				let ss = cell.get_suspended_sediment();
+				mvaddstr(5 + y, 10 * x, &format!("{:5.2}", ss));
 			}
 		}
 

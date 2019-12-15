@@ -1,9 +1,5 @@
-use glm::{normalize, GenNum, Vector2, Vector3};
 use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng, FromEntropy};
-use std::ops::Add;
-
-// use ncurses::*;
+use rand::FromEntropy;
 
 use super::State;
 use crate::HeightMap;
@@ -34,6 +30,11 @@ impl HydraulicErosion {
 		next_state.age_increment();
         next_state.calculate_flow(&self.state);
 		next_state.apply_flow();
+		next_state.calculate_velocity(&self.state);
+		next_state.calculate_normals(&self.state);
+		next_state.calculate_transport_capacity(&self.state);
+		next_state.apply_erosion_deposition();
+		next_state.apply_sediment_transportation();
 		self.state = next_state;
 	}
 }

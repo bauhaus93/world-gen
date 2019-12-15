@@ -2,6 +2,8 @@ use rand::prelude::SliceRandom;
 use rand::Rng;
 use std::rc::Rc;
 
+use glm::{normalize, length, sin, Vector2, Vector3};
+
 use super::direction::{get_neighbour_pos, get_opposite_direction, Direction, DirectionIterator};
 use super::{Cell, Parameter};
 use crate::HeightMap;
@@ -64,9 +66,11 @@ impl State {
             .map(|cell| {
                 DirectionIterator::default()
                     .map(|dir| (dir, self.get_neighbour(cell.get_pos(), dir)))
-                    .filter(|(dir, nb)| nb.is_some())
+                    .filter(|(_dir, nb)| nb.is_some())
                     .map(|(dir, nb)| {
-                        nb.unwrap().get_flow(get_opposite_direction(dir)) - cell.get_flow(dir)
+                        nb.expect("Should have been some")
+                            .get_flow(get_opposite_direction(dir))
+                            - cell.get_flow(dir)
                     })
                     .sum()
             })
@@ -77,6 +81,71 @@ impl State {
             .for_each(|(cell, delta)| cell.mod_water(delta));
     }
 
+    pub fn calculate_velocity(&mut self, prev_state: &State) {
+        prev_state.cells.iter().for_each(|prev| {
+            let vel = prev_state.calculate_velocity_for_cell(prev);
+            let next = self.get_cell_mut(prev.get_pos()).unwrap();
+            next.set_velocity(vel);
+        });
+    }
+
+    pub fn calculate_normals(&mut self, prev_state: &State) {
+        prev_state.cells.iter().for_each(|prev| {
+            let normal = prev_state.calculate_normal_for_cell(prev);
+            let next = self.get_cell_mut(prev.get_pos()).expect("Must be some");
+            next.set_normal(normal);
+        });
+    }
+
+    pub fn calculate_transport_capacity(&mut self, prev_state: &State) {
+        prev_state.cells.iter().for_each(|prev| {
+            let speed = prev.get_speed();
+            let tilt = prev.get_tilt();
+            let capacity = self.parameter.get_sediment_capacity() * speed * sin(tilt);
+            let next = self.get_cell_mut(prev.get_pos()).expect("Must be some");
+            next.set_transport_capacity(capacity);
+        });
+    }
+
+    pub fn apply_erosion_deposition(&mut self) {
+        let diss_const = self.parameter.get_dissolving_constant();
+        let depo_const = self.parameter.get_deposition_constant();
+        self.cells.iter_mut().for_each(|cell| {
+            let transport_capacity = cell.get_transport_capacity();
+            let suspended_sediment = cell.get_suspended_sediment();
+            let suspended_delta = if transport_capacity > suspended_sediment {
+                diss_const * (transport_capacity - suspended_sediment)
+            } else {
+                -depo_const * (suspended_sediment - transport_capacity)
+            };
+            cell.mod_height(-suspended_delta);
+            cell.mod_suspended_sediment(suspended_delta);
+        });
+    }
+
+	pub fn apply_sediment_transportation(&mut self) {
+		let transported_sediment: Vec<f64> =
+			self.cells.iter()
+			.map(|cell| {
+				let source_point = cell.get_sediment_source(self.parameter.get_time_delta());
+				let points = [Vector2::<i32>::new(source_point.x.floor() as i32, source_point.y.floor() as i32),
+							  Vector2::<i32>::new(source_point.x.floor() as i32 + 1, source_point.y.floor() as i32),
+							  Vector2::<i32>::new(source_point.x.floor() as i32, source_point.y.floor() as i32 + 1),
+							  Vector2::<i32>::new(source_point.x.floor() as i32 + 1, source_point.y.floor() as i32 + 1)];
+				let (sediment_sum, distance_sum) = points.iter()
+					.map(|p| (Vector2::<f64>::new(p.x as f64, p.y as f64), self.get_cell(&[p.x, p.y]).map_or(cell.get_suspended_sediment(), |c| c.get_suspended_sediment())))
+					.map(|(p, susp)| (length(source_point - p), susp))
+					.fold((0., 0.), |(sed_sum, dist_sum), (dist, susp)| (sed_sum + susp / f64::max(dist, 1e-6), dist_sum + dist));
+				sediment_sum * distance_sum
+			})
+			.collect();
+		self.cells
+            .iter_mut()
+            .zip(transported_sediment.into_iter())
+            .for_each(|(cell, sed)| cell.set_suspended_sediment(sed));
+
+	}
+
     fn calculate_flow_for_cell(&self, cell: &Cell) -> Vec<f64> {
         DirectionIterator::default()
             .map(|dir| (dir, self.get_neighbour(cell.get_pos(), dir)))
@@ -85,6 +154,38 @@ impl State {
                 None => 0.,
             })
             .collect()
+    }
+
+    fn calculate_velocity_for_cell(&self, cell: &Cell) -> Vector2<f64> {
+        let nb: Vec<Option<&Cell>> = DirectionIterator::default()
+            .map(|dir| self.get_neighbour(cell.get_pos(), dir))
+            .collect();
+        let flow_from_left = nb[usize::from(Direction::LEFT)]
+            .map_or(0., |cell| cell.get_flow(Direction::RIGHT))
+            - cell.get_flow(Direction::LEFT);
+        let flow_to_right = cell.get_flow(Direction::RIGHT)
+            - nb[usize::from(Direction::RIGHT)].map_or(0., |cell| cell.get_flow(Direction::LEFT));
+
+        let flow_from_top = nb[usize::from(Direction::TOP)]
+            .map_or(0., |cell| cell.get_flow(Direction::BOTTOM))
+            - cell.get_flow(Direction::TOP);
+        let flow_to_bottom = cell.get_flow(Direction::BOTTOM)
+            - nb[usize::from(Direction::BOTTOM)].map_or(0., |cell| cell.get_flow(Direction::TOP));
+        Vector2::new(
+            flow_from_left - flow_to_right / 2.,
+            flow_from_top - flow_to_bottom / 2.,
+        )
+    }
+
+    fn calculate_normal_for_cell(&self, cell: &Cell) -> Vector3<f64> {
+        let heights: Vec<f64> = DirectionIterator::default()
+            .map(|dir| self.get_neighbour(cell.get_pos(), dir))
+            .map(|nb| nb.map_or_else(|| cell.get_total_height(), |nb| nb.get_total_height()))
+            .collect();
+        let slope_x = heights[usize::from(Direction::LEFT)] - heights[usize::from(Direction::LEFT)];
+        let slope_y =
+            heights[usize::from(Direction::TOP)] - heights[usize::from(Direction::BOTTOM)];
+        normalize(Vector3::new(slope_x, slope_y, 2.))
     }
 
     fn add_water_drop<R: Rng + ?Sized>(&mut self, drop_size: f64, rng: &mut R) {

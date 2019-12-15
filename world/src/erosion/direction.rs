@@ -30,38 +30,39 @@ impl Iterator for DirectionIterator {
 	}
 }
 
-impl Into<u8> for Direction {
-    fn into(self) -> u8 {
-        match self {
-            Direction::TOP => 0,
-            Direction::RIGHT => 1,
-            Direction::BOTTOM => 2,
-            Direction::LEFT => 3,
-        }
-    }
-}
-
-impl Into<Direction> for u8 {
-	fn into(self) -> Direction {
-		match self {
+impl From<u8> for Direction {
+	fn from(v: u8) -> Direction {
+		match v {
 			0 => Direction::TOP,
 			1 => Direction::RIGHT,
 			2 => Direction::BOTTOM,
 			3 => Direction::LEFT,
-			_ => unreachable!()
+			_ => Direction::TOP,
 		}
 	}
 }
 
-impl Into<usize> for Direction {
-    fn into(self) -> usize {
-        match self {
-            Direction::TOP => 0,
-            Direction::RIGHT => 1,
-            Direction::BOTTOM => 2,
-            Direction::LEFT => 3,
-        }
-    }
+impl From<usize> for Direction {
+	fn from(v: usize) -> Direction {
+		match v {
+			0 => Direction::TOP,
+			1 => Direction::RIGHT,
+			2 => Direction::BOTTOM,
+			3 => Direction::LEFT,
+			_ => Direction::TOP
+		}
+	}
+}
+
+impl From<Direction> for usize {
+	fn from(dir: Direction) -> usize {
+		match dir {
+			Direction::TOP => 0,
+			Direction::RIGHT => 1,
+			Direction::BOTTOM => 2,
+			Direction::LEFT => 3
+		}
+	}
 }
 
 pub fn get_neighbour_pos(pos: &[i32; 2], dir: Direction) -> [i32; 2] {

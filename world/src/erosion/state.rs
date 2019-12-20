@@ -2,7 +2,7 @@ use rand::prelude::SliceRandom;
 use rand::Rng;
 use std::rc::Rc;
 
-use glm::{normalize, length, sin, Vector2, Vector3};
+use glm::{length, normalize, sin, Vector2, Vector3};
 
 use super::direction::{get_neighbour_pos, get_opposite_direction, Direction, DirectionIterator};
 use super::{Cell, Parameter};
@@ -123,28 +123,36 @@ impl State {
         });
     }
 
-	pub fn apply_sediment_transportation(&mut self) {
-		let transported_sediment: Vec<f64> =
-			self.cells.iter()
-			.map(|cell| {
-				let source_point = cell.get_sediment_source(self.parameter.get_time_delta());
-				let points = [Vector2::<i32>::new(source_point.x.floor() as i32, source_point.y.floor() as i32),
-							  Vector2::<i32>::new(source_point.x.floor() as i32 + 1, source_point.y.floor() as i32),
-							  Vector2::<i32>::new(source_point.x.floor() as i32, source_point.y.floor() as i32 + 1),
-							  Vector2::<i32>::new(source_point.x.floor() as i32 + 1, source_point.y.floor() as i32 + 1)];
-				let (sediment_sum, distance_sum) = points.iter()
-					.map(|p| (Vector2::<f64>::new(p.x as f64, p.y as f64), self.get_cell(&[p.x, p.y]).map_or(cell.get_suspended_sediment(), |c| c.get_suspended_sediment())))
-					.map(|(p, susp)| (length(source_point - p), susp))
-					.fold((0., 0.), |(sed_sum, dist_sum), (dist, susp)| (sed_sum + susp / f64::max(dist, 1e-6), dist_sum + dist));
-				sediment_sum * distance_sum
-			})
-			.collect();
-		self.cells
+    pub fn apply_sediment_transportation(&mut self) {
+        let transported_sediment: Vec<f64> = self
+            .cells
+            .iter()
+            .map(|cell| {
+                let source_point = cell.get_sediment_source(self.parameter.get_time_delta());
+                let points = get_nearest_grid_points(source_point);
+                let (sediment_sum, distance_sum) = points
+                    .iter()
+                    .map(|p| {
+                        (
+                            Vector2::<f64>::new(p.x as f64, p.y as f64),
+                            self.get_cell(&[p.x, p.y])
+                                .map_or(cell.get_suspended_sediment(), |c| {
+                                    c.get_suspended_sediment()
+                                }),
+                        )
+                    })
+                    .map(|(p, susp)| (length(source_point - p), susp))
+                    .fold((0., 0.), |(sed_sum, dist_sum), (dist, susp)| {
+                        (sed_sum + susp / f64::max(dist, 1e-6), dist_sum + dist)
+                    });
+                sediment_sum * distance_sum
+            })
+            .collect();
+        self.cells
             .iter_mut()
             .zip(transported_sediment.into_iter())
             .for_each(|(cell, sed)| cell.set_suspended_sediment(sed));
-
-	}
+    }
 
     fn calculate_flow_for_cell(&self, cell: &Cell) -> Vec<f64> {
         DirectionIterator::default()
@@ -185,7 +193,10 @@ impl State {
         let slope_x = heights[usize::from(Direction::LEFT)] - heights[usize::from(Direction::LEFT)];
         let slope_y =
             heights[usize::from(Direction::TOP)] - heights[usize::from(Direction::BOTTOM)];
+        debug_assert!(!slope_x.is_nan());
+        debug_assert!(!slope_y.is_nan());
         normalize(Vector3::new(slope_x, slope_y, 2.))
+        //Vector3::new(0., 0., 1.)
     }
 
     fn add_water_drop<R: Rng + ?Sized>(&mut self, drop_size: f64, rng: &mut R) {
@@ -266,4 +277,13 @@ fn calculate_flow_coefficent(flow: &[f64], water_height: f64, params: &Parameter
     } else {
         0.
     }
+}
+
+fn get_nearest_grid_points(p: Vector2<f64>) -> [Vector2<i32>; 4] {
+    [
+        Vector2::<i32>::new(p.x.floor() as i32, p.y.floor() as i32),
+        Vector2::<i32>::new(p.x.floor() as i32 + 1, p.y.floor() as i32),
+        Vector2::<i32>::new(p.x.floor() as i32, p.y.floor() as i32 + 1),
+        Vector2::<i32>::new(p.x.floor() as i32 + 1, p.y.floor() as i32 + 1),
+    ]
 }

@@ -65,6 +65,8 @@ impl Cell {
     pub fn mod_suspended_sediment(&mut self, delta: f64) {
         debug_assert!(!delta.is_nan());
         self.suspended_sediment += delta;
+		info!("Suspended sediment at {}/{}: {}", self.pos[0], self.pos[1], self.suspended_sediment);
+        debug_assert!(!self.suspended_sediment.is_nan());
         //debug_assert!(self.suspended_sediment >= 0.);
     }
 
@@ -121,6 +123,7 @@ impl Cell {
     }
 
     pub fn get_suspended_sediment(&self) -> f64 {
+		debug_assert!(!self.suspended_sediment.is_nan());
         self.suspended_sediment
     }
     pub fn get_pos_vec(&self) -> Vector2<f64> {

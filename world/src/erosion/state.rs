@@ -141,8 +141,8 @@ impl State {
                                 }),
                         )
                     })
-                    .map(|(p, susp)| (length(source_point - p), susp))
-                    .fold((0., 0.), |(sed_sum, dist_sum), (dist, susp)| {
+                    .map(|(p, susp)| (susp, length(source_point - p)))
+                    .fold((0., 0.), |(sed_sum, dist_sum), (susp, dist)| {
                         (sed_sum + susp / f64::max(dist, 1e-6), dist_sum + dist)
                     });
                 sediment_sum * distance_sum

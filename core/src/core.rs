@@ -169,8 +169,12 @@ impl Core {
     }
 
     fn handle_resize(&mut self, new_size: (u32, u32)) {
+        let size_phys = (
+            (new_size.0 as f64 * self.window.get_hidpi_factor()) as GLsizei,
+            (new_size.1 as f64 * self.window.get_hidpi_factor()) as GLsizei,
+        );
         unsafe {
-            gl::Viewport(0, 0, new_size.0 as GLsizei, new_size.1 as GLsizei);
+            gl::Viewport(0, 0, size_phys.0, size_phys.1);
         }
         self.window_size = [new_size.0 as f64, new_size.1 as f64];
         info!(

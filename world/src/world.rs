@@ -61,7 +61,7 @@ impl World {
 		for z in 0..10 {
 			for y in 0..10 {
 				for x in 0..10 {
-					if x  == 5 && x == y && x == z {
+					if x  == 5 && x == y && z == 2 {
 						field.push(1.);
 					} else {
 						field.push(-1.);
@@ -84,7 +84,7 @@ impl World {
         test_monkey.set_scale(Vector3::from_s(10.));
 
 		let mut test_march_cubes = object_manager_arc.create_object_instance("march")?;
-		test_march_cubes.set_translation(Vector3::new(0., 0., 300.));
+		test_march_cubes.set_translation(Vector3::new(0., 0., 50.));
         test_march_cubes.set_scale(Vector3::from_s(10.));
 
         let mut world = World {

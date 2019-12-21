@@ -1,14 +1,14 @@
 use std::fmt;
 
-use glm::{ Vector3, GenNum, cross, normalize };
+use glm::{cross, normalize, GenNum, Vector3};
 
-use crate::Float;
 use super::Vertex;
+use crate::Float;
 
 #[derive(Copy, Clone)]
 pub struct Triangle {
-  vertex: [Vertex; 3],
-  normal: Vector3<Float>
+    vertex: [Vertex; 3],
+    normal: Vector3<Float>,
 }
 
 fn calculate_normal(vertices: &[Vertex; 3]) -> Vector3<Float> {
@@ -22,7 +22,7 @@ impl Triangle {
         let normal = calculate_normal(&vertices);
         Self {
             vertex: vertices,
-            normal: normal
+            normal: normal,
         }
     }
 
@@ -36,7 +36,9 @@ impl Triangle {
     }
 
     pub fn set_uv_layer(&mut self, uv_layer: u32) {
-        self.vertex.iter_mut().for_each(|v| v.set_uv_layer(uv_layer));
+        self.vertex
+            .iter_mut()
+            .for_each(|v| v.set_uv_layer(uv_layer));
     }
 
     pub fn get_uv_dim(&self) -> u8 {
@@ -58,13 +60,22 @@ impl Default for Triangle {
     fn default() -> Self {
         Self {
             vertex: [Vertex::default(); 3],
-            normal: Vector3::from_s(0.)
+            normal: Vector3::from_s(0.),
         }
     }
 }
 
 impl fmt::Display for Triangle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "normal = {:.2}/{:.2}/{:.2}, vertices: {}, {}, {}", self.normal[0], self.normal[1], self.normal[2], self.vertex[0], self.vertex[1], self.vertex[2])
+        write!(
+            f,
+            "normal = {:.2}/{:.2}/{:.2}, vertices: {}, {}, {}",
+            self.normal[0],
+            self.normal[1],
+            self.normal[2],
+            self.vertex[0],
+            self.vertex[1],
+            self.vertex[2]
+        )
     }
 }

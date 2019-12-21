@@ -5,6 +5,8 @@ extern crate glutin;
 extern crate glm;
 extern crate image;
 extern crate num_traits;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod traits;
 pub mod object;
@@ -22,6 +24,7 @@ pub mod player;
 pub mod skybox;
 pub mod sun;
 pub mod timer;
+pub mod marching_cubes;
 pub mod update_error;
 pub mod core_error;
 mod window;

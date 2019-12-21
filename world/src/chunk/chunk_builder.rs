@@ -69,7 +69,7 @@ impl ChunkBuilder {
             for rel_pos in positions.into_iter() {
                 let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
                                 ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
-                let mut tree = object_manager.create_object("tree")?;
+                let mut tree = object_manager.create_object_instance("tree")?;
                 tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos) as Float));
                 let scale_xy = rng.gen_range(0.8, 1.2);
                 let scale_z = rng.gen_range(0.8, 1.4);

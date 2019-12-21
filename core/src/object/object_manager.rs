@@ -19,20 +19,27 @@ impl ObjectManager {
 
         for (name, lod0_path, lod1_path) in parsed_file.into_iter() {
             info!("Loading prototype '{}', lod0 = '{}', lod1 = '{}'", name, lod0_path, lod1_path);
-            obj_manager.add_prototype(&name, &lod0_path, &lod1_path)?;
+            obj_manager.add_prototype_by_file(&name, &lod0_path, &lod1_path)?;
         }
 
         Ok(obj_manager)
     }
 
-    pub fn add_prototype(&mut self, name: &str, lod0_path: &str, lod1_path: &str) -> Result<(), ObjectError> {
+    pub fn add_prototype_by_file(&mut self, name: &str, lod0_path: &str, lod1_path: &str) -> Result<(), ObjectError> {
         debug_assert!(!self.prototype_map.contains_key(name));
         let prototype = ObjectPrototype::from_obj(lod0_path, lod1_path)?;
         self.prototype_map.insert(name.to_string(), Arc::new(prototype));
         Ok(())
     }
 
-    pub fn create_object(&self, prototype_name: &str) -> Result<Object, ObjectError> {
+	pub fn add_prototype_by_field(&mut self, name: &str, field: &[f64], field_size: [i32; 3]) -> Result<(), ObjectError> {
+		debug_assert!(!self.prototype_map.contains_key(name));
+		let prototype = ObjectPrototype::from_field(field, field_size)?;
+		self.prototype_map.insert(name.to_string(), Arc::new(prototype));
+		Ok(())
+	}
+
+    pub fn create_object_instance(&self, prototype_name: &str) -> Result<Object, ObjectError> {
         match self.prototype_map.get(prototype_name) {
             Some(proto) => {
                 let obj = Object::new(proto.clone());

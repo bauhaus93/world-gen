@@ -32,6 +32,7 @@ pub struct World {
     #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
+	test_march_cubes: Object,
     center: Vector3<Float>,
     gravity: Float,
 }
@@ -55,16 +56,36 @@ impl World {
         //let mut rng = StdRng::seed_from_u64(0);
         let mut rng = StdRng::from_entropy();
 
-        let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
+        let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
+		let mut field = Vec::new();
+		for z in 0..10 {
+			for y in 0..10 {
+				for x in 0..10 {
+					if x  == 5 && x == y && x == z {
+						field.push(1.);
+					} else {
+						field.push(-1.);
+					}
+				}
+			}
+		}
+		object_manager.add_prototype_by_field("march", &field, [10, 10, 10])?;
+
+		let object_manager_arc = Arc::new(object_manager);
+
         let chunk_loader = ChunkLoader::new(
             &mut rng,
-            object_manager.clone(),
+            object_manager_arc.clone(),
             surface_texture.get_terrain_set(),
         );
 
-        let mut test_monkey = object_manager.create_object("monkey")?;
+        let mut test_monkey = object_manager_arc.create_object_instance("monkey")?;
         test_monkey.set_translation(Vector3::new(0., 0., 400.));
         test_monkey.set_scale(Vector3::from_s(10.));
+
+		let mut test_march_cubes = object_manager_arc.create_object_instance("march")?;
+		test_march_cubes.set_translation(Vector3::new(0., 0., 300.));
+        test_march_cubes.set_scale(Vector3::from_s(10.));
 
         let mut world = World {
             surface_texture: surface_texture,
@@ -79,8 +100,9 @@ impl World {
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
             last_chunk_load: [0, 0],
-            object_manager: object_manager,
+            object_manager: object_manager_arc,
             test_monkey: test_monkey,
+			test_march_cubes: test_march_cubes,
             center: Vector3::from_s(0.),
             gravity: gravity,
         };
@@ -253,6 +275,7 @@ impl Renderable for World {
         info.push_shader(self.surface_shader_program.clone());
 
         self.test_monkey.render(info)?;
+		self.test_march_cubes.render(info)?;
         self.chunks.values().try_for_each(|c| c.render(info))?;
 
         info.pop_shader();

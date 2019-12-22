@@ -45,11 +45,11 @@ fn create_triangles(field: &[f64], field_size: Vector3<i32>) -> Vec<Triangle> {
 }
 
 fn create_cube_triangles(origin: Vector3<i32>, index: u8, triangles: &mut Vec<Triangle>) {
-	for i in 0..8 {
-		if 1 << i == index {
-			triangles.push(gen_single_point(origin, i as usize));
-			break;
-		}
+    for i in 0..8 {
+        if 1 << i == index {
+            triangles.push(gen_single_point(origin, i as usize));
+            break;
+        }
     }
 }
 
@@ -68,10 +68,14 @@ fn index_for_cube(origin: Vector3<i32>, field_size: Vector3<i32>, field: &[f64])
 }
 
 fn gen_single_point(cube_origin: Vector3<i32>, corner_index: usize) -> Triangle {
+    let order = match corner_index {
+        c if c == 4 || c == 6 || c == 1 || c == 3  => [0, 2, 1],
+        _ => [0, 1, 2],
+    };
     let vertices = [
-        Vertex::new(get_edge_pos(cube_origin, corner_index, 1)),
-        Vertex::new(get_edge_pos(cube_origin, corner_index, 0)),
-        Vertex::new(get_edge_pos(cube_origin, corner_index, 2)),
+        Vertex::new(get_edge_pos(cube_origin, corner_index, order[0])),
+        Vertex::new(get_edge_pos(cube_origin, corner_index, order[1])),
+        Vertex::new(get_edge_pos(cube_origin, corner_index, order[2])),
     ];
     Triangle::new(vertices)
 }

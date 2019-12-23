@@ -62,7 +62,8 @@ impl World {
 		for z in 0..DIM {
 			for y in 0..DIM {
 				for x in 0..DIM {
-					if x == 0 && z == 0 { 
+					if x == 0 && z == 0 {
+						debug!("{}/{}/{}", x, y, z);
 						field.push(1.);
 					} else {
 						field.push(-1.);

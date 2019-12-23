@@ -45,58 +45,61 @@ fn create_triangles(field: &[f64], field_size: Vector3<i32>) -> Vec<Triangle> {
 }
 
 fn create_cube_triangles(origin: Vector3<i32>, index: u8, triangles: &mut Vec<Triangle>) {
-	for i in 0..8 {
-		if 1 << i == index ||
-			(1 << i) | (1 << ((i + 3) % 8)) == index ||
-			(1 << i) | (1 << ((i + 2) % 8)) == index ||
-			(1 << i) | (1 << ((i + 3) % 8)) | (1 << ((i + 5) % 8)) == index {
-			debug!("Create corner triangles");
-			triangles.extend(gen_corner_triangles(origin, index));
-		} else if 1 << i != 0 && 1 << ((i + 1) % 8) != 0 {
-			debug!("Create straight ramp");
-			triangles.extend(&gen_straight_ramp(origin, i, (i + 1) % 8));
-		}
-	}
+    for i in 0..8 {
+        if 1 << i == index
+            || 0x5u8.rotate_left(i) == index
+            || 0x9u8.rotate_left(i) == index
+            || 0x15u8.rotate_left(i) == index
+        {
+            debug!("Create corner triangles");
+            triangles.extend(gen_corner_triangles(origin, index));
+        } else if 3u8.rotate_left(i) == index {
+            debug!("Create straight ramp");
+            triangles.extend(&gen_straight_ramp(
+                origin,
+                i as usize,
+                ((i + 1) % 8) as usize,
+            ));
+        }
+    }
 }
 
 fn gen_corner_triangles(cube_origin: Vector3<i32>, index: u8) -> Vec<Triangle> {
-	let mut triangles = Vec::new();
-	for i in 0..8 {
-		if (1 << i) & index != 0 {
-			triangles.push(gen_corner_triangle(cube_origin, i));
-		}
-	}
-	triangles
+    let mut triangles = Vec::new();
+    for i in 0..8 {
+        if (1 << i) & index != 0 {
+            triangles.push(gen_corner_triangle(cube_origin, i));
+        }
+    }
+    triangles
 }
 
 fn gen_straight_ramp(cube_origin: Vector3<i32>, corner_a: usize, corner_b: usize) -> [Triangle; 2] {
-	let diff_axis = match (CORNER[corner_a], CORNER[corner_b]) {
-		(a, b) if a.x != b.x => 0,
-		(a, b) if a.y != b.y => 1,
-		(a, b) if a.z != b.z => 2,
-		_ => unreachable!()
-	};
+    let diff_axis = match (CORNER[corner_a], CORNER[corner_b]) {
+        (a, b) if a.x != b.x => 0,
+        (a, b) if a.y != b.y => 1,
+        (a, b) if a.z != b.z => 2,
+        _ => unreachable!(),
+    };
 
-	let vert_a = [
-		Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 1) % 3)),
-		Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 1) % 3)),
-		Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 2) % 3))
-	];
+    let vert_a = [
+        Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 1) % 3)),
+        Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 1) % 3)),
+        Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 2) % 3)),
+    ];
 
-	let vert_b = [
-		Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 1) % 3)),
-		Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 2) % 3)),
-		Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 2) % 3))
-	];
+    let vert_b = [
+        Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 1) % 3)),
+        Vertex::new(get_edge_pos(cube_origin, corner_a, (diff_axis + 2) % 3)),
+        Vertex::new(get_edge_pos(cube_origin, corner_b, (diff_axis + 2) % 3)),
+    ];
 
-	[Triangle::new(vert_a),
-	 Triangle::new(vert_b)]
-
+    [Triangle::new(vert_a), Triangle::new(vert_b)]
 }
 
 fn gen_corner_triangle(cube_origin: Vector3<i32>, corner_index: usize) -> Triangle {
-	let order = match corner_index {
-        c if c == 4 || c == 6 || c == 1 || c == 3  => [0, 2, 1],
+    let order = match corner_index {
+        c if c == 4 || c == 6 || c == 1 || c == 3 => [0, 2, 1],
         _ => [0, 1, 2],
     };
     let vertices = [

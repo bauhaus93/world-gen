@@ -58,10 +58,11 @@ impl World {
 
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
 		let mut field = Vec::new();
-		for z in 0..10 {
-			for y in 0..10 {
-				for x in 0..10 {
-					if x  == 5 && x == y && z == 2 {
+		const DIM: i32 = 2;
+		for z in 0..DIM {
+			for y in 0..DIM {
+				for x in 0..DIM {
+					if x == 0 && z == 0 { 
 						field.push(1.);
 					} else {
 						field.push(-1.);
@@ -69,7 +70,7 @@ impl World {
 				}
 			}
 		}
-		object_manager.add_prototype_by_field("march", &field, [10, 10, 10])?;
+		object_manager.add_prototype_by_field("march", &field, [DIM, DIM, DIM])?;
 
 		let object_manager_arc = Arc::new(object_manager);
 

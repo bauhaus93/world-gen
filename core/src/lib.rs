@@ -24,6 +24,7 @@ pub mod sun;
 pub mod timer;
 pub mod update_error;
 pub mod core_error;
+pub mod point;
 mod window;
 
 pub use self::core::Core;

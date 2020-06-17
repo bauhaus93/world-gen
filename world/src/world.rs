@@ -14,7 +14,7 @@ use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
-    Config, Float, Object, ObjectManager, Player, Point2i, Point3f, Skybox, Sun, Timer, UpdateError,
+    Config, Object, ObjectManager, Player, Point2i, Point3f, Skybox, Sun, Timer, UpdateError,
 };
 
 pub struct World {
@@ -34,7 +34,7 @@ pub struct World {
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
     center: Point3f,
-    gravity: Float,
+    gravity: f32,
 }
 
 impl World {
@@ -65,7 +65,7 @@ impl World {
 
         let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Point3f::new(0., 0., 400.));
-        test_monkey.set_scale(Point3f::new(10., 10., 10.));
+        test_monkey.set_scale(Point3f::from_scalar(10.));
 
         let mut world = World {
             surface_texture: surface_texture,
@@ -94,8 +94,8 @@ impl World {
         Ok(world)
     }
 
-    pub fn get_active_radius(&self) -> Float {
-        (self.active_chunk_radius * CHUNK_SIZE * 8) as Float
+    pub fn get_active_radius(&self) -> f32 {
+        (self.active_chunk_radius * CHUNK_SIZE * 8) as f32
     }
 
     pub fn interact(&mut self, player: &mut Player) -> Result<(), WorldError> {
@@ -123,15 +123,15 @@ impl World {
         if height_diff > 0. {
             if height_diff > self.gravity && !player.is_jumping() {
                 player.toggle_jump();
-                player.set_z(chunk_height as Float);
+                player.set_z(chunk_height as f32);
             } else {
-                player.push_z(Float::max(-self.gravity, -height_diff as Float));
+                player.push_z(f32::max(-self.gravity, -height_diff as f32));
             }
         } else {
             if player.is_jumping() {
                 player.land();
             }
-            player.set_z(chunk_height as Float);
+            player.set_z(chunk_height as f32);
         }
 
         Ok(())
@@ -225,7 +225,7 @@ impl World {
 
     fn update_skybox_size(&mut self) {
         self.skybox
-            .scale((self.active_chunk_radius * CHUNK_SIZE * 2) as Float);
+            .scale((self.active_chunk_radius * CHUNK_SIZE * 2) as f32);
     }
 
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {

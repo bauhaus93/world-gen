@@ -1,5 +1,6 @@
+use core::Point2f;
 
 pub trait Noise: Sync + Send {
-    fn get_noise(&self, point: [f64; 2]) -> f64;
-    fn get_range(&self) -> [f64; 2];
+    fn get_noise(&self, point: Point2f) -> f32;
+    fn get_range(&self) -> [f32; 2];
 }

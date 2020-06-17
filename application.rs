@@ -3,7 +3,7 @@ use glutin;
 
 use crate::ApplicationError;
 use core::traits::{RenderInfo, Rotatable, Translatable, Updatable};
-use core::{Camera, Config, Core, Float, Player};
+use core::{Point3f, Camera, Config, Core, Float, Player};
 use world::World;
 
 pub struct Application {
@@ -77,7 +77,7 @@ impl Application {
     fn update_player_direction(&mut self) {
         if self.core.has_mouse_delta() {
             let delta = self.core.get_mouse_delta();
-            let offset = Vector3::new(-delta.0 as Float, delta.1 as Float, 0.);
+            let offset = Point3f::new(-delta.0 as f32, delta.1 as f32, 0.);
             let rotation = offset * self.mouse_sensitivity * (self.core.get_time_passed() as Float / 1000.);
             self.player.mod_rotation(rotation);
             self.core.center_mouse();

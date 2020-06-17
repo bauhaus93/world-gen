@@ -1,13 +1,9 @@
-use std::ops::Add;
-use glm::Vector3;
-
-use crate::Float;
+use crate::Point3f;
 
 pub trait Scalable {
-    fn set_scale(&mut self, new_scale: Vector3<Float>);
-    fn get_scale(&self) -> Vector3<Float>;
-    fn mod_scale(&mut self, offset: Vector3<Float>) {
-        let new_scale = self.get_scale().add(offset);
-        self.set_scale(new_scale);
+    fn set_scale(&mut self, new_scale: Point3f);
+    fn get_scale(&self) -> Point3f;
+    fn mod_scale(&mut self, offset: Point3f) {
+        self.set_scale(self.get_scale() + offset);
     }
 }

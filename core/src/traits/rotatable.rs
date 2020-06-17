@@ -1,13 +1,9 @@
-use std::ops::Add;
-use glm::Vector3;
-
-use crate::Float;
+use crate::Point3f;
 
 pub trait Rotatable {
-    fn set_rotation(&mut self, new_rotation: Vector3<Float>);
-    fn get_rotation(&self) -> Vector3<Float>;
-    fn mod_rotation(&mut self, offset: Vector3<Float>) {
-        let new_rotation = self.get_rotation().add(offset);
-        self.set_rotation(new_rotation);
+    fn set_rotation(&mut self, new_rotation: Point3f);
+    fn get_rotation(&self) -> Point3f;
+    fn mod_rotation(&mut self, offset: Point3f) {
+        self.set_rotation(self.get_rotation() + offset);
     }
-} 
+}

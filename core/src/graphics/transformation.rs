@@ -1,33 +1,39 @@
 use glm;
-use glm::{ Vector3, Matrix4, normalize };
+use glm::Matrix4;
 use num_traits::One;
 
-use crate::Float;
+use crate::Point3f;
 
-pub fn create_transformation_matrix(translation: Vector3<Float>, rotation: Vector3<Float>, scale: Vector3<Float>) -> Matrix4<Float> {
-    create_translation_matrix(translation) * create_rotation_matrix(rotation) * create_scale_matrix(scale) 
+pub fn create_transformation_matrix(
+    translation: Point3f,
+    rotation: Point3f,
+    scale: Point3f,
+) -> Matrix4<f32> {
+    create_translation_matrix(translation)
+        * create_rotation_matrix(rotation)
+        * create_scale_matrix(scale)
 }
 
-pub fn create_translation_matrix(translation: Vector3<Float>) -> Matrix4<Float> {
-    glm::ext::translate(&Matrix4::<Float>::one(), translation)
+pub fn create_translation_matrix(translation: Point3f) -> Matrix4<f32> {
+    glm::ext::translate(&Matrix4::<f32>::one(), translation.as_glm())
 }
 
-pub fn create_rotation_matrix(rotation: Vector3<Float>) -> Matrix4<Float> {
-    let one = Matrix4::<Float>::one();
-    glm::ext::rotate(&one, rotation.x as Float, glm::Vector3::<Float>::new(1., 0., 0.)) *
-    glm::ext::rotate(&one, rotation.y as Float, glm::Vector3::<Float>::new(0., 1., 0.)) *
-    glm::ext::rotate(&one, rotation.z as Float, glm::Vector3::<Float>::new(0., 0., 1.))
+pub fn create_rotation_matrix(rotation: Point3f) -> Matrix4<f32> {
+    let one = Matrix4::<f32>::one();
+    glm::ext::rotate(&one, rotation[0], glm::Vector3::<f32>::new(1., 0., 0.))
+        * glm::ext::rotate(&one, rotation[1], glm::Vector3::<f32>::new(0., 1., 0.))
+        * glm::ext::rotate(&one, rotation[2], glm::Vector3::<f32>::new(0., 0., 1.))
 }
 
-pub fn create_scale_matrix(scale: Vector3<Float>) -> Matrix4<Float> {
-    glm::ext::scale(&Matrix4::<Float>::one(), scale)
+pub fn create_scale_matrix(scale: Point3f) -> Matrix4<f32> {
+    glm::ext::scale(&Matrix4::<f32>::one(), scale.as_glm())
 }
 
-pub fn create_direction(rotation: Vector3<Float>) -> Vector3<Float> {
-    normalize(Vector3::<Float>::new(
-        rotation.y.sin() * rotation.x.cos(),
-        rotation.y.sin() * rotation.x.sin(),
-        rotation.y.cos()))
+pub fn create_direction(rotation: Point3f) -> Point3f {
+    Point3f::new(
+        rotation[1].sin() * rotation[0].cos(),
+        rotation[1].sin() * rotation[0].sin(),
+        rotation[1].cos(),
+    )
+    .as_normalized()
 }
-
-

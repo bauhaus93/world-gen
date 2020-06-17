@@ -1,34 +1,33 @@
-use std::convert::TryFrom;
 use std::collections::BTreeSet;
+use std::convert::TryFrom;
 
-use rand::{ Rng, rngs::SmallRng, SeedableRng };
-use glm::{ Vector2, Vector3 };
+use glm::{Vector2, Vector3};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use core::{Float, Object, ObjectManager };
-use core::traits::{ Translatable, Rotatable, Scalable };
-use core::graphics::mesh::{ Vertex, Triangle, Mesh, VertexBuffer };
-use super::{ Chunk, ChunkError, HeightMap, Architect, CHUNK_SIZE, get_world_pos };
+use super::{get_world_pos, Architect, Chunk, ChunkError, HeightMap, CHUNK_SIZE};
+use core::graphics::mesh::{Mesh, Triangle, Vertex, VertexBuffer};
+use core::traits::{Rotatable, Scalable, Translatable};
+use core::{Object, ObjectManager, Point2i, Point3f, Point2f};
 
 pub struct ChunkBuilder {
-    pos: [i32; 2],
+    pos: Point2i,
     lod: u8,
     height_map: HeightMap,
     surface_vertices: VertexBuffer,
-    tree_list: Vec<Object>
+    tree_list: Vec<Object>,
 }
 
 impl ChunkBuilder {
-
     pub fn new(
-        pos: [i32; 2],
+        pos: Point2i,
         lod: u8,
-        architect: &Architect,
+        architect: &dyn Architect,
         object_manager: &ObjectManager,
-        random_state: &[u8; 16]) -> Result<Self, ChunkError> {
-
+        random_state: &[u8; 16],
+    ) -> Result<Self, ChunkError> {
         let height_map = match lod {
-            0 => architect.create_height_map(pos, CHUNK_SIZE, 1),
-            _ => architect.create_height_map(pos, CHUNK_SIZE / 8, 8),
+            0 => architect.create_heightmap(pos, CHUNK_SIZE, 1),
+            _ => architect.create_heightmap(pos, CHUNK_SIZE / 8, 8),
         };
         let surface_buffer = create_surface_buffer(pos, architect, &height_map);
         let mut builder = Self {
@@ -57,27 +56,33 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    fn load_trees<R: Rng + ?Sized>(&mut self, object_manager: &ObjectManager, rng: &mut R) -> Result<(), ChunkError> {
+    fn load_trees<R: Rng + ?Sized>(
+        &mut self,
+        object_manager: &ObjectManager,
+        rng: &mut R,
+    ) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
             let size = self.height_map.get_size();
             let tree_count = rng.gen_range(2, 20);
-            let mut positions: BTreeSet<[i32; 2]> = BTreeSet::default();
-            for _ in 0..tree_count {    // ignore if less trees, bc would tree would be spawned on same pos
-                positions.insert([rng.gen_range(0, size), rng.gen_range(0, size)]);
+            let mut positions: BTreeSet<Point2i> = BTreeSet::default();
+            for _ in 0..tree_count {
+                positions.insert(Point2i::new(rng.gen_range(0, size), rng.gen_range(0, size)));
             }
             for rel_pos in positions.into_iter() {
-                let abs_pos = [((self.pos[0] * CHUNK_SIZE) + rel_pos[0] * resolution) as Float,
-                                ((self.pos[1] * CHUNK_SIZE) + rel_pos[1] * resolution) as Float];
                 let mut tree = object_manager.create_object("tree")?;
-                tree.set_translation(Vector3::new(abs_pos[0], abs_pos[1], self.height_map.get(&rel_pos) as Float));
+                let abs_pos = (Point2f::from(self.pos * CHUNK_SIZE)
+                    + Point2f::from(rel_pos) * resolution as f32)
+                    .extend(self.height_map.get(rel_pos));
+                tree.set_translation(abs_pos);
                 let scale_xy = rng.gen_range(0.8, 1.2);
                 let scale_z = rng.gen_range(0.8, 1.4);
-                tree.set_scale(Vector3::new(scale_xy, scale_xy, scale_z));
-                let orientation = Vector3::new(
+                tree.set_scale(Point3f::new(scale_xy, scale_xy, scale_z));
+                let orientation = Point3f::new(
                     rng.gen_range(-0.2, 0.2),
                     rng.gen_range(-0.2, 0.2),
-                    rng.gen_range(-0.2, 0.2));
+                    rng.gen_range(-0.2, 0.2),
+                );
                 tree.set_rotation(orientation);
                 self.tree_list.push(tree);
             }
@@ -86,46 +91,70 @@ impl ChunkBuilder {
     }
 }
 
-fn create_surface_buffer(origin: [i32; 2], architect: &Architect, height_map: &HeightMap) -> VertexBuffer {
+fn create_surface_buffer(
+    origin: Point2i,
+    architect: &dyn Architect,
+    height_map: &HeightMap,
+) -> VertexBuffer {
     let size = height_map.get_size();
     let resolution = height_map.get_resolution();
     let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
     for y in 0..size - 1 {
         for x in 0..size - 1 {
-            let abs_pos = get_world_pos(&origin, &[x, y], resolution);
+            let rel_pos = Point2i::new(x, y);
+            let abs_pos = get_world_pos(origin, Point2f::from(rel_pos * resolution));
             let terrain = architect.get_terrain(abs_pos);
-            triangles.extend(&add_quad_triangles(&[x, y], height_map, terrain.get_layer()));
+            triangles.extend(&add_quad_triangles(
+                &[x, y],
+                height_map,
+                terrain.get_layer(),
+            ));
         }
     }
     VertexBuffer::from(triangles.as_slice())
 }
 
-fn add_quad_triangles(offset: &[i32; 2], height_map: &HeightMap, texture_layer: u32) -> [Triangle; 2] {
-    const OFFSET: Float = 1.;
-    const VERTEX_OFFSETS: [[Float; 2]; 6] = [
-        [0., 0.],         [OFFSET, OFFSET], [0., OFFSET],
-        [OFFSET, OFFSET], [0., 0.],         [OFFSET, 0.]
+fn add_quad_triangles(
+    offset: &[i32; 2],
+    height_map: &HeightMap,
+    texture_layer: u32,
+) -> [Triangle; 2] {
+    const OFFSET: f32 = 1.;
+    const VERTEX_OFFSETS: [[f32; 2]; 6] = [
+        [0., 0.],
+        [OFFSET, OFFSET],
+        [0., OFFSET],
+        [OFFSET, OFFSET],
+        [0., 0.],
+        [OFFSET, 0.],
     ];
-    let mut triangles = [Triangle::default(),
-                         Triangle::default()];
-    let resolution: Float = height_map.get_resolution() as Float;
+    let mut triangles = [Triangle::default(), Triangle::default()];
+    let resolution = height_map.get_resolution() as f32;
 
     for i in 0..2 {
-        let mut vertices: [Vertex; 3] = [Vertex::default(),
-                                         Vertex::default(),
-                                         Vertex::default()];
-        for (vert, off) in vertices.iter_mut().zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3)) {
-                let map_pos = [offset[0] + i32::max(0, i32::min(1, off[0] as i32)),
-                               offset[1] + i32::max(0, i32::min(1, off[1] as i32))];
-                let height = height_map.get(&map_pos);
-                vert.set_pos(Vector3::new((offset[0] as Float + off[0]) * resolution,
-                                          (offset[1] as Float + off[1]) * resolution,
-                                          height as Float));
-                debug_assert!(off[0] <= 1., off[1] <= 1.);
-                vert.set_uv(Vector2::new(off[0], off[1]));
+        let mut vertices: [Vertex; 3] = [Vertex::default(), Vertex::default(), Vertex::default()];
+        for (vert, off) in vertices
+            .iter_mut()
+            .zip(VERTEX_OFFSETS.iter().skip(i * 3).take(3))
+        {
+            let map_pos = Point2i::new(
+                offset[0] + i32::max(0, i32::min(1, off[0] as i32)),
+                offset[1] + i32::max(0, i32::min(1, off[1] as i32)),
+            );
+
+            let height = height_map.get(map_pos);
+            vert.set_pos(Vector3::new(
+                (offset[0] as f32 + off[0]) * resolution,
+                (offset[1] as f32 + off[1]) * resolution,
+                height,
+            ));
+            debug_assert!(off[0] <= 1., off[1] <= 1.);
+            vert.set_uv(Vector2::new(off[0], off[1]));
         }
         triangles[i] = Triangle::new(vertices);
     }
-    triangles.iter_mut().for_each(|t| t.set_uv_layer(texture_layer));
+    triangles
+        .iter_mut()
+        .for_each(|t| t.set_uv_layer(texture_layer));
     triangles
 }

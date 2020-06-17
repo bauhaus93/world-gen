@@ -1,19 +1,20 @@
 
 use rand::Rng;
 
+use core::Point2f;
 use super::{ Noise, SimplexNoise };
 
 const DEFAULT_OCTAVES: u8 = 4;
-const DEFAULT_ROUGHNESS: f64 = 0.8;
-const DEFAULT_SCALE: f64 = 1e-2;
-const DEFAULT_RANGE: [f64; 2]= [-1., 1.];
+const DEFAULT_ROUGHNESS: f32 = 0.8;
+const DEFAULT_SCALE: f32 = 1e-2;
+const DEFAULT_RANGE: [f32; 2]= [-1., 1.];
 
 pub struct OctavedNoise {
     noise: Box<dyn Noise>,
     octaves: u8,
-    roughness: f64,
-    scale: f64,
-    range: [f64; 2]
+    roughness: f32,
+    scale: f32,
+    range: [f32; 2]
 }
 
 impl OctavedNoise {
@@ -33,15 +34,15 @@ impl OctavedNoise {
         self.octaves = octave_count;
     }
 
-    pub fn set_roughness(&mut self, roughness: f64) {
+    pub fn set_roughness(&mut self, roughness: f32) {
         self.roughness = roughness;
     }
 
-    pub fn set_scale(&mut self, scale: f64) {
+    pub fn set_scale(&mut self, scale: f32) {
         self.scale = scale;
     }
 
-    pub fn set_range(&mut self, new_range: [f64; 2]) {
+    pub fn set_range(&mut self, new_range: [f32; 2]) {
         self.range = new_range;
     }
 }
@@ -52,14 +53,14 @@ impl OctavedNoise {
 */
 
 impl Noise for OctavedNoise {
-    fn get_noise(&self, p: [f64; 2]) -> f64 {
-        let mut sum: f64 = 0.;
+    fn get_noise(&self, p: Point2f) -> f32 {
+        let mut sum: f32 = 0.;
         let mut freq = self.scale;
-        let mut weight: f64 = 1.;
-        let mut weight_sum: f64 = 0.;
+        let mut weight: f32 = 1.;
+        let mut weight_sum: f32 = 0.;
 
         for _oct in 0..self.octaves {
-            sum += self.noise.get_noise([p[0] * freq, p[1] * freq]) * weight;
+            sum += self.noise.get_noise(p * freq) * weight;
             weight_sum += weight;
             freq *= 2.;
             weight *= self.roughness;
@@ -71,7 +72,7 @@ impl Noise for OctavedNoise {
         value
     }
 
-    fn get_range(&self) -> [f64; 2] {
+    fn get_range(&self) -> [f32; 2] {
         self.range
     }
 }

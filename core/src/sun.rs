@@ -1,16 +1,13 @@
 use std::f32::consts::PI;
-use std::ops::Sub;
 
-use glm::{ GenNum, Vector3 };
-
-use crate::{Float, UpdateError, graphics::transformation::create_direction};
 use crate::traits::Updatable;
+use crate::{graphics::transformation::create_direction, Point3f, UpdateError};
 
 pub struct Sun {
-    rotation_center: Vector3<Float>,
-    center_distance: Float,
-    rotation: Vector3<Float>,
-    rotation_speed: Float
+    rotation_center: Point3f,
+    center_distance: f32,
+    rotation: Point3f,
+    rotation_speed: f32,
 }
 
 impl Sun {
@@ -19,21 +16,21 @@ impl Sun {
         sun.set_day_length(length_seconds);
         sun
     }
-    pub fn set_rotation_center(&mut self, mut new_center: Vector3<Float>) {
+    pub fn set_rotation_center(&mut self, mut new_center: Point3f) {
         new_center[2] = 0.;
         self.rotation_center = new_center;
     }
     pub fn set_day_length(&mut self, length_seconds: u32) {
         self.rotation_speed = calculate_rotation_speed(length_seconds);
     }
-    pub fn calculate_position(&self) -> Vector3<Float> {
-        (create_direction(self.rotation) * self.center_distance).sub(self.rotation_center)
+    pub fn calculate_position(&self) -> Point3f {
+        (create_direction(self.rotation) * self.center_distance) - self.rotation_center
     }
     #[allow(unused)]
     pub fn calculate_daytime(&self) -> f32 {
         match 12. + 24. * self.rotation[1] / (2. * PI) {
             t if t > 24. => t - 24.,
-            t => t
+            t => t,
         }
     }
     pub fn calculate_light_level(&self) -> f32 {
@@ -45,17 +42,17 @@ impl Default for Sun {
     fn default() -> Sun {
         const DEFAULT_DAY_LEN: u32 = 60;
         Sun {
-            rotation_center: Vector3::from_s(0.),
+            rotation_center: Point3f::from_scalar(0.),
             center_distance: 10000.,
-            rotation: Vector3::from_s(0.),
-            rotation_speed: calculate_rotation_speed(DEFAULT_DAY_LEN)
+            rotation: Point3f::from_scalar(0.),
+            rotation_speed: calculate_rotation_speed(DEFAULT_DAY_LEN),
         }
     }
 }
 
 impl Updatable for Sun {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
-        self.rotation[1] += self.rotation_speed * time_passed as Float;
+        self.rotation[1] += self.rotation_speed * time_passed as f32;
         if self.rotation[1] > 2. * PI {
             self.rotation[1] -= 2. * PI;
         }

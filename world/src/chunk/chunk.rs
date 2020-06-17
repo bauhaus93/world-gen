@@ -1,12 +1,12 @@
-use glm::{Vector2, Vector3};
+use glm::Vector3;
 
 use super::{HeightMap, CHUNK_SIZE};
 use core::graphics::{GraphicsError, Mesh};
 use core::traits::{RenderInfo, Renderable, Translatable};
-use core::{BoundingBox, Float, Model, Object};
+use core::{BoundingBox, Float, Model, Object, Point2f, Point2i};
 
 pub struct Chunk {
-    pos: [i32; 2],
+    pos: Point2i,
     model: Model,
     mesh: Mesh,
     height_map: HeightMap,
@@ -16,13 +16,10 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(pos: [i32; 2], height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
+    pub fn new(pos: Point2i, height_map: HeightMap, lod: u8, mesh: Mesh) -> Self {
         let mut model = Model::default();
-        model.set_translation(Vector3::new(
-            (pos[0] * CHUNK_SIZE) as Float,
-            (pos[1] * CHUNK_SIZE) as Float,
-            0.,
-        ));
+        model.set_translation(Point2f::from(pos * CHUNK_SIZE).extend(0.));
+
         let bounding_box = build_bounding_box(&height_map);
 
         Self {
@@ -36,7 +33,7 @@ impl Chunk {
         }
     }
 
-    pub fn get_pos(&self) -> [i32; 2] {
+    pub fn get_pos(&self) -> Point2i {
         self.pos
     }
 
@@ -48,12 +45,9 @@ impl Chunk {
         self.mesh.get_vertex_count()
     }
 
-    pub fn get_height(&self, world_pos: Vector2<Float>) -> f64 {
-        let chunk_pos = self.model.get_translation();
-        let relative_pos = [
-            (world_pos.x as f64) - (chunk_pos.x as f64),
-            (world_pos.y as f64) - (chunk_pos.y as f64),
-        ];
+    pub fn get_height(&self, world_pos: Point2f) -> f32 {
+        let chunk_pos = self.model.get_translation().as_xy();
+        let relative_pos = world_pos - chunk_pos;
         self.height_map.get_interpolated_height(relative_pos)
     }
 

@@ -1,25 +1,24 @@
 use glm;
-use glm::GenNum;
-use glm::{Matrix4, Vector3};
+use glm::Matrix4;
 use num_traits::One;
 use std::fmt;
 
 use super::create_transformation_matrix;
 use crate::traits::{Rotatable, Scalable, Translatable};
-use crate::Float;
+use crate::Point3f;
 
 pub struct Model {
-    position: Vector3<Float>,
-    rotation: Vector3<Float>,
-    scale: Vector3<Float>,
-    matrix: Matrix4<Float>,
+    position: Point3f,
+    rotation: Point3f,
+    scale: Point3f,
+    matrix: Matrix4<f32>,
 }
 
 impl Model {
-    pub fn get_matrix(&self) -> Matrix4<Float> {
+    pub fn get_matrix(&self) -> Matrix4<f32> {
         self.matrix.clone()
     }
-    pub fn get_matrix_ref(&self) -> &Matrix4<Float> {
+    pub fn get_matrix_ref(&self) -> &Matrix4<f32> {
         &self.matrix
     }
     fn update_matrix(&mut self) {
@@ -30,9 +29,9 @@ impl Model {
 impl Default for Model {
     fn default() -> Self {
         let mut model = Self {
-            position: Vector3::from_s(0.),
-            rotation: Vector3::from_s(0.),
-            scale: Vector3::from_s(1.),
+            position: Point3f::from_scalar(0.),
+            rotation: Point3f::from_scalar(0.),
+            scale: Point3f::from_scalar(1.),
             matrix: Matrix4::one(),
         };
         model.update_matrix();
@@ -45,56 +44,52 @@ impl fmt::Display for Model {
         write!(
             f,
             "pos = {:.2}/{:.2}/{:.2}, rot = {:.2}/{:.2}/{:.2}",
-            self.position.x,
-            self.position.y,
-            self.position.z,
-            self.rotation.x,
-            self.rotation.y,
-            self.rotation.z
+            self.position[0],
+            self.position[1],
+            self.position[2],
+            self.rotation[0],
+            self.rotation[1],
+            self.rotation[2]
         )
     }
 }
 
 impl Translatable for Model {
-    fn set_translation(&mut self, new_translation: Vector3<Float>) {
+    fn set_translation(&mut self, new_translation: Point3f) {
         self.position = new_translation;
         self.update_matrix();
     }
-    fn get_translation(&self) -> Vector3<Float> {
-        self.position.clone()
+    fn get_translation(&self) -> Point3f {
+        self.position
     }
 }
 
 impl Rotatable for Model {
-    fn set_rotation(&mut self, new_rotation: Vector3<Float>) {
-        const DOUBLE_PI: Float = std::f32::consts::PI as Float * 2.;
+    fn set_rotation(&mut self, new_rotation: Point3f) {
+        const DOUBLE_PI: f32 = std::f32::consts::PI * 2.;
         self.rotation = new_rotation;
-        for value in self.rotation.as_array_mut().iter_mut() {
-            if *value >= DOUBLE_PI {
-                *value -= DOUBLE_PI;
-            } else if *value < 0. {
-                *value += DOUBLE_PI;
+        for i in 0..3 {
+            if self.rotation[i] >= DOUBLE_PI {
+                self.rotation[i] -= DOUBLE_PI;
+            } else if self.rotation[i] < 0. {
+                self.rotation[i] += DOUBLE_PI;
             }
         }
         self.update_matrix();
     }
-    fn get_rotation(&self) -> Vector3<Float> {
-        self.rotation.clone()
+    fn get_rotation(&self) -> Point3f {
+        self.rotation
     }
 }
 
 impl Scalable for Model {
-    fn set_scale(&mut self, new_scale: Vector3<Float>) {
-        const MIN_SCALE: Float = 1e-3;
+    fn set_scale(&mut self, new_scale: Point3f) {
+        const MIN_SCALE: f32 = 1e-3;
         self.scale = new_scale;
-        for value in self.scale.as_array_mut().iter_mut() {
-            if *value < MIN_SCALE {
-                *value = MIN_SCALE;
-            }
-        }
+        self.scale.clamp_min(MIN_SCALE);
         self.update_matrix();
     }
-    fn get_scale(&self) -> Vector3<Float> {
-        self.scale.clone()
+    fn get_scale(&self) -> Point3f {
+        self.scale
     }
 }

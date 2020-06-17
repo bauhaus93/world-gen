@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use glm::{normalize, GenNum, Vector3};
 use rand;
 use rand::rngs::StdRng;
 #[allow(unused)]
@@ -11,10 +10,12 @@ use rand::{FromEntropy, Rng, SeedableRng};
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
+use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
-use core::{distance::get_distance_2d_from_zero, format::format_number};
-use core::{Config, Float, Object, ObjectManager, Player, Skybox, Sun, Timer, UpdateError};
+use core::{
+    Config, Float, Object, ObjectManager, Player, Point2i, Point3f, Skybox, Sun, Timer, UpdateError,
+};
 
 pub struct World {
     surface_texture: SurfaceTexture,
@@ -22,17 +23,17 @@ pub struct World {
     skybox: Skybox,
     sun: Sun,
     chunk_loader: ChunkLoader,
-    chunks: BTreeMap<[i32; 2], Chunk>,
+    chunks: BTreeMap<Point2i, Chunk>,
     chunk_update_timer: Timer,
     chunk_build_stats_timer: Timer,
     lod_near_radius: i32,
     lod_far_radius: i32,
     active_chunk_radius: i32,
-    last_chunk_load: [i32; 2],
+    last_chunk_load: Point2i,
     #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
-    center: Vector3<Float>,
+    center: Point3f,
     gravity: Float,
 }
 
@@ -63,8 +64,8 @@ impl World {
         );
 
         let mut test_monkey = object_manager.create_object("monkey")?;
-        test_monkey.set_translation(Vector3::new(0., 0., 400.));
-        test_monkey.set_scale(Vector3::from_s(10.));
+        test_monkey.set_translation(Point3f::new(0., 0., 400.));
+        test_monkey.set_scale(Point3f::new(10., 10., 10.));
 
         let mut world = World {
             surface_texture: surface_texture,
@@ -78,10 +79,10 @@ impl World {
             lod_near_radius: near_radius,
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
-            last_chunk_load: [0, 0],
+            last_chunk_load: Point2i::default(),
             object_manager: object_manager,
             test_monkey: test_monkey,
-            center: Vector3::from_s(0.),
+            center: Point3f::new(0., 0., 0.),
             gravity: gravity,
         };
 
@@ -102,19 +103,19 @@ impl World {
 
         let chunk_height = match self.get_chunk_by_world_pos(player_pos) {
             Some(chunk) => {
-                let player_pos_xy = player_pos.truncate(2);
+                let player_pos_xy = player_pos.as_xy();
                 let height = chunk.get_height(player_pos_xy);
-                let forward_xy = normalize(player.get_direction().truncate(2));
+                let forward_xy = player.get_direction().as_xy().as_normalized();
                 let forward_height = chunk.get_height(player_pos_xy + forward_xy);
                 let forward_z = forward_height - height;
 
-                player.update_forward(forward_xy.extend(forward_z as Float));
-                height as Float
+                player.update_forward(forward_xy.extend(forward_z));
+                height
             }
             None => {
                 trace!("Player not on any chunk!");
                 player.update_forward(player.get_direction());
-                player_pos.z as Float
+                player_pos[2]
             }
         };
 
@@ -137,11 +138,12 @@ impl World {
     }
 
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
-        let mut request_list: Vec<([i32; 2], u8)> = Vec::new();
+        let mut request_list: Vec<(Point2i, u8)> = Vec::new();
         let player_chunk_pos = get_chunk_pos(self.center);
         for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
             for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-                if let Some(pos_lod) = self.should_load_chunk([x, y], player_chunk_pos) {
+                let p = Point2i::new(x, y);
+                if let Some(pos_lod) = self.should_load_chunk(p, player_chunk_pos) {
                     request_list.push(pos_lod);
                 }
             }
@@ -186,15 +188,15 @@ impl World {
         vertex_count
     }
 
-    pub fn set_center(&mut self, pos: Vector3<Float>) {
+    pub fn set_center(&mut self, pos: Point3f) {
         self.center = pos;
     }
 
-    fn should_load_chunk(&self, pos: [i32; 2], player_pos: [i32; 2]) -> Option<([i32; 2], u8)> {
-        let distance = get_distance_2d_from_zero(pos).round() as i32;
+    fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
+        let distance = rel_pos.get_length() as i32;
         if distance < self.active_chunk_radius {
             let lod = self.lod_by_chunk_distance(distance);
-            let chunk_pos = [player_pos[0] + pos[0], player_pos[1] + pos[1]];
+            let chunk_pos = player_pos + rel_pos;
             match self.chunks.get(&chunk_pos) {
                 Some(c) => {
                     let old_lod = c.get_lod();
@@ -229,20 +231,20 @@ impl World {
     fn update_shader_resources(&self) -> Result<(), GraphicsError> {
         self.surface_shader_program.use_program();
         self.surface_shader_program
-            .set_resource_vec3("view_pos", &self.center)?;
+            .set_resource_vec3("view_pos", &self.center.as_glm())?;
         self.surface_shader_program
-            .set_resource_vec3("light_pos", &self.sun.calculate_position())?;
+            .set_resource_vec3("light_pos", &self.sun.calculate_position().as_glm())?;
 
         let light_level = self.sun.calculate_light_level();
-        let fog_color = Vector3::from_s(1. - (-light_level).exp());
+        let fog_color = Point3f::from_scalar(1. - (-light_level).exp());
         self.surface_shader_program
-            .set_resource_vec3("fog_color", &fog_color)?;
+            .set_resource_vec3("fog_color", &fog_color.as_glm())?;
         self.skybox.update_light_level(light_level)?;
         self.surface_shader_program.use_program();
         Ok(())
     }
 
-    fn get_chunk_by_world_pos(&self, world_pos: Vector3<Float>) -> Option<&Chunk> {
+    fn get_chunk_by_world_pos(&self, world_pos: Point3f) -> Option<&Chunk> {
         self.chunks.get(&get_chunk_pos(world_pos))
     }
 }
@@ -293,11 +295,11 @@ impl Updatable for World {
         self.sun.set_rotation_center(self.center);
         self.sun.tick(time_passed)?;
 
-        self.test_monkey.mod_rotation(Vector3::new(0., 0., 0.25));
-        self.test_monkey.mod_translation(Vector3::new(4., 0., 0.));
+        self.test_monkey.mod_rotation(Point3f::new(0., 0., 0.25));
+        self.test_monkey.mod_translation(Point3f::new(4., 0., 0.));
         if self.test_monkey.get_translation()[0] >= 500. {
             self.test_monkey
-                .mod_translation(Vector3::new(-500., 0., 0.));
+                .mod_translation(Point3f::new(-500., 0., 0.));
         }
 
         if let Err(e) = self.update_shader_resources() {

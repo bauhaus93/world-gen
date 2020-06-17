@@ -1,12 +1,14 @@
 use std::cmp::Ordering;
-use std::ops::{Add, AddAssign, Index, Sub};
+use std::ops::{Add, AddAssign, Index, Sub, Mul};
 
 pub struct Point2<T>(pub [T; 2]);
 pub struct Point3<T>(pub [T; 3]);
 
-type Point2i = Point2<i32>;
-type Point3i = Point3<i32>;
-type Point3f = Point3<f32>;
+pub type Point2i = Point2<i32>;
+pub type Point2f = Point2<f32>;
+
+pub type Point3i = Point3<i32>;
+pub type Point3f = Point3<f32>;
 
 const EPSILON: f32 = 1e-6;
 
@@ -34,7 +36,7 @@ impl<T: Add<Output = T> + Copy + Clone> Add for Point2<T> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        Self([self[0] + other[0], self[1] + other[1]])
+        Self::new(self[0] + other[0], self[1] + other[1])
     }
 }
 
@@ -44,12 +46,25 @@ impl<T: Add<Output = T> + Copy + Clone> AddAssign for Point2<T> {
     }
 }
 
+impl<T: Mul<Output = T> + Copy + Clone> Mul<T> for Point2<T> {
+    type Output = Self;
+    fn mul(self, scalar: T) -> Self {
+        Self::new(self[0] * scalar, self[1] * scalar)
+    }
+}
+
 impl Ord for Point2i {
     fn cmp(&self, other: &Self) -> Ordering {
         match self[0].cmp(&other[0]) {
             Ordering::Equal => self[1].cmp(&other[1]),
             order => order,
         }
+    }
+}
+
+impl From<Point2f> for Point2i {
+    fn from(p: Point2f) -> Point2i {
+        Point2i::new(p[0].round() as i32, p[1].round() as i32)
     }
 }
 

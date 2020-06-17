@@ -1,13 +1,9 @@
-use std::ops::Add;
-use glm::Vector3;
-
-use crate::Float;
+use crate::Point3f;
 
 pub trait Translatable {
-    fn set_translation(&mut self, new_translation: Vector3<Float>);
-    fn get_translation(&self) -> Vector3<Float>;
-    fn mod_translation(&mut self, offset: Vector3<Float>) {
-        let new_translation = self.get_translation().add(offset);
-        self.set_translation(new_translation);
+    fn set_translation(&mut self, new_translation: Point3f);
+    fn get_translation(&self) -> Point3f;
+    fn mod_translation(&mut self, offset: Point3f) {
+        self.set_translation(self.get_translation() + offset);
     }
 }

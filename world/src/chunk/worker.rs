@@ -5,14 +5,14 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use super::{Architect, BuildStats, ChunkBuilder, ChunkError};
-use core::ObjectManager;
+use core::{ObjectManager, Point2i};
 
 #[derive(Clone)]
 pub struct Worker {
-    architect: Arc<Architect>,
+    architect: Arc<dyn Architect>,
     object_manager: Arc<ObjectManager>,
     stop: Arc<AtomicBool>,
-    input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     random_state: [u8; 16],
@@ -20,10 +20,10 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(
-        architect: Arc<Architect>,
+        architect: Arc<dyn Architect>,
         object_manager: Arc<ObjectManager>,
         stop: Arc<AtomicBool>,
-        input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+        input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
         output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
         build_stats: Arc<Mutex<BuildStats>>,
         random_state: [u8; 16],
@@ -61,11 +61,11 @@ impl Worker {
         Ok(())
     }
 
-    fn build_chunk(&self, chunk_pos: [i32; 2], lod: u8) -> Result<(), ChunkError> {
+    fn build_chunk(&self, chunk_pos: Point2i, lod: u8) -> Result<(), ChunkError> {
         let builder = ChunkBuilder::new(
             chunk_pos,
             lod,
-            &self.architect,
+            self.architect.as_ref(),
             &self.object_manager,
             &self.random_state,
         )?;
@@ -91,7 +91,7 @@ impl Worker {
         Ok(())
     }
 
-    fn get_chunk_pos(&self) -> Result<Option<([i32; 2], u8)>, ChunkError> {
+    fn get_chunk_pos(&self) -> Result<Option<(Point2i, u8)>, ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => Ok((*guard).pop_back()),
             Err(_poisoned) => Err(ChunkError::MutexPoison),

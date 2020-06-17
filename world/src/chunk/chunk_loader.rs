@@ -5,18 +5,18 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use core::{ ObjectManager };
+use core::{ ObjectManager, Point2i };
 use crate::TerrainSet;
-use super::{ Chunk, ChunkBuilder, Architect, ChunkError, BuildStats, Worker };
+use super::{ Chunk, ChunkBuilder, Architect, ArchitectNoiseInfinite, ChunkError, BuildStats, Worker };
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
-    architect: Arc<Architect>,
+    architect: Arc<dyn Architect>,
     object_manager: Arc<ObjectManager>,
-    input_queue: Arc<Mutex<VecDeque<([i32; 2], u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
-    handeled_positions: BTreeSet<[i32; 2]>,
+    handeled_positions: BTreeSet<Point2i>,
     thread_handles: Vec<thread::JoinHandle<()>>,
     random_state: [u8; 16],
 }
@@ -28,7 +28,7 @@ impl ChunkLoader {
         rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(Architect::from_rng(rng, terrain_set)),
+            architect: Arc::new(ArchitectNoiseInfinite::from_rng(rng, terrain_set)),
             object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),
@@ -78,7 +78,7 @@ impl ChunkLoader {
         info!("Stopped {} chunk loader threads", stop_count);
     }
 
-    pub fn get(&mut self) -> Result<BTreeMap<[i32; 2], Chunk>, ChunkError> {
+    pub fn get(&mut self) -> Result<BTreeMap<Point2i, Chunk>, ChunkError> {
         let mut chunks = BTreeMap::new();
         match self.output_queue.lock() {
             Ok(mut guard) => {
@@ -94,7 +94,7 @@ impl ChunkLoader {
         Ok(chunks)
     }
 
-    pub fn request(&mut self, chunk_pos: &[([i32; 2], u8)]) -> Result<(), ChunkError> {
+    pub fn request(&mut self, chunk_pos: &[(Point2i, u8)]) -> Result<(), ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => {
                 for (pos, lod) in chunk_pos {

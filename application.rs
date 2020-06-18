@@ -1,4 +1,3 @@
-use glm::Vector3;
 use glutin;
 
 use crate::ApplicationError;
@@ -54,10 +53,10 @@ impl Application {
         self.update_player_momentum();
         self.world.interact(&mut self.player)?;
 		if self.core.key_pressed(glutin::VirtualKeyCode::F1) {
-			self.player.mod_speed(0.1);
+			self.player.mod_speed(0.25);
 		}
 		if self.core.key_pressed(glutin::VirtualKeyCode::F2) {
-			self.player.mod_speed(-0.1);
+			self.player.mod_speed(-0.25);
 		}
 
         self.player.tick(self.core.get_time_passed())?;
@@ -105,7 +104,7 @@ impl Application {
             }
 
             if self.core.key_pressed(glutin::VirtualKeyCode::Space) {
-                self.player.jump(4.);
+                self.player.jump(6.);
             }
         }
     }

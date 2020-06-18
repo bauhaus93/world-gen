@@ -18,6 +18,14 @@ impl<T: Primitive> Point2<T> {
     pub fn extend(&self, z: T) -> Point3<T> {
         Point3::new(self[0], self[1], z)
     }
+
+    pub fn apply<T2: Primitive + Default, F: (Fn(T) -> T2)>(&self, f: F) -> Point2<T2> {
+        let mut res = Point2::<T2>::default();
+        for i in 0..2 {
+            res[i] = f(self[i])
+        }
+        res
+    }
 }
 
 impl<T: Primitive> From<Vector2<T>> for Point2<T> {

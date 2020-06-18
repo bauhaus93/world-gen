@@ -5,9 +5,9 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use rand::{ Rng };
 
-use core::{ ObjectManager, Point2i };
+use core::{ ObjectManager, Point2i, Point2f };
 use crate::TerrainSet;
-use super::{ Chunk, ChunkBuilder, Architect, ArchitectNoiseInfinite, ChunkError, BuildStats, Worker };
+use super::{ Chunk, ChunkBuilder, Architect, SimpleArchitect, ChunkError, BuildStats, Worker };
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
@@ -28,7 +28,7 @@ impl ChunkLoader {
         rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(ArchitectNoiseInfinite::from_rng(rng, terrain_set)),
+            architect: Arc::new(SimpleArchitect::from_rng(rng, terrain_set)),
             object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),

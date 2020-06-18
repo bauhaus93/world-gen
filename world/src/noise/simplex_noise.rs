@@ -23,6 +23,7 @@ const GRADIENTS: [[i32; 2]; 12] = [
     [0, 1], [0, -1], [0, 1], [0, -1]
 ];
 
+#[derive(Clone)]
 pub struct SimplexNoise {
     permutation_table: Vec<u8>,
 }

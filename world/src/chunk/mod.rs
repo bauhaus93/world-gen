@@ -5,14 +5,14 @@ pub mod chunk_size;
 pub mod height_map;
 mod chunk_builder;
 mod architect;
-mod architect_noise_infinite;
+mod simple_architect;
 mod worker;
 mod build_stats;
 
 pub use self::chunk::Chunk;
 pub use self::chunk_loader::ChunkLoader;
 pub use self::architect::Architect;
-pub use self::architect_noise_infinite::ArchitectNoiseInfinite;
+pub use self::simple_architect::SimpleArchitect;
 pub use self::chunk_size::CHUNK_SIZE;
 pub use self::chunk_error::ChunkError;
 #[allow(unused)]

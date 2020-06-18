@@ -1,32 +1,29 @@
+use rand::{Rng, SeedableRng};
 
-use rand::Rng;
-
+use super::{Noise, SimplexNoise};
 use core::Point2f;
-use super::{ Noise, SimplexNoise };
 
 const DEFAULT_OCTAVES: u8 = 4;
 const DEFAULT_ROUGHNESS: f32 = 0.8;
 const DEFAULT_SCALE: f32 = 1e-2;
-const DEFAULT_RANGE: [f32; 2]= [-1., 1.];
+const DEFAULT_RANGE: [f32; 2] = [-1., 1.];
 
 pub struct OctavedNoise {
     noise: Box<dyn Noise>,
     octaves: u8,
     roughness: f32,
     scale: f32,
-    range: [f32; 2]
+    range: [f32; 2],
 }
 
 impl OctavedNoise {
-
-    #[allow(dead_code)]
-    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    pub fn wrap(wrapped_noise: Box<dyn Noise>) -> Self {
         Self {
-            noise: Box::new(SimplexNoise::from_rng(rng)),
+            noise: wrapped_noise,
             octaves: DEFAULT_OCTAVES,
             roughness: DEFAULT_ROUGHNESS,
             scale: DEFAULT_SCALE,
-            range: DEFAULT_RANGE
+            range: DEFAULT_RANGE,
         }
     }
 
@@ -66,7 +63,7 @@ impl Noise for OctavedNoise {
             weight *= self.roughness;
         }
         let sub_range = self.noise.get_range();
-        let normalized =  (-sub_range[0] + (sum / weight_sum)) / (sub_range[1] - sub_range[0]);
+        let normalized = (-sub_range[0] + (sum / weight_sum)) / (sub_range[1] - sub_range[0]);
         debug_assert!(normalized >= 0. && normalized <= 1.);
         let value = self.range[0] + (self.range[1] - self.range[0]) * normalized;
         value

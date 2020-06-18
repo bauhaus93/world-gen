@@ -42,6 +42,14 @@ impl<T: Primitive> Point3<T> {
         self.clamp_min(min);
         self.clamp_max(max);
     }
+
+    pub fn apply<T2: Primitive + Default, F: (Fn(T) -> T2)>(&self, f: F) -> Point3<T2> {
+        let mut res = Point3::<T2>::default();
+        for i in 0..3 {
+            res[i] = f(self[i])
+        }
+        res
+    }
 }
 
 impl<T: Primitive> From<Vector3<T>> for Point3<T> {

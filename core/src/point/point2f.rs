@@ -12,6 +12,8 @@ impl Point2f {
     pub fn get_length(&self) -> f32 {
         glm::length(self.0)
     }
+
+    
 }
 
 impl From<Point2i> for Point2f {

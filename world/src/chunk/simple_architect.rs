@@ -21,12 +21,16 @@ impl Architect for SimpleArchitect {
     fn get_terrain(&self, absolute_pos: Point2f) -> &Terrain {
         self.terrain_set
             .get(&TerrainType::Grass)
-            .expect("Must have rock")
+            .expect("Must have grass")
     }
 }
 
 impl SimpleArchitect {
-    pub fn from_rng<R: Rng + ?Sized>(rng: &mut R, terrain_set: &TerrainSet) -> Self {
+    pub fn from_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        world_size: Point2f,
+        terrain_set: &TerrainSet,
+    ) -> Self {
         let mut local_rng = SmallRng::from_rng(rng).unwrap();
 
         let height_noise = NoiseBuilder::new()
@@ -35,6 +39,7 @@ impl SimpleArchitect {
             .scale(1e-3)
             .roughness(0.5)
             .range([0., 100.])
+            .repeat(world_size)
             .finish();
 
         let mountain_noise = NoiseBuilder::new()
@@ -43,6 +48,7 @@ impl SimpleArchitect {
             .scale(1e-4)
             .roughness(2.)
             .range([-1., 1.])
+            .repeat(world_size)
             .finish();
 
         Self {

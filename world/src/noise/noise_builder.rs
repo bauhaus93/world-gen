@@ -93,12 +93,13 @@ impl NoiseBuilder {
 
     fn handle_repeating_noise(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
         match self.repeat_cycle {
-            Some(cycle) => Box::new(RepeatingNoise::wrap(noise, cycle)),
+            Some(cycle) if !(cycle[0].is_finite() && cycle[1].is_finite()) => Box::new(RepeatingNoise::wrap(noise, cycle)),
+            Some(_infinite_cycle) => noise,
             None => noise
         }
     }
 
-    pub fn finish(self) -> Box<Noise> {
+    pub fn finish(self) -> Box<dyn Noise> {
         self.handle_repeating_noise(self.handle_octaved_noise(self.handle_base_noise()))
     }
 }

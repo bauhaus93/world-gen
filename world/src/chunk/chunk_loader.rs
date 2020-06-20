@@ -23,12 +23,12 @@ pub struct ChunkLoader {
 
 
 impl ChunkLoader {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R, object_manager: Arc<ObjectManager>, terrain_set: &TerrainSet) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R, architect: Box<dyn Architect>, object_manager: Arc<ObjectManager>) -> Self {
         let mut random_state = [0; 16];
         rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(SimpleArchitect::from_rng(rng, terrain_set)),
+            architect: Arc::from(architect),
             object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),

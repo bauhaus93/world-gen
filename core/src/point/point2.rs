@@ -1,4 +1,5 @@
 use glm::{Primitive, Vector2};
+use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use super::Point3;
@@ -113,5 +114,11 @@ impl<T: Add<Output = T> + Primitive + AddAssign> AddAssign for Point2<T> {
         for i in 0..2 {
             self[i] += other[i];
         }
+    }
+}
+
+impl<T: fmt::Display + Primitive> fmt::Display for Point2<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "P({}/{})", self[0], self[1])
     }
 }

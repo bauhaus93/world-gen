@@ -17,18 +17,32 @@ impl RepeatingNoise {
 
 impl Noise for RepeatingNoise {
     fn get_noise(&self, point: Point2f) -> f32 {
-        self.noise.get_noise(point)
-    }
+        let rep_pos = get_repeating_pos(point, self.size);
+        let pos_x = Point2f::new(self.size[0] - rep_pos[0], rep_pos[1]);
+        let pos_y = Point2f::new(rep_pos[0], self.size[1] - rep_pos[1]);
+        let pos_xy = Point2f::new(self.size[0] - rep_pos[0], self.size[1] - rep_pos[1]);
 
+
+        (self.noise.get_noise(rep_pos) +
+         self.noise.get_noise(pos_x) +
+         self.noise.get_noise(pos_y) +
+         self.noise.get_noise(pos_xy)) / 4.
+    }
 
     fn get_range(&self) -> [f32; 2] {
         self.noise.get_range()
     }
 }
 
-fn absolute_to_repeating_pos(absolute_pos: Point2f, size: Point2f) -> Point2f {
+fn get_repeating_pos(absolute_pos: Point2f, size: Point2f) -> Point2f {
     Point2f::new(
         absolute_pos[0].rem_euclid(size[0]),
         absolute_pos[1].rem_euclid(size[1]),
     )
 }
+
+fn rotate_90(point: Point2f, center: Point2f) -> Point2f {
+    Point2f::new(center[0] + center[1] - point[1], -center[0] + center[1] + point[0])
+}
+
+

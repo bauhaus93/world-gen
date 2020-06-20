@@ -7,14 +7,17 @@ use rand::rngs::StdRng;
 #[allow(unused)]
 use rand::{FromEntropy, Rng, SeedableRng};
 
-use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
+use crate::chunk::{
+    chunk_size::get_chunk_pos, Architect, Chunk, ChunkLoader, SimpleArchitect, CHUNK_SIZE,
+};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
-    Config, Object, ObjectManager, Player, Point2i, Point3f, Skybox, Sun, Timer, UpdateError,
+    Config, Object, ObjectManager, Player, Point2f, Point2i, Point3f, Skybox, Sun, Timer,
+    UpdateError,
 };
 
 pub struct World {
@@ -57,11 +60,12 @@ impl World {
         let mut rng = StdRng::from_entropy();
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
-        let chunk_loader = ChunkLoader::new(
+        let architect = Box::new(SimpleArchitect::from_rng(
             &mut rng,
-            object_manager.clone(),
+            Point2f::from_scalar(1000.),
             surface_texture.get_terrain_set(),
-        );
+        ));
+        let chunk_loader = ChunkLoader::new(&mut rng, architect, object_manager.clone());
 
         let mut test_monkey = object_manager.create_object("monkey")?;
         test_monkey.set_translation(Point3f::new(0., 0., 400.));

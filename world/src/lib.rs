@@ -17,6 +17,7 @@ extern crate core;
 pub mod world;
 pub mod world_error;
 mod chunk;
+mod architect;
 mod noise;
 mod surface;
 

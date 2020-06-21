@@ -6,7 +6,11 @@ edition = "2018"
 
 [[bin]]
 name = "world_gen"
-path = "./main.rs"
+path = "bin/world_gen.rs"
+
+[[bin]]
+name = "heightmap_generator"
+path = "bin/heightmap_generator.rs"
 
 [dependencies]
 core = { path = "./core" }

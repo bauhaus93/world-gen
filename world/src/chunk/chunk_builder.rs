@@ -4,10 +4,11 @@ use std::convert::TryFrom;
 use glm::{Vector2, Vector3};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use super::{get_world_pos, Architect, Chunk, ChunkError, HeightMap, CHUNK_SIZE};
+use super::{get_world_pos, Chunk, ChunkError, HeightMap, CHUNK_SIZE};
+use crate::architect::Architect;
 use core::graphics::mesh::{Mesh, Triangle, Vertex, VertexBuffer};
 use core::traits::{Rotatable, Scalable, Translatable};
-use core::{Object, ObjectManager, Point2i, Point3f, Point2f};
+use core::{Object, ObjectManager, Point2f, Point2i, Point3f};
 
 pub struct ChunkBuilder {
     pos: Point2i,

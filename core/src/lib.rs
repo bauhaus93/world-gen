@@ -25,6 +25,7 @@ pub mod sun;
 pub mod timer;
 pub mod traits;
 pub mod update_error;
+pub mod seed;
 mod window;
 
 pub use self::core::Core;
@@ -58,3 +59,4 @@ pub use self::float::Float;
 pub use self::update_error::UpdateError;
 
 pub use self::point::{Point2f, Point2i, Point3f};
+pub use self::seed::Seed;

@@ -1,7 +1,6 @@
-use super::get_world_pos;
-use super::height_map::HeightMap;
+use crate::chunk::{get_world_pos, height_map::HeightMap};
 use crate::Terrain;
-use core::{Point2f, Point2i};
+use core::{Point2f, Point2i, traits::Saveable};
 
 pub trait Architect: Send + Sync {
     fn get_height(&self, absolute_pos: Point2f) -> f32;

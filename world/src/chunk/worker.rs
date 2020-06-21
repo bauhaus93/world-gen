@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::{Architect, BuildStats, ChunkBuilder, ChunkError};
+use super::{BuildStats, ChunkBuilder, ChunkError};
+use crate::architect::Architect;
 use core::{ObjectManager, Point2i};
 
 #[derive(Clone)]

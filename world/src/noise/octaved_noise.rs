@@ -72,4 +72,8 @@ impl Noise for OctavedNoise {
     fn get_range(&self) -> [f32; 2] {
         self.range
     }
+
+    fn get_cycle(&self) -> Point2f {
+        self.noise.get_cycle()
+    }
 }

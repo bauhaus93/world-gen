@@ -1,13 +1,14 @@
-use std::sync::{ Arc, Mutex };
-use std::collections::{ BTreeMap, BTreeSet, VecDeque };
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::sync::atomic::{ AtomicBool, Ordering };
 
-use rand::{ Rng };
+use rand::Rng;
 
-use core::{ ObjectManager, Point2i, Point2f };
+use super::{BuildStats, Chunk, ChunkBuilder, ChunkError, Worker};
+use crate::architect::Architect;
 use crate::TerrainSet;
-use super::{ Chunk, ChunkBuilder, Architect, SimpleArchitect, ChunkError, BuildStats, Worker };
+use core::{ObjectManager, Point2f, Point2i};
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
@@ -21,9 +22,12 @@ pub struct ChunkLoader {
     random_state: [u8; 16],
 }
 
-
 impl ChunkLoader {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R, architect: Box<dyn Architect>, object_manager: Arc<ObjectManager>) -> Self {
+    pub fn new<R: Rng + ?Sized>(
+        rng: &mut R,
+        architect: Box<dyn Architect>,
+        object_manager: Arc<ObjectManager>,
+    ) -> Self {
         let mut random_state = [0; 16];
         rng.fill_bytes(&mut random_state);
         Self {
@@ -35,7 +39,7 @@ impl ChunkLoader {
             build_stats: Arc::new(Mutex::new(BuildStats::default())),
             handeled_positions: BTreeSet::new(),
             thread_handles: Vec::new(),
-            random_state: random_state
+            random_state: random_state,
         }
     }
     pub fn start(&mut self, thread_count: usize) {
@@ -50,15 +54,13 @@ impl ChunkLoader {
             self.input_queue.clone(),
             self.output_queue.clone(),
             self.build_stats.clone(),
-            self.random_state
+            self.random_state,
         );
         for _i in 0..thread_count {
             let next_worker = worker.clone();
-            let handle = thread::spawn(move || {
-                match next_worker.work() {
-                    Ok(_) => trace!("Worker finished successfully"),
-                    Err(e) =>  error!("Worker error: {}", e)
-                 }
+            let handle = thread::spawn(move || match next_worker.work() {
+                Ok(_) => trace!("Worker finished successfully"),
+                Err(e) => error!("Worker error: {}", e),
             });
             self.thread_handles.push(handle);
         }
@@ -71,8 +73,10 @@ impl ChunkLoader {
         let mut stop_count = 0;
         while let Some(handle) = self.thread_handles.pop() {
             match handle.join() {
-                Ok(_) => { stop_count += 1; },
-                Err(_) => warn!("Thread to join panicked")
+                Ok(_) => {
+                    stop_count += 1;
+                }
+                Err(_) => warn!("Thread to join panicked"),
             }
         }
         info!("Stopped {} chunk loader threads", stop_count);
@@ -88,8 +92,10 @@ impl ChunkLoader {
                     self.handeled_positions.remove(&pos);
                     chunks.insert(pos, chunk);
                 }
-            },
-            Err(_poisoned) => { return Err(ChunkError::MutexPoison); }
+            }
+            Err(_poisoned) => {
+                return Err(ChunkError::MutexPoison);
+            }
         }
         Ok(chunks)
     }
@@ -103,17 +109,15 @@ impl ChunkLoader {
                     }
                 }
                 Ok(())
-            },
-            Err(_) => Err(ChunkError::MutexPoison)
+            }
+            Err(_) => Err(ChunkError::MutexPoison),
         }
     }
 
     pub fn get_avg_build_time(&self) -> f64 {
         match self.build_stats.lock() {
-            Ok(mut guard) => {
-              (*guard).get_avg_time()
-            },
-            Err(_poisoned) => 0.
+            Ok(mut guard) => (*guard).get_avg_time(),
+            Err(_poisoned) => 0.,
         }
     }
 }
@@ -123,5 +127,3 @@ impl Drop for ChunkLoader {
         self.stop();
     }
 }
-
-

@@ -32,6 +32,10 @@ impl Noise for RepeatingNoise {
     fn get_range(&self) -> [f32; 2] {
         self.noise.get_range()
     }
+
+    fn get_cycle(&self) -> Point2f {
+        self.size
+    }
 }
 
 fn get_repeating_pos(absolute_pos: Point2f, size: Point2f) -> Point2f {
@@ -40,9 +44,3 @@ fn get_repeating_pos(absolute_pos: Point2f, size: Point2f) -> Point2f {
         absolute_pos[1].rem_euclid(size[1]),
     )
 }
-
-fn rotate_90(point: Point2f, center: Point2f) -> Point2f {
-    Point2f::new(center[0] + center[1] - point[1], -center[0] + center[1] + point[0])
-}
-
-

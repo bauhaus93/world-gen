@@ -3,20 +3,18 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use rand;
-use rand::rngs::StdRng;
-#[allow(unused)]
+use rand::rngs::{SmallRng, StdRng};
 use rand::{FromEntropy, Rng, SeedableRng};
 
-use crate::chunk::{
-    chunk_size::get_chunk_pos, Architect, Chunk, ChunkLoader, SimpleArchitect, CHUNK_SIZE,
-};
+use crate::architect::{Architect, NoisedArchitect};
+use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
-    Config, Object, ObjectManager, Player, Point2f, Point2i, Point3f, Skybox, Sun, Timer,
+    Config, Object, ObjectManager, Player, Point2f, Point2i, Point3f, Seed, Skybox, Sun, Timer,
     UpdateError,
 };
 
@@ -56,15 +54,16 @@ impl World {
         info!("Day length is {}s", day_length);
         info!("Gravity is {}", gravity);
 
-        //let mut rng = StdRng::seed_from_u64(0);
-        let mut rng = StdRng::from_entropy();
+        let seed = Seed::from_entropy();
+        info!("World seed = {}", seed);
+        let mut rng: SmallRng = seed.into();
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
-        let architect = Box::new(SimpleArchitect::from_rng(
-            &mut rng,
-            Point2f::from_scalar(1000.),
+        let architect: Box<dyn Architect> = Box::new(NoisedArchitect::new_infinite(
+            Seed::from_rng(&mut rng),
             surface_texture.get_terrain_set(),
         ));
+
         let chunk_loader = ChunkLoader::new(&mut rng, architect, object_manager.clone());
 
         let mut test_monkey = object_manager.create_object("monkey")?;

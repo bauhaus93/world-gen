@@ -22,7 +22,7 @@ impl ChunkBuilder {
     pub fn new(
         pos: Point2i,
         lod: u8,
-        architect: &dyn Architect,
+        architect: &Architect,
         object_manager: &ObjectManager,
         random_state: &[u8; 16],
     ) -> Result<Self, ChunkError> {
@@ -57,10 +57,10 @@ impl ChunkBuilder {
         Ok(chunk)
     }
 
-    fn load_trees<R: Rng + ?Sized>(
+    fn load_trees(
         &mut self,
         object_manager: &ObjectManager,
-        rng: &mut R,
+        rng: &mut impl Rng,
     ) -> Result<(), ChunkError> {
         if self.lod < 2 {
             let resolution = self.height_map.get_resolution();
@@ -94,7 +94,7 @@ impl ChunkBuilder {
 
 fn create_surface_buffer(
     origin: Point2i,
-    architect: &dyn Architect,
+    architect: &Architect,
     height_map: &HeightMap,
 ) -> VertexBuffer {
     let size = height_map.get_size();

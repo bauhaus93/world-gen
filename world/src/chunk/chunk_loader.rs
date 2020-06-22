@@ -7,12 +7,11 @@ use rand::Rng;
 
 use super::{BuildStats, Chunk, ChunkBuilder, ChunkError, Worker};
 use crate::architect::Architect;
-use crate::TerrainSet;
-use core::{ObjectManager, Point2f, Point2i};
+use core::{ObjectManager, Point2i};
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
-    architect: Arc<dyn Architect>,
+    architect: Arc<Architect>,
     object_manager: Arc<ObjectManager>,
     input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
     output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
@@ -25,14 +24,14 @@ pub struct ChunkLoader {
 impl ChunkLoader {
     pub fn new<R: Rng + ?Sized>(
         rng: &mut R,
-        architect: Box<dyn Architect>,
+        architect: Architect,
         object_manager: Arc<ObjectManager>,
     ) -> Self {
         let mut random_state = [0; 16];
         rng.fill_bytes(&mut random_state);
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::from(architect),
+            architect: Arc::new(architect),
             object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(Vec::new())),

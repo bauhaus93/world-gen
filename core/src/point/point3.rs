@@ -129,6 +129,6 @@ impl<T: Sub<Output = T> + Primitive + SubAssign> SubAssign for Point3<T> {
 
 impl<T: fmt::Display + Primitive> fmt::Display for Point3<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "P({}/{}/{})", self[0], self[1], self[2])
+        write!(f, "{}/{}/{}", self[0], self[1], self[2])
     }
 }

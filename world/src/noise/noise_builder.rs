@@ -1,4 +1,5 @@
-use rand::{prelude::SmallRng, FromEntropy, Rng, SeedableRng};
+use rand::FromEntropy;
+use std::ops::Fn;
 
 use super::{Noise, OctavedNoise, RepeatingNoise, SimplexNoise};
 use core::{Point2f, Seed};
@@ -9,7 +10,7 @@ pub struct NoiseBuilder {
     scale: Option<f32>,
     roughness: Option<f32>,
     range: Option<[f32; 2]>,
-    repeat_cycle: Option<Point2f>,
+    modifier: Option<([f32; 2], Box<dyn Fn(f32) -> f32 + Send + Sync>)>
 }
 
 impl NoiseBuilder {
@@ -20,7 +21,7 @@ impl NoiseBuilder {
             scale: None,
             roughness: None,
             range: None,
-            repeat_cycle: None,
+            modifier: None
         }
     }
 
@@ -49,13 +50,15 @@ impl NoiseBuilder {
         self
     }
 
-    pub fn repeat(mut self, repeat_cycle: Point2f) -> Self {
-        self.repeat_cycle = Some(repeat_cycle);
+    pub fn modifier(mut self, range: [f32; 2], modifier: Box<dyn Fn(f32) -> f32 + Send + Sync>) -> Self {
+        self.modifier = Some((range, modifier));
         self
     }
 
     fn handle_base_noise(&self) -> Box<dyn Noise> {
-        Box::new(SimplexNoise::from_seed(self.seed.unwrap_or(Seed::from_entropy())))
+        Box::new(SimplexNoise::from_seed(
+            self.seed.unwrap_or(Seed::from_entropy()),
+        ))
     }
 
     fn handle_octaved_noise(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
@@ -81,17 +84,7 @@ impl NoiseBuilder {
         }
     }
 
-    fn handle_repeating_noise(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
-        match self.repeat_cycle {
-            Some(cycle) if cycle[0].is_finite() && cycle[1].is_finite() => {
-                Box::new(RepeatingNoise::wrap(noise, cycle))
-            }
-            Some(_infinite_cycle) => noise,
-            None => noise,
-        }
-    }
-
     pub fn finish(self) -> Box<dyn Noise> {
-        self.handle_repeating_noise(self.handle_octaved_noise(self.handle_base_noise()))
+        self.handle_octaved_noise(self.handle_base_noise())
     }
 }

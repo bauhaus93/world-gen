@@ -1,5 +1,7 @@
+use std::io;
+
 use super::Noise;
-use core::Point2f;
+use core::{Point2f, Point2i};
 
 pub struct RepeatingNoise {
     noise: Box<dyn Noise>,
@@ -22,11 +24,11 @@ impl Noise for RepeatingNoise {
         let pos_y = Point2f::new(rep_pos[0], self.size[1] - rep_pos[1]);
         let pos_xy = Point2f::new(self.size[0] - rep_pos[0], self.size[1] - rep_pos[1]);
 
-
-        (self.noise.get_noise(rep_pos) +
-         self.noise.get_noise(pos_x) +
-         self.noise.get_noise(pos_y) +
-         self.noise.get_noise(pos_xy)) / 4.
+        (self.noise.get_noise(rep_pos)
+            + self.noise.get_noise(pos_x)
+            + self.noise.get_noise(pos_y)
+            + self.noise.get_noise(pos_xy))
+            / 4.
     }
 
     fn get_range(&self) -> [f32; 2] {

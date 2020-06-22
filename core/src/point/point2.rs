@@ -77,6 +77,17 @@ impl<T: Sub<Output = T> + Primitive + SubAssign> Sub for Point2<T> {
     }
 }
 
+impl<T: Mul<Output = T> + Primitive + MulAssign> Mul for Point2<T> {
+    type Output = Self;
+
+    fn mul(mut self, other: Self) -> Self::Output {
+        for i in 0..2 {
+            self[i] *= other[i];
+        }
+        self
+    }
+}
+
 impl<T: Div<Output = T> + Primitive + DivAssign> Div for Point2<T> {
     type Output = Self;
 
@@ -119,6 +130,6 @@ impl<T: Add<Output = T> + Primitive + AddAssign> AddAssign for Point2<T> {
 
 impl<T: fmt::Display + Primitive> fmt::Display for Point2<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "P({}/{})", self[0], self[1])
+        write!(f, "{}/{}", self[0], self[1])
     }
 }

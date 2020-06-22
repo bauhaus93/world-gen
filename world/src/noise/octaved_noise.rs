@@ -1,6 +1,4 @@
-use rand::{Rng, SeedableRng};
-
-use super::{Noise, SimplexNoise};
+use super::Noise;
 use core::Point2f;
 
 const DEFAULT_OCTAVES: u8 = 4;

@@ -2,11 +2,10 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use rand;
-use rand::rngs::{SmallRng, StdRng};
-use rand::{FromEntropy, Rng, SeedableRng};
+use rand::rngs::SmallRng;
+use rand::{FromEntropy, SeedableRng};
 
-use crate::architect::{Architect, NoisedArchitect};
+use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
@@ -14,9 +13,9 @@ use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
-    Config, Object, ObjectManager, Player, Point2f, Point2i, Point3f, Seed, Skybox, Sun, Timer,
-    UpdateError,
+    Config, Object, ObjectManager, Player, Point2i, Point3f, Seed, Skybox, Sun, Timer, UpdateError,
 };
+use crate::noise::{Noise, NoiseBuilder, NoiseModifier};
 
 pub struct World {
     surface_texture: SurfaceTexture,
@@ -36,6 +35,31 @@ pub struct World {
     test_monkey: Object,
     center: Point3f,
     gravity: f32,
+}
+
+fn get_standard_noise(seed: Seed) -> Box<dyn Noise> {
+    let mut local_rng: SmallRng = seed.into();
+    let height_noise = NoiseBuilder::new()
+            .seed(Seed::from_rng(&mut local_rng))
+            .octaves(6)
+            .scale(1e-3)
+            .roughness(0.5)
+            .range([0., 100.])
+            .finish();
+
+    let mountain_noise = NoiseBuilder::new()
+            .seed(Seed::from_rng(&mut local_rng))
+            .octaves(4)
+            .scale(1e-4)
+            .roughness(2.)
+            .range([-1., 1.])
+            .finish();
+
+    let f = |n:f32| if n > 0. { 10. * n.powf(2.)} else { 1.};
+    let mountain_factor = Box::new(NoiseModifier::wrap_around(mountain_noise, [0., 10.], Box::new(f)));
+
+
+    height_noise
 }
 
 impl World {
@@ -59,10 +83,10 @@ impl World {
         let mut rng: SmallRng = seed.into();
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
-        let architect: Box<dyn Architect> = Box::new(NoisedArchitect::new_infinite(
-            Seed::from_rng(&mut rng),
+        let architect = Architect::from_noise(
+            get_standard_noise(Seed::from_rng(&mut rng)),
             surface_texture.get_terrain_set(),
-        ));
+        );
 
         let chunk_loader = ChunkLoader::new(&mut rng, architect, object_manager.clone());
 

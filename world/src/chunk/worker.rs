@@ -10,7 +10,7 @@ use core::{ObjectManager, Point2i};
 
 #[derive(Clone)]
 pub struct Worker {
-    architect: Arc<dyn Architect>,
+    architect: Arc<Architect>,
     object_manager: Arc<ObjectManager>,
     stop: Arc<AtomicBool>,
     input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
@@ -21,7 +21,7 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(
-        architect: Arc<dyn Architect>,
+        architect: Arc<Architect>,
         object_manager: Arc<ObjectManager>,
         stop: Arc<AtomicBool>,
         input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,

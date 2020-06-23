@@ -7,6 +7,7 @@ use rand::{FromEntropy, SeedableRng};
 
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
+use crate::noise::{Noise, NoiseBuilder, ModifierType};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
@@ -15,7 +16,6 @@ use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Up
 use core::{
     Config, Object, ObjectManager, Player, Point2i, Point3f, Seed, Skybox, Sun, Timer, UpdateError,
 };
-use crate::noise::{Noise, NoiseBuilder, NoiseModifier};
 
 pub struct World {
     surface_texture: SurfaceTexture,
@@ -30,7 +30,6 @@ pub struct World {
     lod_far_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: Point2i,
-    #[allow(unused)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
     center: Point3f,
@@ -39,26 +38,37 @@ pub struct World {
 
 fn get_standard_noise(seed: Seed) -> Box<dyn Noise> {
     let mut local_rng: SmallRng = seed.into();
+
+    let mountain_factor = NoiseBuilder::new()
+        .seed(Seed::from_rng(&mut local_rng))
+        .octaves(4)
+        .scale(1e-4)
+        .roughness(2.)
+        .range([-1., 1.])
+        .modifier(ModifierType::FactoredExponent(10., 2.))
+        .above(0.)
+        .finish();
+
+    let lake_factor = NoiseBuilder::new()
+        .seed(Seed::from_rng(&mut local_rng))
+        .octaves(4)
+        .scale(1e-5)
+        .roughness(2.)
+        .range([-1., 1.])
+        .modifier(ModifierType::FactoredExponent(-100., 0.75))
+        .below(0.)
+        .finish();
+
+
     let height_noise = NoiseBuilder::new()
-            .seed(Seed::from_rng(&mut local_rng))
-            .octaves(6)
-            .scale(1e-3)
-            .roughness(0.5)
-            .range([0., 100.])
-            .finish();
-
-    let mountain_noise = NoiseBuilder::new()
-            .seed(Seed::from_rng(&mut local_rng))
-            .octaves(4)
-            .scale(1e-4)
-            .roughness(2.)
-            .range([-1., 1.])
-            .finish();
-
-    let f = |n:f32| if n > 0. { 10. * n.powf(2.)} else { 1.};
-    let mountain_factor = Box::new(NoiseModifier::wrap_around(mountain_noise, [0., 10.], Box::new(f)));
-
-
+        .seed(Seed::from_rng(&mut local_rng))
+        .octaves(6)
+        .scale(1e-3)
+        .roughness(0.5)
+        .range([0., 100.])
+        .add_factor(mountain_factor)
+   //     .add_factor(lake_factor)
+        .finish();
     height_noise
 }
 

@@ -60,3 +60,4 @@ pub use self::update_error::UpdateError;
 
 pub use self::point::{Point2f, Point2i, Point3f};
 pub use self::seed::Seed;
+pub use self::file::FileError;

@@ -1,6 +1,7 @@
 use glm::Vector3;
 
-use super::{HeightMap, CHUNK_SIZE};
+use super::CHUNK_SIZE;
+use crate::HeightMap;
 use core::graphics::{GraphicsError, Mesh};
 use core::traits::{RenderInfo, Renderable, Translatable};
 use core::{BoundingBox, Float, Model, Object, Point2f, Point2i};

@@ -1,13 +1,12 @@
 use std::collections::BTreeMap;
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use rand::rngs::SmallRng;
-use rand::{FromEntropy, SeedableRng};
 
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
-use crate::noise::{Noise, NoiseBuilder, ModifierType};
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
@@ -30,46 +29,12 @@ pub struct World {
     lod_far_radius: i32,
     active_chunk_radius: i32,
     last_chunk_load: Point2i,
+    #[allow(dead_code)]
     object_manager: Arc<ObjectManager>,
     test_monkey: Object,
     center: Point3f,
     gravity: f32,
-}
-
-fn get_standard_noise(seed: Seed) -> Box<dyn Noise> {
-    let mut local_rng: SmallRng = seed.into();
-
-    let mountain_factor = NoiseBuilder::new()
-        .seed(Seed::from_rng(&mut local_rng))
-        .octaves(4)
-        .scale(1e-4)
-        .roughness(2.)
-        .range([-1., 1.])
-        .modifier(ModifierType::FactoredExponent(10., 2.))
-        .above(0.)
-        .finish();
-
-    let lake_factor = NoiseBuilder::new()
-        .seed(Seed::from_rng(&mut local_rng))
-        .octaves(4)
-        .scale(1e-5)
-        .roughness(2.)
-        .range([-1., 1.])
-        .modifier(ModifierType::FactoredExponent(-100., 0.75))
-        .below(0.)
-        .finish();
-
-
-    let height_noise = NoiseBuilder::new()
-        .seed(Seed::from_rng(&mut local_rng))
-        .octaves(6)
-        .scale(1e-3)
-        .roughness(0.5)
-        .range([0., 100.])
-        .add_factor(mountain_factor)
-   //     .add_factor(lake_factor)
-        .finish();
-    height_noise
+    size: Point2i,
 }
 
 impl World {
@@ -92,11 +57,19 @@ impl World {
         info!("World seed = {}", seed);
         let mut rng: SmallRng = seed.into();
 
+        let world_size = Point2i::from_scalar(100);
+
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
-        let architect = Architect::from_noise(
+        /*let architect = Architect::from_noise(
             get_standard_noise(Seed::from_rng(&mut rng)),
+            (world_size + 2) * CHUNK_SIZE,
             surface_texture.get_terrain_set(),
-        );
+        );*/
+        let architect = Architect::from_file(
+            Path::new("heightmap.dat"),
+            surface_texture.get_terrain_set(),
+        )
+        .expect("Could find file");
 
         let chunk_loader = ChunkLoader::new(&mut rng, architect, object_manager.clone());
 
@@ -121,6 +94,7 @@ impl World {
             test_monkey: test_monkey,
             center: Point3f::new(0., 0., 0.),
             gravity: gravity,
+            size: world_size,
         };
 
         world.update_skybox_size();
@@ -216,7 +190,6 @@ impl World {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn count_loaded_vertices(&self) -> u32 {
         let mut vertex_count = 0;
         self.chunks
@@ -230,23 +203,32 @@ impl World {
     }
 
     fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
-        let distance = rel_pos.get_length() as i32;
-        if distance < self.active_chunk_radius {
-            let lod = self.lod_by_chunk_distance(distance);
-            let chunk_pos = player_pos + rel_pos;
-            match self.chunks.get(&chunk_pos) {
-                Some(c) => {
-                    let old_lod = c.get_lod();
-                    if lod != old_lod && (lod < 2 || old_lod < 2) {
-                        Some((chunk_pos, lod))
-                    } else {
-                        None
-                    }
-                }
-                None => Some((chunk_pos, lod)),
-            }
-        } else {
+        let abs_pos = player_pos + rel_pos;
+        if abs_pos[0] < 0
+            || abs_pos[1] < 0
+            || abs_pos[0] > self.size[0]
+            || abs_pos[1] > self.size[1]
+        {
             None
+        } else {
+            let distance = rel_pos.get_length() as i32;
+            if distance < self.active_chunk_radius {
+                let lod = self.lod_by_chunk_distance(distance);
+                let chunk_pos = player_pos + rel_pos;
+                match self.chunks.get(&chunk_pos) {
+                    Some(c) => {
+                        let old_lod = c.get_lod();
+                        if lod != old_lod && (lod < 2 || old_lod < 2) {
+                            Some((chunk_pos, lod))
+                        } else {
+                            None
+                        }
+                    }
+                    None => Some((chunk_pos, lod)),
+                }
+            } else {
+                None
+            }
         }
     }
 

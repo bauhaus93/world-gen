@@ -7,63 +7,17 @@ extern crate env_logger;
 extern crate core;
 extern crate world;
 
-use byteorder::{LittleEndian, WriteBytesExt};
 use env_logger::{fmt::Formatter, Builder};
 use log::Record;
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io;
-use std::io::{BufWriter, Write};
+use std::io::Write;
+use std::path::Path;
 
 use std::time::Instant;
 
 use core::{Point2f, Point2i, Seed};
-use world::noise::{Noise, NoiseBuilder};
-
-type HeightMap = BTreeMap<Point2i, f32>;
-
-fn write_heightmap(
-    heightmap: HeightMap,
-    size: Point2i,
-    writer: &mut impl Write,
-) -> Result<(), io::Error> {
-    info!("Writing heightmap to file...");
-    writer.write_i32::<LittleEndian>(size[0])?;
-    writer.write_i32::<LittleEndian>(size[1])?;
-    for y in 0..size[1] {
-        for x in 0..size[0] {
-            let h = heightmap.get(&Point2i::new(x, y)).unwrap_or(&0.);
-            writer.write_f32::<LittleEndian>(*h)?;
-            if (y * size[0] + x) % (size[0] * size[1] / 20) == 0 {
-                info!(
-                    "Progress: {:2}%",
-                    (100. * (y * size[0] + x) as f32 / (size[0] * size[1]) as f32).round() as i32
-                )
-            }
-        }
-    }
-    info!("Written heightmap to file!");
-    Ok(())
-}
-
-fn heightmap_from_noise(noise: &dyn Noise, size: Point2i) -> HeightMap {
-    info!("Creating heightmap from noise...");
-    let mut heightmap = HeightMap::new();
-    for y in 0..size[1] {
-        for x in 0..size[0] {
-            let h = noise.get_noise(Point2f::new(x as f32, y as f32));
-            heightmap.insert(Point2i::new(x, y), h);
-            if (y * size[0] + x) % (size[0] * size[1] / 20) == 0 {
-                info!(
-                    "Progress: {:2}%",
-                    (100. * (y * size[0] + x) as f32 / (size[0] * size[1]) as f32).round() as i32
-                )
-            }
-        }
-    }
-    info!("Created heightmap from noise!");
-    heightmap
-}
+use world::noise::{presets::get_default_noise, Noise, NoiseBuilder};
+use world::HeightMap;
 
 fn main() {
     const FILENAME: &'static str = "heightmap.dat";
@@ -75,27 +29,16 @@ fn main() {
     let seed = Seed::from_entropy();
     info!("Seed = {}", seed);
 
-    let size = Point2i::from_scalar(10000);
-    info!("Heightmap size = {}", size);
+    let size = 10000;
+    info!("Heightmap size = {}x{}", size, size);
 
-    let noise = NoiseBuilder::new()
-        .seed(seed)
-        .octaves(6)
-        .scale(1e-3)
-        .roughness(0.5)
-        .range([0., 100.])
-        .finish();
+    let noise = get_default_noise(seed);
 
-    let heightmap = heightmap_from_noise(noise.as_ref(), size);
+    let heightmap = HeightMap::from_noise(Point2f::from_scalar(0.), size, 1, noise.as_ref());
 
-    match File::create(FILENAME) {
-        Ok(f) => match write_heightmap(heightmap, size, &mut BufWriter::new(f)) {
-            Ok(_) => info!("Saved heightmap in '{}'", FILENAME),
-            Err(e) => error!("Could not save heightmap in '{}': {}", FILENAME, e),
-        },
-        Err(e) => {
-            error!("Could not create file '{}': {}", FILENAME, e);
-        }
+    match heightmap.into_file(&Path::new(FILENAME)) {
+        Ok(f) => info!("Successfully written heightmap to'{}'", FILENAME),
+        Err(e) => error!("Could not write heightmap into '{}': {}", FILENAME, e),
     }
 
     let work_duration = start.elapsed().as_secs() as u32;

@@ -1,5 +1,5 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 use std::io;
 use std::num;
 
@@ -8,7 +8,8 @@ pub enum FileError {
     IO(io::Error),
     ParseFloat(num::ParseFloatError),
     ParseInt(num::ParseIntError),
-    UnexpectedFormat(String)
+    UnexpectedFormat(String),
+    InconsistentData(String),
 }
 
 impl From<io::Error> for FileError {
@@ -30,13 +31,13 @@ impl From<num::ParseIntError> for FileError {
 }
 
 impl Error for FileError {
-
     fn description(&self) -> &str {
         match *self {
             FileError::IO(_) => "io",
             FileError::ParseFloat(_) => "parse float",
             FileError::ParseInt(_) => "parse int",
-            FileError::UnexpectedFormat(_) => "unexpected format"
+            FileError::UnexpectedFormat(_) => "unexpected format",
+            FileError::InconsistentData(_) => "inconsistent data",
         }
     }
 
@@ -45,7 +46,8 @@ impl Error for FileError {
             FileError::IO(ref err) => Some(err),
             FileError::ParseFloat(ref err) => Some(err),
             FileError::ParseInt(ref err) => Some(err),
-            FileError::UnexpectedFormat(_) => None
+            FileError::UnexpectedFormat(_) => None,
+            FileError::InconsistentData(_) => None,
         }
     }
 }
@@ -55,8 +57,13 @@ impl fmt::Display for FileError {
         match *self {
             FileError::IO(ref err) => write!(f, "{}:{}", self.description(), err),
             FileError::ParseFloat(ref err) => write!(f, "{}:{}", self.description(), err),
-            FileError::ParseInt(ref err) => write!(f, "{}:{}", self.description(), err),            
-            FileError::UnexpectedFormat(ref unexpected_str) => write!(f, "{}: {}", self.description(), unexpected_str)
+            FileError::ParseInt(ref err) => write!(f, "{}:{}", self.description(), err),
+            FileError::UnexpectedFormat(ref unexpected_str) => {
+                write!(f, "{}: {}", self.description(), unexpected_str)
+            }
+            FileError::InconsistentData(ref inconsistent_str) => {
+                write!(f, "{}: {}", self.description(), inconsistent_str)
+            }
         }
     }
 }

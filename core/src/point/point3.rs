@@ -4,7 +4,7 @@ use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use super::Point2;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Point3<T: Primitive>(pub Vector3<T>);
 
 impl<T: Primitive> Point3<T> {

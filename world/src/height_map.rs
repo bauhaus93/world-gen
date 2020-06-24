@@ -1,6 +1,12 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::Path;
+
 use std::cmp::Ordering;
 
-use core::{Point2f, Point2i};
+use core::{FileError, Point2f, Point2i};
+use crate::Noise;
 
 pub struct HeightMap {
     size: i32,
@@ -19,6 +25,97 @@ impl HeightMap {
             resolution: resolution,
             height_list: height_list,
         }
+    }
+
+    pub fn from_noise(origin: Point2f, size: i32, resolution: i32, noise: &dyn Noise) -> Self {
+        debug_assert!(size > 0);
+        debug_assert!(resolution > 0);
+
+        debug!("Creating heightmap from noise, size = {}x{}", size, size);
+        let mut height_list = Vec::with_capacity((size * size) as usize);
+        for y in 0..size {
+            for x in 0..size {
+                let h = noise.get_noise(
+                    origin + Point2f::new((x * resolution) as f32, (y * resolution) as f32),
+                );
+                height_list.push(h);
+                if (height_list.len()) % ((size * size) as usize / 20) == 0 {
+                    debug!(
+                        "Progress: {:2}%",
+                        100 * height_list.len() / (size * size) as usize
+                    )
+                }
+            }
+        }
+        debug!("Created heightmap from file!");
+        Self {
+            size: size,
+            resolution: resolution,
+            height_list: height_list,
+        }
+    }
+
+    pub fn from_file(path: &Path) -> Result<Self, FileError> {
+        debug!("Reading heightmap from file...");
+        let mut file = BufReader::new(File::open(path)?);
+
+        let size = file.read_i32::<LittleEndian>()?;
+        let resolution = file.read_i32::<LittleEndian>()?;
+
+        if size < 0 {
+            return Err(FileError::InconsistentData(format!(
+                "Heightmap size expected to be positive, but was {}",
+                size
+            )));
+        }
+
+        if resolution < 0 {
+            return Err(FileError::InconsistentData(format!(
+                "Heightmap resolution expected to be positive, but was {}",
+                resolution
+            )));
+        }
+
+        debug!("Size = {}x{}, resolution = {}", size, size, resolution);
+
+        let mut data = Vec::with_capacity((size * size) as usize);
+        while let Ok(h) = file.read_f32::<LittleEndian>() {
+            data.push(h);
+            if data.len() % (size * size / 10) as usize == 0 {
+                trace!(
+                    "Progress: {:2} %",
+                    100 * data.len() / (size * size) as usize
+                )
+            }
+        }
+
+        if (size * size) as usize != data.len() {
+            return Err(FileError::InconsistentData(format!(
+                "Expected {} data points, but read only {}",
+                size * size,
+                data.len()
+            )));
+        }
+        debug!("Read heightmap from file!");
+        Ok(Self {
+            size: size,
+            resolution: resolution,
+            height_list: data,
+        })
+    }
+
+    pub fn into_file(&self, path: &Path) -> Result<(), FileError> {
+        info!("Writing heightmap to file...");
+        let mut file = BufWriter::new(File::create(path)?);
+
+        file.write_i32::<LittleEndian>(self.size)?;
+        file.write_i32::<LittleEndian>(self.resolution)?;
+
+        self.height_list
+            .iter()
+            .try_for_each(|h| file.write_f32::<LittleEndian>(*h))?;
+        debug!("Written heightmap to file!");
+        Ok(())
     }
 
     pub fn get_interpolated_height(&self, relative_pos: Point2f) -> f32 {
@@ -125,8 +222,7 @@ impl HeightMap {
 
     fn calculate_index(&self, pos: Point2i) -> usize {
         debug_assert!(pos[0] >= 0 && pos[1] >= 0);
-        debug_assert!(pos[0] < self.size && pos[1] < self.size);
-        (pos[0] + self.size * pos[1]) as usize
+        ((pos[0] % self.size) + self.size * (pos[1] % self.size)) as usize
     }
 }
 

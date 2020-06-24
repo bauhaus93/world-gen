@@ -4,7 +4,8 @@ use std::convert::TryFrom;
 use glm::{Vector2, Vector3};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 
-use super::{get_world_pos, Chunk, ChunkError, HeightMap, CHUNK_SIZE};
+use super::{get_world_pos, Chunk, ChunkError, CHUNK_SIZE};
+use crate::HeightMap;
 use crate::architect::Architect;
 use core::graphics::mesh::{Mesh, Triangle, Vertex, VertexBuffer};
 use core::traits::{Rotatable, Scalable, Translatable};

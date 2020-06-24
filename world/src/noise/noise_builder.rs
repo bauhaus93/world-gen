@@ -1,9 +1,6 @@
-use rand::FromEntropy;
-use std::ops::Fn;
-
 use super::{
-    ModifierType, Noise, NoiseModifier, OctavedNoise, RepeatingNoise, SimplexNoise, Threshold,
-    ThresholdNoise,MergeType, FactoredNoise
+    FactoredNoise, MergeType, ModifierType, Noise, NoiseModifier, OctavedNoise, RepeatingNoise,
+    SimplexNoise, Threshold, ThresholdNoise,
 };
 use core::{Point2f, Seed};
 
@@ -13,6 +10,7 @@ pub struct NoiseBuilder {
     scale: Option<f32>,
     roughness: Option<f32>,
     range: Option<[f32; 2]>,
+    repeat_cycle: Option<Point2f>,
     modifier: Option<ModifierType>,
     threshold: Option<Threshold>,
     factor_merge_type: Option<MergeType>,
@@ -27,6 +25,7 @@ impl NoiseBuilder {
             scale: None,
             roughness: None,
             range: None,
+            repeat_cycle: None,
             modifier: None,
             threshold: None,
             factor_merge_type: None,
@@ -56,6 +55,11 @@ impl NoiseBuilder {
 
     pub fn range(mut self, range: [f32; 2]) -> Self {
         self.range = Some(range);
+        self
+    }
+
+    pub fn repeat(mut self, cycle: Point2f) -> Self {
+        self.repeat_cycle = Some(cycle);
         self
     }
 
@@ -113,6 +117,13 @@ impl NoiseBuilder {
         }
     }
 
+    fn handle_repeat(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
+        match self.repeat_cycle {
+            Some(cycle) => Box::new(RepeatingNoise::wrap(noise, cycle)),
+            None => noise,
+        }
+    }
+
     fn handle_modifier(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
         match &self.modifier {
             Some(m) => Box::new(NoiseModifier::wrap_around(noise, *m)),
@@ -129,19 +140,21 @@ impl NoiseBuilder {
 
     fn handle_factors(self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
         if self.factors.len() > 0 {
-            let mut factored_noise = FactoredNoise::new(noise, self.factor_merge_type.unwrap_or(MergeType::SUM));
-            self.factors.into_iter().for_each(|n| factored_noise.add_factor(n));
+            let mut factored_noise =
+                FactoredNoise::new(noise, self.factor_merge_type.unwrap_or(MergeType::SUM));
+            self.factors
+                .into_iter()
+                .for_each(|n| factored_noise.add_factor(n));
             Box::new(factored_noise)
-        } else  {
+        } else {
             noise
         }
     }
 
     pub fn finish(self) -> Box<dyn Noise> {
-        let n =
-        self.handle_threshold(
-            self.handle_modifier(self.handle_octaved_noise(self.handle_base_noise())),
-        );
+        let n = self.handle_threshold(
+            self.handle_modifier(self.handle_repeat(self.handle_octaved_noise(self.handle_base_noise())),
+        ));
         self.handle_factors(n)
     }
 }

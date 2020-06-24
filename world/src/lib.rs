@@ -16,12 +16,13 @@ extern crate core;
 
 pub mod architect;
 mod chunk;
+pub mod height_map;
 pub mod noise;
 mod surface;
 pub mod world;
 pub mod world_error;
-//mod global_heightmap;
 
+pub use self::height_map::HeightMap;
 pub use self::noise::{Noise, NoiseBuilder};
 pub use self::world::World;
 pub use self::world_error::WorldError;

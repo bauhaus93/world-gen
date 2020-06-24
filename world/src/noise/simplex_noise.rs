@@ -1,6 +1,5 @@
 use rand;
-use rand::prelude::SliceRandom;
-use rand::{prelude::SmallRng, Rng};
+use rand::prelude::{SliceRandom, SmallRng};
 use std::{f32, iter};
 
 use super::Noise;

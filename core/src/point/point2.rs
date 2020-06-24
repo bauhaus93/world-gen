@@ -4,7 +4,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, 
 
 use super::Point3;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Point2<T: Primitive>(pub Vector2<T>);
 
 impl<T: Primitive> Point2<T> {
@@ -94,6 +94,17 @@ impl<T: Div<Output = T> + Primitive + DivAssign> Div for Point2<T> {
     fn div(mut self, other: Self) -> Self::Output {
         for i in 0..2 {
             self[i] /= other[i];
+        }
+        self
+    }
+}
+
+impl<T: Add<Output = T> + Primitive + AddAssign> Add<T> for Point2<T> {
+    type Output = Self;
+
+    fn add(mut self, scalar: T) -> Self::Output {
+        for i in 0..2 {
+            self[i] += scalar;
         }
         self
     }

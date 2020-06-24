@@ -1,7 +1,5 @@
-use std::io;
-
 use super::Noise;
-use core::{Point2f, Point2i};
+use core::Point2f;
 
 pub struct RepeatingNoise {
     noise: Box<dyn Noise>,

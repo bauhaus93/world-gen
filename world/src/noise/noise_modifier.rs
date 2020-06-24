@@ -1,6 +1,3 @@
-use std::ops::Fn;
-use std::sync::Arc;
-
 use super::Noise;
 use core::Point2f;
 

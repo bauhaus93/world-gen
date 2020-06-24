@@ -27,6 +27,16 @@ impl HeightMap {
         }
     }
 
+    pub fn from_list(size: i32, resolution: i32, height_list: &[f32]) -> Self {
+        debug_assert!(size > 0);
+        debug_assert!(resolution > 0);
+        Self {
+            size: size,
+            resolution: resolution,
+            height_list: Vec::from(height_list)
+        }
+    }
+
     pub fn from_noise(origin: Point2f, size: i32, resolution: i32, noise: &dyn Noise) -> Self {
         debug_assert!(size > 0);
         debug_assert!(resolution > 0);
@@ -159,6 +169,10 @@ impl HeightMap {
 
     pub fn get_resolution(&self) -> i32 {
         self.resolution
+    }
+
+    pub fn get_list(&self) -> &[f32] {
+        self.height_list.as_slice()
     }
 
     pub fn get_min(&self) -> f32 {

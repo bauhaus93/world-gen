@@ -19,6 +19,10 @@ impl Point3f {
     pub fn cross(&self, rhs: &Self) -> Self {
         Self(glm::cross(self.0, rhs.0))
     }
+
+    pub fn dot(&self, rhs: &Self) -> f32 {
+        glm::dot(self.0, rhs.0)
+    }
 }
 
 impl Ord for Point3f {

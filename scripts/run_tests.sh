@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cargo test -p core
+cargo test -p core -p world

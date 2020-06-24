@@ -21,6 +21,7 @@ pub mod noise;
 mod surface;
 pub mod world;
 pub mod world_error;
+pub mod erosion;
 
 pub use self::height_map::HeightMap;
 pub use self::noise::{Noise, NoiseBuilder};

@@ -16,8 +16,10 @@ use std::path::Path;
 use std::time::Instant;
 
 use core::{Point2f, Point2i, Seed};
+use world::erosion::Model;
 use world::noise::{presets::get_default_noise, Noise, NoiseBuilder};
 use world::HeightMap;
+use world::CHUNK_SIZE;
 
 fn main() {
     const FILENAME: &'static str = "heightmap.dat";
@@ -29,14 +31,16 @@ fn main() {
     let seed = Seed::from_entropy();
     info!("Seed = {}", seed);
 
-    let size = 10000;
+    let size = CHUNK_SIZE * 10;
     info!("Heightmap size = {}x{}", size, size);
 
     let noise = get_default_noise(seed);
 
     let heightmap = HeightMap::from_noise(Point2f::from_scalar(0.), size, 1, noise.as_ref());
 
-    match heightmap.into_file(&Path::new(FILENAME)) {
+    let erosion_heightmap: HeightMap = Model::from(heightmap).run(40, seed).into();
+
+    match erosion_heightmap.into_file(&Path::new(FILENAME)) {
         Ok(f) => info!("Successfully written heightmap to'{}'", FILENAME),
         Err(e) => error!("Could not write heightmap into '{}': {}", FILENAME, e),
     }

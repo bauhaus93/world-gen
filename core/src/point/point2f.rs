@@ -9,11 +9,9 @@ impl Point2f {
         Self(glm::normalize(self.0))
     }
 
-    pub fn get_length(&self) -> f32 {
+    pub fn length(&self) -> f32 {
         glm::length(self.0)
     }
-
-    
 }
 
 impl From<Point2i> for Point2f {

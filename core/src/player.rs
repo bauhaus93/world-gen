@@ -33,7 +33,7 @@ impl Player {
     pub fn jump(&mut self, force: Float) {
         self.jumping = true;
         let momentum_xy = self.momentum.as_xy();
-        let jump_momentum = match momentum_xy.get_length() {
+        let jump_momentum = match momentum_xy.length() {
             mom_xy if mom_xy < 1e-3 => Point3f::new(0., 0., 1.) * force,
             _ => (momentum_xy.as_normalized() * self.speed).extend(force),
         };
@@ -60,7 +60,7 @@ impl Player {
                 move_offset += self.forward.cross(&up);
             }
         }
-        if move_offset.get_length() > 1e-3 {
+        if move_offset.length() > 1e-3 {
             self.push(move_offset.as_normalized() * self.speed);
         }
     }

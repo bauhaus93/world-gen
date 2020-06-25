@@ -1,4 +1,4 @@
 
 mod model;
 
-use self::model::Model;
+pub use self::model::Model;

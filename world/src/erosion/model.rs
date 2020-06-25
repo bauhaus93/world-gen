@@ -1,19 +1,23 @@
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng};
 use std::ops::{Add, AddAssign};
 
 use crate::HeightMap;
-use core::{Point2f, Point3f};
+use core::{Point2f, Point3f, Seed};
 
 type Flux = [f32; 4];
 
 // TODO: Proper values for constants
-const PIPE_AREA: f32 = 1.;
-const PIPE_LENGTH: f32 = 1.;
-const GRID_DISTANCE_X: f32 = 1.;
-const GRID_DISTANCE_Y: f32 = 1.;
-const GRAVITY: f32 = 1.;
-const DELTA_TIME: f32 = 1.;
-const SEDIMENT_CAPACITY_CONSTANT: f32 = 1.;
+const PIPE_AREA: f32 = 0.5;
+const PIPE_LENGTH: f32 = 0.25;
+const GRID_DISTANCE_X: f32 = 0.01;
+const GRID_DISTANCE_Y: f32 = 0.01;
+const GRAVITY: f32 = 0.5;
+const DELTA_TIME: f32 = 1e-1;
+const SEDIMENT_CAPACITY_CONSTANT: f32 = 0.4;
+const DISSOLVING_CONSTANT: f32 = 5e-1;
+const DEPOSITION_CONSTANT: f32 = 1e-1;
+const EVAPORATION_CONSTANT: f32 = 0.1;
+const MIN_TILT: f32 = 0.1;
 
 pub struct Model {
     size: usize,
@@ -82,23 +86,64 @@ impl Model {
         m
     }
 
-    pub fn run_once(mut self, rng: &mut impl Rng) -> Self {
-        let mut model_delta = Model::new_zeroed_from_ref(&self);
-
-        model_delta.rain(1000., 10000, rng);
-        model_delta.calculate_flux_delta(&self);
-        self.apply_flux_delta(&model_delta);
-        model_delta.calculate_flux_water_delta(&self);
-
-        self
+    pub fn get_total_water(&self) -> f32 {
+        self.water_height.iter().fold(0., |acc, h| acc + h)
     }
 
-    pub fn run(mut self, count: usize, rng: &mut impl Rng) -> Self {
+    pub fn get_total_terrain_height(&self) -> f32 {
+        self.terrain_height.iter().fold(0., |acc, h| acc + h)
+    }
+
+    pub fn get_total_suspended_sediment(&self) -> f32 {
+        self.suspended_sediment.iter().fold(0., |acc, h| acc + h)
+    }
+
+    pub fn get_terrain_suspended_ratio(&self) -> f32 {
+        self.get_total_suspended_sediment() / self.get_total_terrain_height()
+    }
+
+    pub fn run(mut self, count: usize, seed: Seed) -> Self {
+        info!("Starting erosion simulation with {} turns", count);
+        let mut rng: SmallRng = seed.into();
         let mut model_delta = Model::new_zeroed_from_ref(&self);
 
         for i in 0..count {
-            self = self.run_once(rng);
+            self = self.run_once(&mut rng);
+            if i % usize::max(1, (count / 20)) == 0 {
+                info!(
+                    "Progress: {:2}% | terrain height: {:.0} | susp sed: {:.2} | total water: {:.2}",
+                    100 * i / count,
+                    self.get_total_terrain_height(),
+                    self.get_total_suspended_sediment(),
+                    self.get_total_water()
+                );
+            }
         }
+        self
+    }
+
+    fn run_once(mut self, rng: &mut impl Rng) -> Self {
+        let mut delta = Model::new_zeroed_from_ref(&self);
+
+        delta.rain(1., 10000, rng);
+
+        delta.calculate_flux_delta(&self);
+        self.apply_flux_delta(&delta);
+        delta.calculate_flux_water_delta(&self);
+        delta.calculate_velocity_field_delta(&self);
+        self.apply_velocity_field_delta(&delta);
+
+        delta.calculate_erosion_deposition_delta(&self);
+        self.apply_erosion_deposition_delta(&delta);
+
+        delta.calculate_sediment_transportation_delta(&self);
+        self.apply_sediment_transportation_delta(&delta);
+
+        delta.calculate_evaporation_delta(&self);
+
+        self.apply_water_delta(&delta);
+        self.apply_terrain_delta(&delta);
+
         self
     }
 
@@ -154,18 +199,81 @@ impl Model {
 
             let flux_delta_x = (flux_delta_left + flux_delta_right) / 2.;
             let flux_delta_y = (flux_delta_up + flux_delta_down) / 2.;
-            let u = flux_delta_x / (GRID_DISTANCE_Y * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
-            let v = flux_delta_y / (GRID_DISTANCE_X * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let u = flux_delta_x / f32::max(1e-3, (GRID_DISTANCE_Y * m.water_height[i])); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let v = flux_delta_y / f32::max(1e-3, (GRID_DISTANCE_X * m.water_height[i])); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
             self.velocity[i] = Point2f::new(
                 f32::min(u, GRID_DISTANCE_X / DELTA_TIME),
                 f32::min(v, GRID_DISTANCE_Y / DELTA_TIME),
             ) - m.velocity[i];
+            debug_assert!(!self.velocity[i][0].is_infinite() && !self.velocity[i][0].is_nan());
+            debug_assert!(!self.velocity[i][1].is_infinite() && !self.velocity[i][1].is_nan());
         }
     }
 
     pub fn calculate_erosion_deposition_delta(&mut self, m: &Model) {
         for i in 0..self.size * self.size {
-            let transport_capacity = SEDIMENT_CAPACITY_CONSTANT;
+            let transport_capacity = SEDIMENT_CAPACITY_CONSTANT
+                * f32::max(MIN_TILT, m.get_tilt_angle(i)).sin()
+                * m.velocity[i].length();
+            if transport_capacity > m.suspended_sediment[i] {
+                let delta_suspendend_sediment =
+                    DISSOLVING_CONSTANT * (transport_capacity - m.suspended_sediment[i]);
+                self.terrain_height[i] -= delta_suspendend_sediment;
+                self.suspended_sediment[i] += delta_suspendend_sediment;
+            } else {
+                let delta_deposited_sediment =
+                    DEPOSITION_CONSTANT * (m.suspended_sediment[i] - transport_capacity);
+                self.terrain_height[i] += delta_deposited_sediment;
+                self.suspended_sediment[i] -= delta_deposited_sediment;
+            }
+        }
+    }
+
+    pub fn calculate_sediment_transportation_delta(&mut self, m: &Model) {
+        for i in 0..self.size * self.size {
+            let mut source_pos = Point2f::new(
+                (i % self.size) as f32 - m.velocity[i][0] * DELTA_TIME,
+                (i / self.size) as f32 - m.velocity[i][1] * DELTA_TIME,
+            );
+
+            if source_pos[0] < 0. {
+                source_pos[0] += self.size as f32;
+            }
+            if source_pos[0] >= self.size as f32 {
+                source_pos[0] -= self.size as f32;
+            }
+            if source_pos[1] < 0. {
+                source_pos[1] += self.size as f32;
+            }
+            if source_pos[1] >= self.size as f32 {
+                source_pos[1] -= self.size as f32;
+            }
+            assert!(source_pos[0] >= 0. && source_pos[0] < self.size as f32);
+            assert!(source_pos[1] >= 0. && source_pos[1] < self.size as f32);
+
+            let grid_ul_index = source_pos[0] as usize + source_pos[1] as usize * self.size;
+            let grid_ur_index = self.get_neighbour_index(grid_ul_index, Direction::Right);
+            let grid_dl_index = self.get_neighbour_index(grid_ul_index, Direction::Down);
+            let grid_dr_index = self.get_neighbour_index(grid_dl_index, Direction::Right);
+            // overwrites existing delta from deposition/suspending phase, which should already have been
+            // applied to the model
+            self.suspended_sediment[i] = interpolate(
+                source_pos,
+                [
+                    m.suspended_sediment[grid_ul_index],
+                    m.suspended_sediment[grid_ur_index],
+                    m.suspended_sediment[grid_dl_index],
+                    m.suspended_sediment[grid_dr_index],
+                ],
+            ) - m.suspended_sediment[i];
+        }
+    }
+
+    pub fn calculate_evaporation_delta(&mut self, m: &Model) {
+        for i in 0..self.size * self.size {
+            self.water_height[i] = ((self.water_height[i] + m.water_height[i])
+                * (1. - EVAPORATION_CONSTANT * DELTA_TIME))
+                - m.water_height[i];
         }
     }
 
@@ -193,12 +301,6 @@ impl Model {
         let v_lr = Point3f::new(-2., 0., h_left - h_right).as_normalized();
 
         let cos_tilt = v_lr.cross(&v_ud).dot(&Point3f::new(0., 0., 1.));
-        println!(
-            "v_ud = {}, v_lr = {}, n = {}",
-            v_ud,
-            v_lr,
-            v_lr.cross(&v_ud)
-        );
         cos_tilt.acos()
     }
 
@@ -222,6 +324,37 @@ impl Model {
                     self.outflow_flux[i][dir.get_index()] *= scaling_factor;
                 }
             }
+        }
+    }
+
+    fn apply_velocity_field_delta(&mut self, delta: &Self) {
+        for i in 0..self.size * self.size {
+            self.velocity[i] += delta.velocity[i];
+        }
+    }
+
+    fn apply_erosion_deposition_delta(&mut self, delta: &Self) {
+        for i in 0..self.size * self.size {
+            self.terrain_height[i] += delta.terrain_height[i];
+            self.suspended_sediment[i] += delta.suspended_sediment[i];
+        }
+    }
+
+    fn apply_sediment_transportation_delta(&mut self, delta: &Self) {
+        for i in 0..self.size * self.size {
+            self.suspended_sediment[i] += delta.suspended_sediment[i];
+        }
+    }
+
+    fn apply_water_delta(&mut self, delta: &Self) {
+        for i in 0..self.size * self.size {
+            self.water_height[i] += delta.water_height[i];
+        }
+    }
+
+    fn apply_terrain_delta(&mut self, delta: &Self) {
+        for i in 0..self.size * self.size {
+            self.terrain_height[i] += delta.terrain_height[i];
         }
     }
 }
@@ -249,6 +382,17 @@ impl Into<HeightMap> for Model {
     fn into(self) -> HeightMap {
         HeightMap::from_list(self.size as i32, 1, self.terrain_height.as_slice())
     }
+}
+
+fn interpolate(p: Point2f, reference: [f32; 4]) -> f32 {
+    let anchor = [p[0].floor() as i32, p[1].floor() as i32];
+    let a = anchor[0] as f32 + 1. - p[0];
+    let b = p[0] - anchor[0] as f32;
+    let r_1 = a * reference[0] + b * reference[1];
+    let r_2 = a * reference[2] + b * reference[3];
+    let c = anchor[1] as f32 + 1. - p[1];
+    let d = p[1] - anchor[1] as f32;
+    c * r_1 + d * r_2
 }
 
 #[cfg(test)]

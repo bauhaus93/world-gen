@@ -57,7 +57,7 @@ impl World {
         info!("World seed = {}", seed);
         let mut rng: SmallRng = seed.into();
 
-        let world_size = Point2i::from_scalar(100);
+        let world_size = Point2i::from_scalar(8);
 
         let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
         /*let architect = Architect::from_noise(

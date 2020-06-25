@@ -2,21 +2,21 @@ use rand::{rngs::SmallRng, Rng};
 use std::ops::{Add, AddAssign};
 
 use crate::HeightMap;
-use core::{Point2f, Point3f, Seed};
+use core::{Point2f, Point2i, Point3f, Seed};
 
 type Flux = [f32; 4];
 
 // TODO: Proper values for constants
-const PIPE_AREA: f32 = 0.5;
+const PIPE_AREA: f32 = 0.1;
 const PIPE_LENGTH: f32 = 0.25;
 const GRID_DISTANCE_X: f32 = 0.01;
 const GRID_DISTANCE_Y: f32 = 0.01;
 const GRAVITY: f32 = 0.5;
 const DELTA_TIME: f32 = 1e-1;
-const SEDIMENT_CAPACITY_CONSTANT: f32 = 0.4;
-const DISSOLVING_CONSTANT: f32 = 5e-1;
-const DEPOSITION_CONSTANT: f32 = 1e-1;
-const EVAPORATION_CONSTANT: f32 = 0.1;
+const SEDIMENT_CAPACITY_CONSTANT: f32 = 2.;
+const DISSOLVING_CONSTANT: f32 = 1e-1;
+const DEPOSITION_CONSTANT: f32 = 5e-1;
+const EVAPORATION_CONSTANT: f32 = 1e-2;
 const MIN_TILT: f32 = 0.1;
 
 pub struct Model {
@@ -123,14 +123,14 @@ impl Model {
     }
 
     fn run_once(mut self, rng: &mut impl Rng) -> Self {
-        let mut delta = Model::new_zeroed_from_ref(&self);
+        //delta.rain(3., 100, rng);
+        self.river(0, 1.);
 
-        delta.rain(1., 10000, rng);
+        let new_flux = self.calculate_flux();
+        self.update_flux(new_flux);
+        self.apply_flux_to_waterlevel();
 
-        delta.calculate_flux_delta(&self);
-        self.apply_flux_delta(&delta);
-        delta.calculate_flux_water_delta(&self);
-        delta.calculate_velocity_field_delta(&self);
+        /*delta.calculate_velocity_field_delta(&self);
         self.apply_velocity_field_delta(&delta);
 
         delta.calculate_erosion_deposition_delta(&self);
@@ -139,12 +139,19 @@ impl Model {
         delta.calculate_sediment_transportation_delta(&self);
         self.apply_sediment_transportation_delta(&delta);
 
-        delta.calculate_evaporation_delta(&self);
+        delta.calculate_evaporation_delta(&self);*/
 
-        self.apply_water_delta(&delta);
-        self.apply_terrain_delta(&delta);
+        //self.apply_water_delta(&delta);
+        //self.apply_terrain_delta(&delta);
 
         self
+    }
+
+    pub fn get_water_height(&self, pos: Point2i) -> f32 {
+        self.water_height[self.get_index(pos)]
+    }
+    pub fn get_terrain_height(&self, pos: Point2i) -> f32 {
+        self.terrain_height[self.get_index(pos)]
     }
 
     pub fn rain(&mut self, total_amount: f32, drop_count: usize, rng: &mut impl Rng) {
@@ -155,28 +162,57 @@ impl Model {
         }
     }
 
-    pub fn calculate_flux_delta(&mut self, m: &Model) {
+    pub fn river(&mut self, source_index: usize, total_amount: f32) {
+        self.water_height[source_index] += total_amount;
+    }
+
+    pub fn calculate_flux(&self) -> Vec<Flux> {
+        let mut new_flux = self.outflow_flux.clone();
         for i in 0..self.size * self.size {
             for dir in Direction::as_slice().iter() {
                 let nb = self.get_neighbour_index(i, *dir);
                 let delta_height = self.terrain_height[i] + self.water_height[i]
                     - self.terrain_height[nb]
                     - self.water_height[nb];
-                self.outflow_flux[i][dir.get_index()] =
-                    DELTA_TIME * PIPE_AREA * ((GRAVITY * delta_height) / PIPE_LENGTH);
+                if delta_height.abs() < 1e-6 {
+                    new_flux[i][dir.get_index()] = 0.;
+                } else {
+                    new_flux[i][dir.get_index()] = f32::max(
+                        0.,
+                        self.outflow_flux[i][dir.get_index()]
+                            + DELTA_TIME * PIPE_AREA * ((GRAVITY * delta_height) / PIPE_LENGTH),
+                    );
+                }
+            }
+            if new_flux[i].iter().any(|e| e.abs() > 0.) {
+                let scaling = f32::min(
+                    1.,
+                    (self.water_height[i] * GRID_DISTANCE_X * GRID_DISTANCE_Y)
+                        / (new_flux[i].iter().fold(0., |acc, f| acc + f) * DELTA_TIME),
+                );
+                for dir in Direction::as_slice().iter() {
+                    new_flux[i][dir.get_index()] *= scaling;
+                    //println!("new = {}", new_flux[i][dir.get_index()]);
+                }
             }
         }
+        new_flux
+    }
+    fn update_flux(&mut self, new_flux: Vec<Flux>) {
+        self.outflow_flux = new_flux;
     }
 
-    pub fn calculate_flux_water_delta(&mut self, m: &Model) {
+    fn apply_flux_to_waterlevel(&mut self) {
         for i in 0..self.size * self.size {
             let inflow = Direction::as_slice()
                 .iter()
-                .map(|d| m.outflow_flux[m.get_neighbour_index(i, *d)][d.get_opposite().get_index()])
+                .map(|d| {
+                    self.outflow_flux[self.get_neighbour_index(i, *d)][d.get_opposite().get_index()]
+                })
                 .fold(0., |acc, flux| acc + flux);
             let outflow = Direction::as_slice()
                 .iter()
-                .fold(0., |acc, dir| acc + m.outflow_flux[i][dir.get_index()]);
+                .fold(0., |acc, dir| acc + self.outflow_flux[i][dir.get_index()]);
             let delta = (DELTA_TIME * (inflow - outflow)) / (GRID_DISTANCE_X * GRID_DISTANCE_Y);
             self.water_height[i] += delta;
         }
@@ -199,8 +235,8 @@ impl Model {
 
             let flux_delta_x = (flux_delta_left + flux_delta_right) / 2.;
             let flux_delta_y = (flux_delta_up + flux_delta_down) / 2.;
-            let u = flux_delta_x / f32::max(1e-3, (GRID_DISTANCE_Y * m.water_height[i])); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
-            let v = flux_delta_y / f32::max(1e-3, (GRID_DISTANCE_X * m.water_height[i])); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let u = flux_delta_x / f32::max(1e-3, GRID_DISTANCE_Y * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let v = flux_delta_y / f32::max(1e-3, GRID_DISTANCE_X * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
             self.velocity[i] = Point2f::new(
                 f32::min(u, GRID_DISTANCE_X / DELTA_TIME),
                 f32::min(v, GRID_DISTANCE_Y / DELTA_TIME),
@@ -277,6 +313,10 @@ impl Model {
         }
     }
 
+    fn get_index(&self, pos: Point2i) -> usize {
+        pos[0] as usize + self.size * (pos[1] as usize)
+    }
+
     fn get_neighbour_index(&self, cell: usize, dir: Direction) -> usize {
         match dir {
             Direction::Up if cell < self.size => self.size * self.size - (self.size - cell),
@@ -302,29 +342,6 @@ impl Model {
 
         let cos_tilt = v_lr.cross(&v_ud).dot(&Point3f::new(0., 0., 1.));
         cos_tilt.acos()
-    }
-
-    fn apply_flux_delta(&mut self, delta: &Self) {
-        for i in 0..self.size * self.size {
-            for dir in Direction::as_slice().iter() {
-                self.outflow_flux[i][dir.get_index()] = f32::max(
-                    0.,
-                    self.outflow_flux[i][dir.get_index()] + delta.outflow_flux[i][dir.get_index()],
-                );
-            }
-            let scaling_factor = match self.outflow_flux[i].iter().fold(0., |acc, v| acc + v) {
-                n if n > 0. => f32::min(
-                    1.,
-                    (self.water_height[i] * GRID_DISTANCE_X * GRID_DISTANCE_Y) / (n * DELTA_TIME),
-                ),
-                _ => 0.,
-            };
-            if scaling_factor > 0. {
-                for dir in Direction::as_slice().iter() {
-                    self.outflow_flux[i][dir.get_index()] *= scaling_factor;
-                }
-            }
-        }
     }
 
     fn apply_velocity_field_delta(&mut self, delta: &Self) {

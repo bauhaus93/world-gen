@@ -57,7 +57,7 @@ impl HeightMap {
                 }
             }
         }
-        debug!("Created heightmap from file!");
+        debug!("Created heightmap from noise!");
         Self {
             size: size,
             resolution: resolution,

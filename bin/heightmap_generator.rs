@@ -31,14 +31,14 @@ fn main() {
     let seed = Seed::from_entropy();
     info!("Seed = {}", seed);
 
-    let size = CHUNK_SIZE * 10;
+    let size = CHUNK_SIZE * 5;
     info!("Heightmap size = {}x{}", size, size);
 
     let noise = get_default_noise(seed);
 
     let heightmap = HeightMap::from_noise(Point2f::from_scalar(0.), size, 1, noise.as_ref());
 
-    let erosion_heightmap: HeightMap = Model::from(heightmap).run(40, seed).into();
+    let erosion_heightmap: HeightMap = Model::from(heightmap).run(100, seed).into();
 
     match erosion_heightmap.into_file(&Path::new(FILENAME)) {
         Ok(f) => info!("Successfully written heightmap to'{}'", FILENAME),

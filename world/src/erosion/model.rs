@@ -12,7 +12,7 @@ const PIPE_LENGTH: f32 = 0.25;
 const GRID_DISTANCE_X: f32 = 0.01;
 const GRID_DISTANCE_Y: f32 = 0.01;
 const GRAVITY: f32 = 0.5;
-const DELTA_TIME: f32 = 1e-1;
+const DELTA_TIME: f32 = 1e-2;
 const SEDIMENT_CAPACITY_CONSTANT: f32 = 2.;
 const DISSOLVING_CONSTANT: f32 = 1e-1;
 const DEPOSITION_CONSTANT: f32 = 5e-1;
@@ -123,17 +123,18 @@ impl Model {
     }
 
     fn run_once(mut self, rng: &mut impl Rng) -> Self {
-        //delta.rain(3., 100, rng);
-        self.river(0, 1.);
+        //self.rain(1., 5, rng);
+        self.river((self.size * (self.size -1)) / 2, 2.);
 
         let new_flux = self.calculate_flux();
         self.update_flux(new_flux);
         self.apply_flux_to_waterlevel();
 
-        /*delta.calculate_velocity_field_delta(&self);
-        self.apply_velocity_field_delta(&delta);
+        self.update_velocity();
 
-        delta.calculate_erosion_deposition_delta(&self);
+
+
+        /*delta.calculate_erosion_deposition_delta(&self);
         self.apply_erosion_deposition_delta(&delta);
 
         delta.calculate_sediment_transportation_delta(&self);
@@ -152,6 +153,9 @@ impl Model {
     }
     pub fn get_terrain_height(&self, pos: Point2i) -> f32 {
         self.terrain_height[self.get_index(pos)]
+    }
+    pub fn get_velocity(&self, pos: Point2i) -> Point2f {
+        self.velocity[self.get_index(pos)]
     }
 
     pub fn rain(&mut self, total_amount: f32, drop_count: usize, rng: &mut impl Rng) {
@@ -218,29 +222,29 @@ impl Model {
         }
     }
 
-    pub fn calculate_velocity_field_delta(&mut self, m: &Model) {
+    pub fn update_velocity(&mut self) {
         for i in 0..self.size * self.size {
-            let flux_delta_left = self.outflow_flux[self.get_neighbour_index(i, Direction::Left)]
+            let flux_left = self.outflow_flux[self.get_neighbour_index(i, Direction::Left)]
                 [Direction::Right.get_index()]
                 - self.outflow_flux[i][Direction::Left.get_index()];
-            let flux_delta_right = self.outflow_flux[i][Direction::Right.get_index()]
+            let flux_right = self.outflow_flux[i][Direction::Right.get_index()]
                 - self.outflow_flux[self.get_neighbour_index(i, Direction::Right)]
                     [Direction::Left.get_index()];
-            let flux_delta_up = self.outflow_flux[self.get_neighbour_index(i, Direction::Up)]
+            let flux_up = self.outflow_flux[self.get_neighbour_index(i, Direction::Up)]
                 [Direction::Down.get_index()]
                 - self.outflow_flux[i][Direction::Up.get_index()];
-            let flux_delta_down = self.outflow_flux[i][Direction::Down.get_index()]
+            let flux_down = self.outflow_flux[i][Direction::Down.get_index()]
                 - self.outflow_flux[self.get_neighbour_index(i, Direction::Down)]
                     [Direction::Up.get_index()];
 
-            let flux_delta_x = (flux_delta_left + flux_delta_right) / 2.;
-            let flux_delta_y = (flux_delta_up + flux_delta_down) / 2.;
-            let u = flux_delta_x / f32::max(1e-3, GRID_DISTANCE_Y * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
-            let v = flux_delta_y / f32::max(1e-3, GRID_DISTANCE_X * m.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let flux_x = (flux_left + flux_right) / 2.;
+            let flux_y = (flux_up + flux_down) / 2.;
+            let u = flux_x / f32::max(1e-3, GRID_DISTANCE_Y * self.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
+            let v = flux_y / f32::max(1e-3, GRID_DISTANCE_X * self.water_height[i]); // possible problem: not using average of water height between intermediate steps (instead of (d1+d2)/2, just using d2)
             self.velocity[i] = Point2f::new(
                 f32::min(u, GRID_DISTANCE_X / DELTA_TIME),
                 f32::min(v, GRID_DISTANCE_Y / DELTA_TIME),
-            ) - m.velocity[i];
+            );
             debug_assert!(!self.velocity[i][0].is_infinite() && !self.velocity[i][0].is_nan());
             debug_assert!(!self.velocity[i][1].is_infinite() && !self.velocity[i][1].is_nan());
         }

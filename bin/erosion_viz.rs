@@ -43,7 +43,7 @@ fn print_water_height(p: Point2i, offset: Point2i, width: i32, model: &Model) {
     } else if w > 0. {
         ncurses::attron(ncurses::COLOR_PAIR(2));
     }
-    ncurses::printw(&format!("{:3.1}", w));
+    ncurses::addstr(&format!("{:3.1}", w));
 
     ncurses::attroff(ncurses::COLOR_PAIR(1));
     ncurses::attroff(ncurses::COLOR_PAIR(2));
@@ -52,13 +52,37 @@ fn print_water_height(p: Point2i, offset: Point2i, width: i32, model: &Model) {
 fn print_terrain_height(p: Point2i, offset: Point2i, width: i32, model: &Model) {
     ncurses::mv(offset[1] + p[1], offset[0] + width * p[0]);
     let h = model.get_terrain_height(p) as i32;
-    ncurses::printw(&format!("{:2}", h));
+    ncurses::addstr(&format!("{:3}", h));
+}
+
+fn print_delta_terrain_height(p: Point2i, offset: Point2i, width: i32, curr_model: &Model, orig_model: &Model) {
+    ncurses::mv(offset[1] + p[1], offset[0] + width * p[0]);
+    let dh = curr_model.get_terrain_height(p) as i32 - orig_model.get_terrain_height(p) as i32;
+    if dh.abs() >= 1  {
+        ncurses::attron(ncurses::COLOR_PAIR(4));
+    }
+    ncurses::addstr(&format!("{:3}", dh));
+    ncurses::attroff(ncurses::COLOR_PAIR(4));
 }
 
 fn print_velocity(p: Point2i, offset: Point2i, width: i32, model: &Model) {
     ncurses::mv(offset[1] + p[1], offset[0] + width * p[0]);
     let v = model.get_velocity(p);
-    ncurses::printw(&format!("{:.1}/{:.1}", v[0], v[1]));
+    ncurses::addstr(&format!("{:.1}/{:.1}", v[0], v[1]));
+}
+
+fn print_suspended_sediment(p: Point2i, offset: Point2i, width: i32, model: &Model) {
+    ncurses::mv(offset[1] + p[1], offset[0] + width * p[0]);
+    let ss = model.get_suspended_sediment(p);
+    if ss > 1. {
+        ncurses::attron(ncurses::COLOR_PAIR(4));
+    } else if ss >= 1e-1 {
+        ncurses::attron(ncurses::COLOR_PAIR(3));
+    }
+    ncurses::addstr(&format!("{:3.1}", ss));
+
+    ncurses::attroff(ncurses::COLOR_PAIR(3));
+    ncurses::attroff(ncurses::COLOR_PAIR(4));
 }
 
 fn main() {
@@ -72,13 +96,49 @@ fn main() {
 
     let mut rng: SmallRng = seed.into();
     let mut model = Model::from(heightmap);
+    let orig_model = model.clone();
     for i in 0..10000 {
+        ncurses::clear();
+        ncurses::mv(1, 1);
+        ncurses::addstr("total water:");
+        ncurses::mv(1, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_water()));
+
+        ncurses::mv(2, 1);
+        ncurses::addstr("total height:");
+        ncurses::mv(2, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_terrain_height()));
+
+        ncurses::mv(3, 1);
+        ncurses::addstr("total susp sed:");
+        ncurses::mv(3, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_suspended_sediment()));
+
+
+        ncurses::mv(4, 1);
+        ncurses::addstr("h + ss:");
+        ncurses::mv(4, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_terrain_height() + model.get_total_suspended_sediment()));
+
+        ncurses::mv(5, 1);
+        ncurses::addstr("total velocity:");
+        ncurses::mv(5, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_velocity()));
+
+        ncurses::mv(6, 1);
+        ncurses::addstr("total height delta:");
+        ncurses::mv(6, 20);
+        ncurses::addstr(&format!("{:.1}", model.get_total_terrain_height() - orig_model.get_total_terrain_height()));
+
+
+
         for y in 0..size {
             for x in 0..size {
                 let p = Point2i::new(x, y);
-                print_water_height(p, Point2i::new(10, 1), 5, &model);
-                print_terrain_height(p, Point2i::new(10, 22), 5, &model);
-                print_velocity(p, Point2i::new(10, 43), 10, &model);
+                print_water_height(p, Point2i::new(10, 10), 5, &model);
+                print_suspended_sediment(p, Point2i::new(10, 31), 5, &model);
+                print_terrain_height(p, Point2i::new(10, 52), 5, &model);
+                print_delta_terrain_height(p, Point2i::new(120, 52), 5, &model, &orig_model);
             }
         }
         model = model.run(1, Seed::from_rng(&mut rng));

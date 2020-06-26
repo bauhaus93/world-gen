@@ -38,7 +38,7 @@ fn main() {
 
     let heightmap = HeightMap::from_noise(Point2f::from_scalar(0.), size, 1, noise.as_ref());
 
-    let erosion_heightmap: HeightMap = Model::from(heightmap).run(100, seed).into();
+    let erosion_heightmap: HeightMap = Model::from(heightmap).run(5000, seed).into();
 
     match erosion_heightmap.into_file(&Path::new(FILENAME)) {
         Ok(f) => info!("Successfully written heightmap to'{}'", FILENAME),

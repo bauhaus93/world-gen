@@ -11,6 +11,7 @@ extern crate byteorder;
 extern crate bytes;
 extern crate serde;
 extern crate serde_yaml;
+extern crate rayon;
 
 extern crate core;
 

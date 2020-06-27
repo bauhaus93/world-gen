@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use super::ObjectPrototype;
 use crate::graphics::GraphicsError;
@@ -6,16 +6,26 @@ use crate::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable};
 use crate::{Model, Point3f};
 
 pub struct Object {
-    prototype: Arc<ObjectPrototype>,
+    id: u32,
+    prototype: Rc<ObjectPrototype>,
     model: Model,
 }
 
 impl Object {
-    pub fn new(prototype: Arc<ObjectPrototype>) -> Object {
+    pub fn new(id: u32, prototype: Rc<ObjectPrototype>) -> Object {
         Object {
+            id: id,
             prototype: prototype,
             model: Model::default(),
         }
+    }
+
+    pub fn get_id(&self) -> u32 {
+        self.id
+    }
+    
+    pub fn get_distance(&self, point: Point3f) -> f32 {
+        self.model.get_distance(point)
     }
 }
 

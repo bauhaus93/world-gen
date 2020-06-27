@@ -1,95 +1,40 @@
-use std::collections::BTreeSet;
 use std::convert::TryFrom;
 
 use glm::{Vector2, Vector3};
-use rand::{rngs::SmallRng, Rng, SeedableRng};
 
 use super::{get_world_pos, Chunk, ChunkError, CHUNK_SIZE};
-use crate::HeightMap;
 use crate::architect::Architect;
+use crate::HeightMap;
 use core::graphics::mesh::{Mesh, Triangle, Vertex, VertexBuffer};
-use core::traits::{Rotatable, Scalable, Translatable};
-use core::{Object, ObjectManager, Point2f, Point2i, Point3f};
+use core::{Point2f, Point2i};
 
 pub struct ChunkBuilder {
     pos: Point2i,
     lod: u8,
     height_map: HeightMap,
     surface_vertices: VertexBuffer,
-    tree_list: Vec<Object>,
 }
 
 impl ChunkBuilder {
-    pub fn new(
-        pos: Point2i,
-        lod: u8,
-        architect: &Architect,
-        object_manager: &ObjectManager,
-        random_state: &[u8; 16],
-    ) -> Result<Self, ChunkError> {
+    pub fn new(pos: Point2i, lod: u8, architect: &Architect) -> Result<Self, ChunkError> {
         let height_map = match lod {
             0 => architect.create_heightmap(pos, CHUNK_SIZE, 1),
             _ => architect.create_heightmap(pos, CHUNK_SIZE / 8, 8),
         };
         let surface_buffer = create_surface_buffer(pos, architect, &height_map);
-        let mut builder = Self {
+        let builder = Self {
             pos: pos,
             lod: lod,
             height_map: height_map,
             surface_vertices: surface_buffer,
-            tree_list: Vec::new(),
         };
-
-        let mut seed: [u8; 16] = [0; 16];
-        seed.copy_from_slice(random_state);
-        for i in 0..8 {
-            seed[i] += (pos[i / 4] >> (8 * (i % 4))) as u8;
-        }
-        let mut rng = SmallRng::from_seed(seed);
-
-        builder.load_trees(object_manager, &mut rng)?;
         Ok(builder)
     }
 
     pub fn finish(self) -> Result<Chunk, ChunkError> {
         let mesh = Mesh::try_from(self.surface_vertices)?;
-        let mut chunk = Chunk::new(self.pos, self.height_map, self.lod, mesh);
-        self.tree_list.into_iter().for_each(|t| chunk.add_tree(t));
+        let chunk = Chunk::new(self.pos, self.height_map, self.lod, mesh);
         Ok(chunk)
-    }
-
-    fn load_trees(
-        &mut self,
-        object_manager: &ObjectManager,
-        rng: &mut impl Rng,
-    ) -> Result<(), ChunkError> {
-        if self.lod < 2 {
-            let resolution = self.height_map.get_resolution();
-            let size = self.height_map.get_size();
-            let tree_count = rng.gen_range(2, 20);
-            let mut positions: BTreeSet<Point2i> = BTreeSet::default();
-            for _ in 0..tree_count {
-                positions.insert(Point2i::new(rng.gen_range(0, size), rng.gen_range(0, size)));
-            }
-            for rel_pos in positions.into_iter() {
-                let mut tree = object_manager.create_object("tree")?;
-                let abs_pos = (Point2f::from(self.pos * CHUNK_SIZE)
-                    + Point2f::from(rel_pos) * resolution as f32)
-                    .extend(self.height_map.get(rel_pos));
-                tree.set_translation(abs_pos);
-                let scale_xy = rng.gen_range(0.8, 1.2);
-                let scale_z = rng.gen_range(0.8, 1.4);
-                tree.set_scale(Point3f::new(scale_xy, scale_xy, scale_z));
-                let orientation = Point3f::new(
-                    rng.gen_range(-0.2, 0.2),
-                    rng.gen_range(-0.2, 0.2),
-                    rng.gen_range(-0.2, 0.2),
-                );
-                tree.set_rotation(orientation);
-                self.tree_list.push(tree);
-            }
-        }
-        Ok(())
     }
 }
 

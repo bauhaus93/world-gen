@@ -9,15 +9,14 @@ extern crate world;
 
 use env_logger::{fmt::Formatter, Builder};
 use log::Record;
-use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
 
 use std::time::Instant;
 
-use core::{Point2f, Point2i, Seed};
+use core::{Point2f, Seed};
 use world::erosion::Model;
-use world::noise::{presets::get_default_noise, Noise, NoiseBuilder};
+use world::noise::presets::get_default_noise;
 use world::HeightMap;
 use world::CHUNK_SIZE;
 
@@ -41,7 +40,7 @@ fn main() {
     let erosion_heightmap: HeightMap = Model::from(heightmap).run(5000, seed).into();
 
     match erosion_heightmap.into_file(&Path::new(FILENAME)) {
-        Ok(f) => info!("Successfully written heightmap to'{}'", FILENAME),
+        Ok(_) => info!("Successfully written heightmap to'{}'", FILENAME),
         Err(e) => error!("Could not write heightmap into '{}': {}", FILENAME, e),
     }
 

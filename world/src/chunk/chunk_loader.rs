@@ -3,42 +3,30 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use rand::Rng;
-
 use super::{BuildStats, Chunk, ChunkBuilder, ChunkError, Worker};
 use crate::architect::Architect;
-use core::{ObjectManager, Point2i};
+use core::Point2i;
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
-    object_manager: Arc<ObjectManager>,
     input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
-    output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+    output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<Point2i>,
     thread_handles: Vec<thread::JoinHandle<()>>,
-    random_state: [u8; 16],
 }
 
 impl ChunkLoader {
-    pub fn new<R: Rng + ?Sized>(
-        rng: &mut R,
-        architect: Architect,
-        object_manager: Arc<ObjectManager>,
-    ) -> Self {
-        let mut random_state = [0; 16];
-        rng.fill_bytes(&mut random_state);
+    pub fn new(architect: Architect) -> Self {
         Self {
             stop: Arc::new(AtomicBool::new(false)),
             architect: Arc::new(architect),
-            object_manager: object_manager,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
-            output_queue: Arc::new(Mutex::new(Vec::new())),
+            output_queue: Arc::new(Mutex::new(VecDeque::new())),
             build_stats: Arc::new(Mutex::new(BuildStats::default())),
             handeled_positions: BTreeSet::new(),
             thread_handles: Vec::new(),
-            random_state: random_state,
         }
     }
     pub fn start(&mut self, thread_count: usize) {
@@ -48,12 +36,10 @@ impl ChunkLoader {
         self.stop.load(Ordering::Relaxed);
         let worker = Worker::new(
             self.architect.clone(),
-            self.object_manager.clone(),
             self.stop.clone(),
             self.input_queue.clone(),
             self.output_queue.clone(),
             self.build_stats.clone(),
-            self.random_state,
         );
         for _i in 0..thread_count {
             let next_worker = worker.clone();
@@ -81,15 +67,19 @@ impl ChunkLoader {
         info!("Stopped {} chunk loader threads", stop_count);
     }
 
-    pub fn get(&mut self) -> Result<BTreeMap<Point2i, Chunk>, ChunkError> {
+    pub fn get(&mut self, max_taken: usize) -> Result<BTreeMap<Point2i, Chunk>, ChunkError> {
         let mut chunks = BTreeMap::new();
         match self.output_queue.lock() {
             Ok(mut guard) => {
-                while let Some(cb) = (*guard).pop() {
-                    let chunk = cb.finish()?;
-                    let pos = chunk.get_pos();
-                    self.handeled_positions.remove(&pos);
-                    chunks.insert(pos, chunk);
+                while chunks.len() < max_taken {
+                    if let Some(cb) = (*guard).pop_front() {
+                        let chunk = cb.finish()?;
+                        let pos = chunk.get_pos();
+                        self.handeled_positions.remove(&pos);
+                        chunks.insert(pos, chunk);
+                    } else {
+                        break;
+                    }
                 }
             }
             Err(_poisoned) => {

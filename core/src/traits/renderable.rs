@@ -4,7 +4,7 @@ use crate::{graphics::GraphicsError, Camera, ShaderProgram};
 pub struct RenderInfo<'a> {
     shader_stack: Vec<Rc<ShaderProgram>>,
     camera: &'a Camera,
-    lod: u8,
+    lod: u8
 }
 
 impl<'a> RenderInfo<'a> {

@@ -6,37 +6,31 @@ use std::time::{Duration, Instant};
 
 use super::{BuildStats, ChunkBuilder, ChunkError};
 use crate::architect::Architect;
-use core::{ObjectManager, Point2i};
+use core::Point2i;
 
 #[derive(Clone)]
 pub struct Worker {
     architect: Arc<Architect>,
-    object_manager: Arc<ObjectManager>,
     stop: Arc<AtomicBool>,
     input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
-    output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+    output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
-    random_state: [u8; 16],
 }
 
 impl Worker {
     pub fn new(
         architect: Arc<Architect>,
-        object_manager: Arc<ObjectManager>,
         stop: Arc<AtomicBool>,
         input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
-        output_queue: Arc<Mutex<Vec<ChunkBuilder>>>,
+        output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
         build_stats: Arc<Mutex<BuildStats>>,
-        random_state: [u8; 16],
     ) -> Worker {
         Worker {
             architect: architect,
-            object_manager: object_manager,
             stop: stop,
             input_queue: input_queue,
             output_queue: output_queue,
             build_stats: build_stats,
-            random_state: random_state,
         }
     }
 
@@ -63,16 +57,10 @@ impl Worker {
     }
 
     fn build_chunk(&self, chunk_pos: Point2i, lod: u8) -> Result<(), ChunkError> {
-        let builder = ChunkBuilder::new(
-            chunk_pos,
-            lod,
-            self.architect.as_ref(),
-            &self.object_manager,
-            &self.random_state,
-        )?;
+        let builder = ChunkBuilder::new(chunk_pos, lod, self.architect.as_ref())?;
 
         match self.output_queue.lock() {
-            Ok(mut guard) => (*guard).push(builder),
+            Ok(mut guard) => (*guard).push_back(builder),
             Err(_poisoned) => {
                 return Err(ChunkError::MutexPoison);
             }

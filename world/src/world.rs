@@ -1,19 +1,18 @@
 use std::collections::BTreeMap;
-use std::path::Path;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use rand::rngs::SmallRng;
 
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
+use crate::noise::presets::get_default_noise;
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
-    Config, Object, ObjectManager, Player, Point2i, Point3f, Seed, Skybox, Sun, Timer, UpdateError,
+    Config, ObjectManager, Player, Point2i, Point3f, Seed, Skybox, Sun, Timer, UpdateError,
 };
 
 pub struct World {
@@ -30,8 +29,8 @@ pub struct World {
     active_chunk_radius: i32,
     last_chunk_load: Point2i,
     #[allow(dead_code)]
-    object_manager: Arc<ObjectManager>,
-    test_monkey: Object,
+    object_manager: ObjectManager,
+    monkey_id: u32,
     center: Point3f,
     gravity: f32,
     size: Point2i,
@@ -57,25 +56,21 @@ impl World {
         info!("World seed = {}", seed);
         let mut rng: SmallRng = seed.into();
 
-        let world_size = Point2i::from_scalar(3);
+        let world_size = Point2i::from_scalar(100);
 
-        let object_manager = Arc::new(ObjectManager::from_yaml(&object_prototypes_path)?);
-        /*let architect = Architect::from_noise(
-            get_standard_noise(Seed::from_rng(&mut rng)),
-            (world_size + 2) * CHUNK_SIZE,
+        let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
+        let architect = Architect::from_noise(
+            get_default_noise(Seed::from_rng(&mut rng)),
             surface_texture.get_terrain_set(),
-        );*/
-        let architect = Architect::from_file(
-            Path::new("heightmap.dat"),
-            surface_texture.get_terrain_set(),
-        )
-        .expect("Could find file");
+        );
 
-        let chunk_loader = ChunkLoader::new(&mut rng, architect, object_manager.clone());
+        let chunk_loader = ChunkLoader::new(architect);
 
-        let mut test_monkey = object_manager.create_object("monkey")?;
-        test_monkey.set_translation(Point3f::new(0., 0., 400.));
-        test_monkey.set_scale(Point3f::from_scalar(10.));
+        let monkey_id = object_manager.create_object("monkey")?;
+        object_manager.mod_object(monkey_id, |o| {
+            o.set_translation(Point3f::new(0., 0., 300.));
+            o.set_scale(Point3f::from_scalar(10.));
+        });
 
         let mut world = World {
             surface_texture: surface_texture,
@@ -84,14 +79,14 @@ impl World {
             sun: Sun::with_day_length(day_length),
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(500),
+            chunk_update_timer: Timer::new(200),
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: near_radius,
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
             last_chunk_load: Point2i::default(),
             object_manager: object_manager,
-            test_monkey: test_monkey,
+            monkey_id: monkey_id,
             center: Point3f::new(0., 0., 0.),
             gravity: gravity,
             size: world_size,
@@ -165,7 +160,7 @@ impl World {
         Ok(())
     }
 
-    pub fn unload_distant_chunks(&mut self) {
+    fn unload_distant_chunks(&mut self) {
         let mut unload_list = Vec::new();
         let cam_pos = get_chunk_pos(self.center);
         for chunk_pos in self.chunks.keys() {
@@ -181,8 +176,8 @@ impl World {
         }
     }
 
-    pub fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
-        let finished_chunks = self.chunk_loader.get()?;
+    fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
+        let finished_chunks = self.chunk_loader.get(200)?;
         if finished_chunks.len() > 0 {
             trace!("Finished chunks: {}", finished_chunks.len());
             self.chunks.extend(finished_chunks);
@@ -273,8 +268,9 @@ impl Renderable for World {
         self.surface_texture.activate();
         info.push_shader(self.surface_shader_program.clone());
 
-        self.test_monkey.render(info)?;
         self.chunks.values().try_for_each(|c| c.render(info))?;
+
+        self.object_manager.render(info)?;
 
         info.pop_shader();
 
@@ -301,6 +297,12 @@ impl Updatable for World {
                     error!("{}", e); // TODO: handle error
                 }
             }
+            let rem_count = self
+                .object_manager
+                .unload_distant(self.center, (self.lod_far_radius * CHUNK_SIZE) as f32);
+            if rem_count > 0 {
+                info!("Removed {} objects", rem_count);
+            }
         }
         if self.chunk_build_stats_timer.fires() {
             info!(
@@ -314,12 +316,13 @@ impl Updatable for World {
         self.sun.set_rotation_center(self.center);
         self.sun.tick(time_passed)?;
 
-        self.test_monkey.mod_rotation(Point3f::new(0., 0., 0.25));
-        self.test_monkey.mod_translation(Point3f::new(4., 0., 0.));
-        if self.test_monkey.get_translation()[0] >= 500. {
-            self.test_monkey
-                .mod_translation(Point3f::new(-500., 0., 0.));
-        }
+        self.object_manager.mod_object(self.monkey_id, |o| {
+            o.mod_rotation(Point3f::new(0., 0., 0.25));
+            o.mod_translation(Point3f::new(4., 0., 0.));
+            if o.get_translation()[0] >= 500. {
+                o.mod_translation(Point3f::new(-500., 0., 0.));
+            }
+        });
 
         if let Err(e) = self.update_shader_resources() {
             error!("{}", e); // TODO: handle error

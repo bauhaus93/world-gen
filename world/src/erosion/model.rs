@@ -1,6 +1,5 @@
 use rand::{rngs::SmallRng, Rng};
 use rayon::prelude::*;
-use std::ops::{Add, AddAssign};
 
 use crate::HeightMap;
 use core::{Point2f, Point2i, Point3f, Seed};
@@ -113,6 +112,11 @@ impl Model {
         self.deposit_all_suspended();
     }
 
+    pub fn consume(mut self) -> Vec<f32> {
+        self.finish();
+        self.terrain_height
+    }
+
     fn run_once(mut self, rng: &mut impl Rng) -> Self {
         self.rain(DELTA_TIME * WATER_AMOUNT, 100, rng);
         //self.river((self.size * (self.size - 1)) / 2, 2.);
@@ -147,12 +151,13 @@ impl Model {
 
     fn rain(&mut self, total_amount: f32, drop_count: usize, rng: &mut impl Rng) {
         let drop_size = total_amount / drop_count as f32;
-        for i in 0..drop_count {
+        for _ in 0..drop_count {
             let index: usize = rng.gen_range(0, self.water_height.len());
             self.water_height[index] += drop_size;
         }
     }
 
+    #[allow(dead_code)]
     fn river(&mut self, source_index: usize, total_amount: f32) {
         self.water_height[source_index] += total_amount;
     }
@@ -356,7 +361,6 @@ impl Model {
             Direction::Right => cell + 1,
             Direction::Down => cell + self.size,
             Direction::Left => cell - 1,
-            _ => unreachable!(),
         }
     }
 

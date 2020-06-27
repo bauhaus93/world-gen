@@ -5,8 +5,9 @@ use std::path::Path;
 
 use std::cmp::Ordering;
 
-use core::{FileError, Point2f, Point2i};
+use crate::erosion;
 use crate::Noise;
+use core::{FileError, Point2f, Point2i, Seed};
 
 pub struct HeightMap {
     size: i32,
@@ -33,7 +34,7 @@ impl HeightMap {
         Self {
             size: size,
             resolution: resolution,
-            height_list: Vec::from(height_list)
+            height_list: Vec::from(height_list),
         }
     }
 
@@ -112,6 +113,12 @@ impl HeightMap {
             resolution: resolution,
             height_list: data,
         })
+    }
+
+    pub fn erode(self, iterations: usize) -> Self {
+        erosion::Model::from(self)
+            .run(iterations, Seed::from_entropy())
+            .into()
     }
 
     pub fn into_file(&self, path: &Path) -> Result<(), FileError> {

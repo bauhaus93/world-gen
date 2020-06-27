@@ -15,6 +15,10 @@ pub struct Model {
 }
 
 impl Model {
+
+    pub fn get_distance(&self, point: Point3f) -> f32 {
+        (self.position - point).length()
+    }
     pub fn get_matrix(&self) -> Matrix4<f32> {
         self.matrix.clone()
     }

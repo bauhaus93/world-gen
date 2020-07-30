@@ -1,33 +1,24 @@
 use std::fmt;
 
-use glm::{ Vector3, GenNum, cross, normalize };
-
-use crate::Float;
 use super::Vertex;
+use crate::Point3f;
 
 #[derive(Copy, Clone)]
 pub struct Triangle {
   vertex: [Vertex; 3],
-  normal: Vector3<Float>
 }
 
-fn calculate_normal(vertices: &[Vertex; 3]) -> Vector3<Float> {
-    let vec_a = vertices[1].get_pos() - vertices[0].get_pos();
-    let vec_b = vertices[2].get_pos() - vertices[0].get_pos();
-    normalize(cross(vec_a, vec_b))
+fn calculate_normal(vertices: &[Vertex; 3], index: usize) -> Point3f {
+    let vec_a = vertices[(index + 1) % 3].get_pos() - vertices[index].get_pos();
+    let vec_b = vertices[(index + 2) % 3].get_pos() - vertices[index].get_pos();
+    vec_a.cross(&vec_b).as_normalized()
 }
 
 impl Triangle {
     pub fn new(vertices: [Vertex; 3]) -> Self {
-        let normal = calculate_normal(&vertices);
         Self {
             vertex: vertices,
-            normal: normal
         }
-    }
-
-    pub fn get_normal(&self) -> Vector3<Float> {
-        self.normal
     }
 
     pub fn set_vertex(&mut self, vertex: Vertex, index: usize) {
@@ -45,8 +36,10 @@ impl Triangle {
         self.vertex[0].get_uv_dim()
     }
 
-    pub fn update_normal(&mut self) {
-        self.normal = calculate_normal(&self.vertex);
+    pub fn update_normals(&mut self) {
+        for i in 0..3 {
+            self.vertex[i].set_normal(calculate_normal(&self.vertex, i));
+        }
     }
 
     pub fn as_vertices(&self) -> &[Vertex; 3] {
@@ -58,13 +51,12 @@ impl Default for Triangle {
     fn default() -> Self {
         Self {
             vertex: [Vertex::default(); 3],
-            normal: Vector3::from_s(0.)
         }
     }
 }
 
 impl fmt::Display for Triangle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "normal = {:.2}/{:.2}/{:.2}, vertices: {}, {}, {}", self.normal[0], self.normal[1], self.normal[2], self.vertex[0], self.vertex[1], self.vertex[2])
+        write!(f, "vertices: {}, {}, {}", self.vertex[0], self.vertex[1], self.vertex[2])
     }
 }

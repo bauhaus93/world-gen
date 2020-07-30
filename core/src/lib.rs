@@ -5,6 +5,7 @@ extern crate glm;
 extern crate glutin;
 extern crate image;
 extern crate num_traits;
+extern crate palette;
 
 pub mod bounding_box;
 pub mod camera;
@@ -26,6 +27,7 @@ pub mod timer;
 pub mod traits;
 pub mod update_error;
 pub mod seed;
+pub mod light;
 mod window;
 
 pub use self::core::Core;

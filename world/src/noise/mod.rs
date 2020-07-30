@@ -13,7 +13,7 @@ pub use self::noise::Noise;
 pub use self::noise_builder::NoiseBuilder;
 pub use self::noise_modifier::{ModifierType, NoiseModifier};
 pub use self::octaved_noise::OctavedNoise;
-pub use self::presets::get_default_noise;
+pub use self::presets::{get_default_noise, get_default_tree_noise};
 pub use self::repeating_noise::RepeatingNoise;
 pub use self::simplex_noise::SimplexNoise;
 pub use self::threshold_noise::{Threshold, ThresholdNoise};

@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::path::Path;
 
 use crate::graphics::mesh::vertex_buffer::BUFFER_POSTION;
 use crate::graphics::{
@@ -6,7 +7,7 @@ use crate::graphics::{
     TextureBuilder,
 };
 use crate::traits::{RenderInfo, Renderable, Scalable, Translatable};
-use crate::{CoreError, Point3f};
+use crate::{CoreError, FileError, Point3f, Config};
 
 pub struct Skybox {
     texture: Texture,
@@ -17,16 +18,22 @@ pub struct Skybox {
 }
 
 impl Skybox {
-    pub fn new(img_file: &str) -> Result<Self, CoreError> {
+    pub fn new(config: &Config) -> Result<Self, CoreError> {
         const CUBE_PATH: &'static str = "resources/obj/cube_inward.obj";
+        let cube_path = config.get_str("skybox_cube_path")?;
+        let cube_img = config.get_str("skybox_texture_path")?;
+        let shader_dir = Path::new(config.get_str("skybox_shader_directory")?);
         info!(
             "Creating skybox from obj '{}' with img '{}'",
-            CUBE_PATH, img_file
+            cube_path, cube_img
         );
 
+        let vertex_shader_path = shader_dir.join("VertexShader.glsl").to_str().ok_or(FileError::InvalidPath("skybox_vertex_shader".to_owned()))?.to_owned();
+        let fragment_shader_path = shader_dir.join("FragmentShader.glsl").to_str().ok_or(FileError::InvalidPath("skybox_fragment_shader".to_owned()))?.to_owned();
+
         let shader = ShaderProgramBuilder::new()
-            .add_vertex_shader("resources/shader/skybox/VertexShader.glsl")
-            .add_fragment_shader("resources/shader/skybox/FragmentShader.glsl")
+            .add_vertex_shader(&vertex_shader_path)
+            .add_fragment_shader(&fragment_shader_path)
             .add_resource("cube_texture")
             .add_resource("mvp")
             .add_resource("light_level")
@@ -35,7 +42,7 @@ impl Skybox {
             return Err(GraphicsError::from(e).into());
         }
 
-        let mut builder = TextureBuilder::new_cube_map(img_file, 512);
+        let mut builder = TextureBuilder::new_cube_map(cube_img, 512);
         builder.add_cube_element([1, 0], Orientation::Top);
         builder.add_cube_element([1, 2], Orientation::Bottom);
         builder.add_cube_element([0, 1], Orientation::Left);

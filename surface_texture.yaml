@@ -1,0 +1,6 @@
+texture_size: 32
+path: resources/img/atlas.png
+surface_coordinates:
+  Grass: [1, 0, 0]
+  Mud: [0, 0, 1]
+  Rock: [2, 0, 2]

@@ -16,7 +16,7 @@ use std::io::Write;
 use crate::{application::Application, application_error::ApplicationError};
 
 fn main() {
-    const CONFIG_PATH: &'static str = "resources/default.yaml";
+    const CONFIG_PATH: &'static str = "default.yaml";
 
     init_custom_logger();
 

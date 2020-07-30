@@ -34,6 +34,10 @@ impl ObjectManager {
         Ok(obj_manager)
     }
 
+    pub fn count_active_objects(&self) -> usize {
+        self.active_list.len()
+    }
+
     pub fn add_prototype(
         &mut self,
         name: &str,
@@ -47,11 +51,15 @@ impl ObjectManager {
         Ok(())
     }
 
-    pub fn create_object(&mut self, prototype_name: &str) -> Result<u32, ObjectError> {
+    pub fn create_object(&mut self, prototype_name: &str, persistent: bool) -> Result<u32, ObjectError> {
         match self.prototype_map.get(prototype_name) {
             Some(proto) => {
+                let mut obj = Object::new(self.next_id, proto.clone());
+                if persistent {
+                    obj.set_persitent();
+                }
                 self.active_list
-                    .push(Object::new(self.next_id, proto.clone()));
+                    .push(obj);
                 self.next_id += 1;
                 Ok(self.next_id - 1)
             }
@@ -78,10 +86,26 @@ impl ObjectManager {
         None
     }
 
+    fn sort_by_id(&mut self) {
+        self.active_list.sort_by_key(|k| k.get_id());
+    }
+
+    pub fn unload_by_list(&mut self, ids: &[u32]) {
+        self.sort_by_id();
+        for id in ids.iter() {
+            match self.active_list.binary_search_by_key(id, |k| k.get_id()) {
+                Ok(index) => {
+                    self.active_list.remove(index);
+                }
+                Err(_e) => {}
+            }
+        }
+    }
+
     pub fn unload_distant(&mut self, center: Point3f, distant: f32) -> usize {
         let begin_len = self.active_list.len();
         self.active_list
-            .retain(|o| o.get_distance(center) < distant);
+            .retain(|o| o.get_distance(center) < distant || o.is_persistent());
         begin_len - self.active_list.len()
     }
 }
@@ -94,7 +118,6 @@ impl Renderable for ObjectManager {
             obj.render(info)?;
         }
 
-        // self.test_monkey.render(info)?;
         //info.pop_shader();
 
         Ok(())

@@ -1,23 +1,25 @@
-use std::collections::BTreeMap;
 use gl;
-use gl::types::{ GLint, GLuint };
-use glm::{ Matrix4, Vector3 };
+use gl::types::{GLint, GLuint};
+use glm::{Matrix4, Vector3};
+use std::collections::BTreeMap;
 
-use crate::{Float, graphics::check_opengl_error };
 use super::ShaderProgramError;
+use crate::{graphics::check_opengl_error, Float};
 
 pub struct ShaderProgram {
-    id: GLuint, 
-    handles: BTreeMap<String, GLint> 
+    id: GLuint,
+    handles: BTreeMap<String, GLint>,
 }
 
 impl ShaderProgram {
-    
-    pub fn new(program_id: GLuint, resource_names: &[String]) -> Result<ShaderProgram, ShaderProgramError> {
+    pub fn new(
+        program_id: GLuint,
+        resource_names: &[String],
+    ) -> Result<ShaderProgram, ShaderProgramError> {
         debug_assert!(program_id != 0);
         let mut program = Self {
             id: program_id,
-            handles: BTreeMap::new()
+            handles: BTreeMap::new(),
         };
 
         program.use_program();
@@ -30,55 +32,90 @@ impl ShaderProgram {
     }
 
     fn load_handle(&mut self, name: &str) -> Result<(), ShaderProgramError> {
-        self.handles.insert(name.to_string(), get_resource_handle(self.id, name)?);
+        self.handles
+            .insert(name.to_string(), get_resource_handle(self.id, name)?);
         Ok(())
     }
 
     pub fn use_program(&self) {
-        unsafe { gl::UseProgram(self.id); }
+        unsafe {
+            gl::UseProgram(self.id);
+        }
     }
 
-    pub fn set_resource_integer(&self, resource_name: &str, value: i32) -> Result<(), ShaderProgramError> {
+    pub fn set_resource_integer(
+        &self,
+        resource_name: &str,
+        value: i32,
+    ) -> Result<(), ShaderProgramError> {
         match self.handles.get(resource_name) {
             Some(handle) => {
                 unsafe { gl::Uniform1i(*handle, value) }
                 check_opengl_error("gl::Uniform1i")?;
                 Ok(())
-            },
-            _ => Err(ShaderProgramError::HandleNotExisting(resource_name.to_string()))
+            }
+            _ => Err(ShaderProgramError::HandleNotExisting(
+                resource_name.to_string(),
+            )),
         }
     }
 
-    pub fn set_resource_float(&self, resource_name: &str, value: Float) -> Result<(), ShaderProgramError> {
-            check_opengl_error("gl::Unifaaaaaaaaaaorm1f")?;
+    pub fn set_resource_float(
+        &self,
+        resource_name: &str,
+        value: Float,
+    ) -> Result<(), ShaderProgramError> {
+        check_opengl_error("gl::Uniform1f")?;
         match self.handles.get(resource_name) {
             Some(handle) => {
                 unsafe { gl::Uniform1f(*handle, value) }
                 check_opengl_error("gl::Uniform1f")?;
                 Ok(())
-            },
-            _ => Err(ShaderProgramError::HandleNotExisting(resource_name.to_string()))
+            }
+            _ => Err(ShaderProgramError::HandleNotExisting(
+                resource_name.to_string(),
+            )),
         }
     }
 
-    pub fn set_resource_mat4(&self, resource_name: &str, matrix: &Matrix4<Float>) -> Result<(), ShaderProgramError> {
+    pub fn set_resource_mat4(
+        &self,
+        resource_name: &str,
+        matrix: &Matrix4<Float>,
+    ) -> Result<(), ShaderProgramError> {
         match self.handles.get(resource_name) {
             Some(handle) => {
-
-                unsafe { gl::UniformMatrix4fv(*handle, 1, gl::FALSE, matrix.as_array().as_ptr() as * const Float); }
+                unsafe {
+                    gl::UniformMatrix4fv(
+                        *handle,
+                        1,
+                        gl::FALSE,
+                        matrix.as_array().as_ptr() as *const Float,
+                    );
+                }
                 check_opengl_error("gl::UniformMatrix4fv")?;
                 Ok(())
-            },
-            _ => { Err(ShaderProgramError::HandleNotExisting(resource_name.to_string())) }
+            }
+            _ => Err(ShaderProgramError::HandleNotExisting(
+                resource_name.to_string(),
+            )),
         }
     }
-    pub fn set_resource_vec3(&self, resource_name: &str, vector: &Vector3<Float>) -> Result<(), ShaderProgramError> {
+    pub fn set_resource_vec3(
+        &self,
+        resource_name: &str,
+        vector: &Vector3<Float>,
+    ) -> Result<(), ShaderProgramError> {
         match self.handles.get(resource_name) {
             Some(handle) => {
-                unsafe { gl::Uniform3fv(*handle, 1, vector.as_array().as_ptr() as * const Float); }
-                 Ok(())
-            },
-            _ => { Err(ShaderProgramError::HandleNotExisting(resource_name.to_string())) }
+                unsafe {
+                    gl::Uniform3fv(*handle, 1, vector.as_array().as_ptr() as *const Float);
+                }
+                Ok(())
+            }
+            _ => Err(ShaderProgramError::HandleNotExisting(
+                resource_name.to_string(),
+            )),
         }
     }
 }
@@ -86,21 +123,30 @@ impl ShaderProgram {
 impl Drop for ShaderProgram {
     fn drop(&mut self) {
         debug!("Deleting shader program");
-        unsafe { gl::DeleteProgram(self.id); }
+        unsafe {
+            gl::DeleteProgram(self.id);
+        }
         match check_opengl_error("gl::DeleteProgram") {
-            Ok(_) => {},
-            Err(e) => error!("{}", e)
+            Ok(_) => {}
+            Err(e) => error!("{}", e),
         }
     }
 }
 
-fn get_resource_handle(program_id: GLuint, resource_name: &str) -> Result<GLint, ShaderProgramError> {
+fn get_resource_handle(
+    program_id: GLuint,
+    resource_name: &str,
+) -> Result<GLint, ShaderProgramError> {
     trace!("Getting resource handle for '{}'", resource_name);
     let res_name_zero_term = resource_name.to_string() + "\0";
-    let handle: GLint = unsafe { gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _) };
+    let handle: GLint =
+        unsafe { gl::GetUniformLocation(program_id, res_name_zero_term.as_ptr() as *const _) };
     if handle == -1 {
         check_opengl_error("gl::GetUniformLocation")?;
-        return Err(ShaderProgramError::FunctionFailure(format!("gl::GetUniformLocation('{}')", resource_name)));
+        return Err(ShaderProgramError::FunctionFailure(format!(
+            "gl::GetUniformLocation('{}')",
+            resource_name
+        )));
     }
     trace!("Handle = {}", handle);
     Ok(handle)

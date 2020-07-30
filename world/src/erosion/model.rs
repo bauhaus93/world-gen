@@ -405,7 +405,7 @@ impl From<HeightMap> for Model {
 
 impl Into<HeightMap> for Model {
     fn into(self) -> HeightMap {
-        HeightMap::from_list(self.size as i32, 1, self.terrain_height.as_slice())
+        HeightMap::from_list(self.size as i32, 1., self.terrain_height.as_slice())
     }
 }
 

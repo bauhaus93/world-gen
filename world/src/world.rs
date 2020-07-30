@@ -1,5 +1,8 @@
 use std::collections::BTreeMap;
+use std::iter::repeat;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::time::Instant;
 
 use rand::rngs::SmallRng;
 
@@ -10,6 +13,7 @@ use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
+use core::light::{Light, SceneLights};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
 use core::{
     Config, ObjectManager, Player, Point2i, Point3f, Seed, Skybox, Sun, Timer, UpdateError,
@@ -20,6 +24,7 @@ pub struct World {
     surface_shader_program: Rc<ShaderProgram>,
     skybox: Skybox,
     sun: Sun,
+    architect: Arc<Architect>,
     chunk_loader: ChunkLoader,
     chunks: BTreeMap<Point2i, Chunk>,
     chunk_update_timer: Timer,
@@ -27,20 +32,18 @@ pub struct World {
     lod_near_radius: i32,
     lod_far_radius: i32,
     active_chunk_radius: i32,
-    last_chunk_load: Point2i,
-    #[allow(dead_code)]
     object_manager: ObjectManager,
+    scene_lights: SceneLights,
     monkey_id: u32,
     center: Point3f,
     gravity: f32,
-    size: Point2i,
+    size: Option<Point2i>,
 }
 
 impl World {
     pub fn new(config: &Config) -> Result<World, WorldError> {
         let object_prototypes_path = config.get_str("object_prototype_path")?;
         let day_length = config.get_uint_or_default("day_length", 180);
-        let skybox_img_path = config.get_str("skybox_img_path")?;
         let surface_texture_info_path = config.get_str("surface_info_path")?;
         let gravity = config.get_float_or_default("gravity", 0.25);
 
@@ -56,17 +59,15 @@ impl World {
         info!("World seed = {}", seed);
         let mut rng: SmallRng = seed.into();
 
-        let world_size = Point2i::from_scalar(100);
-
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
-        let architect = Architect::from_noise(
+        let architect = Arc::new(Architect::from_noise(
             get_default_noise(Seed::from_rng(&mut rng)),
             surface_texture.get_terrain_set(),
-        );
+        ));
 
-        let chunk_loader = ChunkLoader::new(architect);
+        let chunk_loader = ChunkLoader::new(architect.clone());
 
-        let monkey_id = object_manager.create_object("monkey")?;
+        let monkey_id = object_manager.create_object("monkey", true)?;
         object_manager.mod_object(monkey_id, |o| {
             o.set_translation(Point3f::new(0., 0., 300.));
             o.set_scale(Point3f::from_scalar(10.));
@@ -75,21 +76,22 @@ impl World {
         let mut world = World {
             surface_texture: surface_texture,
             surface_shader_program: Rc::new(surface_shader_program),
-            skybox: Skybox::new(skybox_img_path)?,
+            skybox: Skybox::new(config)?,
             sun: Sun::with_day_length(day_length),
+            architect: architect,
             chunk_loader: chunk_loader,
             chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(200),
+            chunk_update_timer: Timer::new(500),
             chunk_build_stats_timer: Timer::new(5000),
             lod_near_radius: near_radius,
             lod_far_radius: far_radius,
             active_chunk_radius: active_radius,
-            last_chunk_load: Point2i::default(),
             object_manager: object_manager,
+            scene_lights: create_default_scene_lights(),
             monkey_id: monkey_id,
             center: Point3f::new(0., 0., 0.),
             gravity: gravity,
-            size: world_size,
+            size: None,
         };
 
         world.update_skybox_size();
@@ -146,16 +148,21 @@ impl World {
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
         let mut request_list: Vec<(Point2i, u8)> = Vec::new();
         let player_chunk_pos = get_chunk_pos(self.center);
-        for y in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-            for x in -self.active_chunk_radius..self.active_chunk_radius + 1 {
-                let p = Point2i::new(x, y);
-                if let Some(pos_lod) = self.should_load_chunk(p, player_chunk_pos) {
+
+        for r in 0..self.active_chunk_radius {
+            let rad_iter_x = (-r..r + 1)
+                .zip(repeat(r))
+                .chain((-r..r + 1).zip(repeat(-r)));
+            let rad_iter_y = repeat(r).zip(-r..r + 1).chain(repeat(-r).zip(-r..r + 1));
+            for pos in rad_iter_x.chain(rad_iter_y) {
+                if let Some(pos_lod) =
+                    self.should_load_chunk(Point2i::new(pos.0, pos.1), player_chunk_pos)
+                {
                     request_list.push(pos_lod);
                 }
             }
         }
         self.chunk_loader.request(&request_list)?;
-        self.last_chunk_load = player_chunk_pos;
         trace!("Requested chunks: {}", request_list.len());
         Ok(())
     }
@@ -165,21 +172,32 @@ impl World {
         let cam_pos = get_chunk_pos(self.center);
         for chunk_pos in self.chunks.keys() {
             let vec = [cam_pos[0] - chunk_pos[0], cam_pos[1] - chunk_pos[1]];
-            let distance = f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32).round() as i32;
-            if distance >= self.active_chunk_radius {
+            let distance = vec[0] * vec[0] + vec[1] * vec[1];
+            if distance >= self.active_chunk_radius * self.active_chunk_radius {
                 unload_list.push(*chunk_pos);
             }
         }
         trace!("Unloading {} chunks", unload_list.len());
+
+        let mut object_list = Vec::new();
         for pos in unload_list {
+            match self.chunks.get(&pos) {
+                Some(c) => object_list.extend(c.get_objects()),
+                None => {}
+            }
             self.chunks.remove(&pos);
         }
+        self.object_manager.unload_by_list(&object_list);
     }
 
     fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
-        let finished_chunks = self.chunk_loader.get(200)?;
+        let mut finished_chunks = self.chunk_loader.get(200)?;
         if finished_chunks.len() > 0 {
-            trace!("Finished chunks: {}", finished_chunks.len());
+            for chunk in finished_chunks.values_mut() {
+                if chunk.get_lod() == 0 {
+                    chunk.load_objects(&mut self.object_manager, &self.architect)?;
+                }
+            }
             self.chunks.extend(finished_chunks);
         }
         Ok(())
@@ -199,13 +217,13 @@ impl World {
 
     fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
         let abs_pos = player_pos + rel_pos;
-        if abs_pos[0] < 0
-            || abs_pos[1] < 0
-            || abs_pos[0] > self.size[0]
-            || abs_pos[1] > self.size[1]
+        if let Some(size) = self.size {
+            if (abs_pos[0] < 0 || abs_pos[1] < 0 || abs_pos[0] > size[0] || abs_pos[1] > size[1]) {
+                return None;
+            }
+        }
+
         {
-            None
-        } else {
             let distance = rel_pos.get_length() as i32;
             if distance < self.active_chunk_radius {
                 let lod = self.lod_by_chunk_distance(distance);
@@ -242,14 +260,30 @@ impl World {
             .scale((self.active_chunk_radius * CHUNK_SIZE * 2) as f32);
     }
 
-    fn update_shader_resources(&self) -> Result<(), GraphicsError> {
+    fn update_shader_resources(&mut self) -> Result<(), GraphicsError> {
+        match self.scene_lights.get_light_mut("sun") {
+            Some(sun_light) => {
+                sun_light.set_world_pos(self.sun.calculate_position());
+                sun_light.set_absolute_intensity(self.sun.calculate_intensity());
+            }
+            None => warn!("Could not get light source for sun"),
+        }
+
+        match self.scene_lights.get_light_mut("player") {
+            Some(player_light) => {
+                player_light.set_world_pos(self.center + Point3f::new(0., 0., 100.));
+            }
+            None => warn!("Could not get light source for player"),
+        }
+
         self.surface_shader_program.use_program();
         self.surface_shader_program
             .set_resource_vec3("view_pos", &self.center.as_glm())?;
-        self.surface_shader_program
-            .set_resource_vec3("light_pos", &self.sun.calculate_position().as_glm())?;
 
-        let light_level = self.sun.calculate_light_level();
+        self.scene_lights
+            .update_lights_for_shader(&self.surface_shader_program)?;
+
+        let light_level = self.sun.calculate_intensity();
         let fog_color = Point3f::from_scalar(1. - (-light_level).exp());
         self.surface_shader_program
             .set_resource_vec3("fog_color", &fog_color.as_glm())?;
@@ -286,16 +320,9 @@ impl Updatable for World {
             if let Err(e) = self.get_finished_chunks() {
                 error!("{}", e); // TODO: handle error
             }
-            let cam_chunk_pos = get_chunk_pos(self.center);
-            let vec = [
-                cam_chunk_pos[0] - self.last_chunk_load[0],
-                cam_chunk_pos[1] - self.last_chunk_load[1],
-            ];
-            if f32::sqrt((vec[0] * vec[0] + vec[1] * vec[1]) as f32) > 2. {
-                self.unload_distant_chunks();
-                if let Err(e) = self.request_chunks() {
-                    error!("{}", e); // TODO: handle error
-                }
+            self.unload_distant_chunks();
+            if let Err(e) = self.request_chunks() {
+                error!("{}", e); // TODO: handle error
             }
             let rem_count = self
                 .object_manager
@@ -306,9 +333,9 @@ impl Updatable for World {
         }
         if self.chunk_build_stats_timer.fires() {
             info!(
-                "Avg chunk build time = {:.2} ms, total chunk vertices = {}",
+                "Avg chunk build time = {:.2} ms, active objects = {}",
                 self.chunk_loader.get_avg_build_time(),
-                format_number(self.count_loaded_vertices())
+                self.object_manager.count_active_objects()
             );
         }
 
@@ -316,12 +343,11 @@ impl Updatable for World {
         self.sun.set_rotation_center(self.center);
         self.sun.tick(time_passed)?;
 
+        let sun_pos = self.sun.calculate_position();
+        let center = self.center;
         self.object_manager.mod_object(self.monkey_id, |o| {
+            o.set_translation((sun_pos - center).as_normalized() * 200. + center);
             o.mod_rotation(Point3f::new(0., 0., 0.25));
-            o.mod_translation(Point3f::new(4., 0., 0.));
-            if o.get_translation()[0] >= 500. {
-                o.mod_translation(Point3f::new(-500., 0., 0.));
-            }
         });
 
         if let Err(e) = self.update_shader_resources() {
@@ -355,12 +381,55 @@ fn load_surface_shader(config: &Config) -> Result<ShaderProgram, WorldError> {
         .add_resource("mvp")
         .add_resource("model")
         .add_resource("view_pos")
-        .add_resource("light_pos")
         .add_resource("fog_color")
+        .add_resource("active_lights")
+        .add_resource("scene_lights[0].color")
+        .add_resource("scene_lights[0].world_pos")
+        .add_resource("scene_lights[0].absolute_intensity")
+        .add_resource("scene_lights[0].ambient_intensity")
+        .add_resource("scene_lights[0].diffuse_intensity")
+        .add_resource("scene_lights[0].specular_intensity")
+        .add_resource("scene_lights[0].specular_shininess")
+        .add_resource("scene_lights[1].color")
+        .add_resource("scene_lights[1].world_pos")
+        .add_resource("scene_lights[1].absolute_intensity")
+        .add_resource("scene_lights[1].ambient_intensity")
+        .add_resource("scene_lights[1].diffuse_intensity")
+        .add_resource("scene_lights[1].specular_intensity")
+        .add_resource("scene_lights[1].specular_shininess")
         .finish()?;
     // setting texture slot to 0
     if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
         return Err(GraphicsError::from(e).into());
     }
     Ok(surface_shader_program)
+}
+
+fn create_default_scene_lights() -> SceneLights {
+    let mut scene_lights = SceneLights::default();
+
+    let mut sun_light = Light::default();
+    sun_light.set_color(Point3f::from_scalar(1.));
+    sun_light.set_absolute_intensity(1e8);
+    sun_light.set_ambient_intensity(0.1);
+    sun_light.set_diffuse_intensity(0.5);
+    sun_light.set_specular_intensity(0.2);
+    sun_light.set_specular_shininess(2.);
+
+    if !scene_lights.add_light("sun", sun_light) {
+        warn!("Could not add sun light source to scene_lights");
+    }
+
+    let mut player_light = Light::default();
+    player_light.set_color(Point3f::new(1., 1., 1.));
+    player_light.set_absolute_intensity(1e4);
+    player_light.set_ambient_intensity(0.);
+    player_light.set_diffuse_intensity(1.);
+    player_light.set_specular_intensity(1.);
+    player_light.set_specular_shininess(2.);
+
+    if !scene_lights.add_light("player", player_light) {
+        warn!("Could not add player light source to scene_lights");
+    }
+    scene_lights
 }

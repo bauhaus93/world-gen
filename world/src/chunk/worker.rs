@@ -82,7 +82,7 @@ impl Worker {
 
     fn get_chunk_pos(&self) -> Result<Option<(Point2i, u8)>, ChunkError> {
         match self.input_queue.lock() {
-            Ok(mut guard) => Ok((*guard).pop_back()),
+            Ok(mut guard) => Ok((*guard).pop_front()),
             Err(_poisoned) => Err(ChunkError::MutexPoison),
         }
     }

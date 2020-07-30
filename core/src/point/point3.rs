@@ -44,6 +44,10 @@ impl<T: Primitive> Point3<T> {
         self.clamp_max(max);
     }
 
+    pub fn as_array(&self) -> &[T; 3] {
+        self.0.as_array()
+    }
+
     pub fn apply<T2: Primitive + Default, F: (Fn(T) -> T2)>(&self, f: F) -> Point3<T2> {
         let mut res = Point3::<T2>::default();
         for i in 0..3 {

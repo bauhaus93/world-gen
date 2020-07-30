@@ -7,6 +7,8 @@ use super::{BuildStats, Chunk, ChunkBuilder, ChunkError, Worker};
 use crate::architect::Architect;
 use core::Point2i;
 
+const INPUT_QUEUE_MAX: usize = 200;
+
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
@@ -18,10 +20,10 @@ pub struct ChunkLoader {
 }
 
 impl ChunkLoader {
-    pub fn new(architect: Architect) -> Self {
+    pub fn new(architect: Arc<Architect>) -> Self {
         Self {
             stop: Arc::new(AtomicBool::new(false)),
-            architect: Arc::new(architect),
+            architect: architect,
             input_queue: Arc::new(Mutex::new(VecDeque::new())),
             output_queue: Arc::new(Mutex::new(VecDeque::new())),
             build_stats: Arc::new(Mutex::new(BuildStats::default())),
@@ -93,6 +95,9 @@ impl ChunkLoader {
         match self.input_queue.lock() {
             Ok(mut guard) => {
                 for (pos, lod) in chunk_pos {
+                    if (*guard).len() >= INPUT_QUEUE_MAX {
+                        break;
+                    }
                     if self.handeled_positions.insert(*pos) {
                         (*guard).push_back((*pos, *lod));
                     }

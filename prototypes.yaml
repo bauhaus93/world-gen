@@ -1,0 +1,14 @@
+root_dir: resources/obj
+asset_list:
+-
+  name: monkey
+  lod0: test.obj
+  lod1: test.obj
+-
+  name: tree
+  lod0: tree_lod1.obj
+  lod1: tree_lod1.obj
+-
+  name: grass
+  lod0: grass.obj
+  lod1: grass.obj

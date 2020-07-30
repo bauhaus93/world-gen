@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, 
 
 use super::Point3;
 
+
 #[derive(Copy, Clone, Debug)]
 pub struct Point2<T: Primitive>(pub Vector2<T>);
 
@@ -18,6 +19,10 @@ impl<T: Primitive> Point2<T> {
 
     pub fn extend(&self, z: T) -> Point3<T> {
         Point3::new(self[0], self[1], z)
+    }
+
+    pub fn as_array(&self) -> &[T; 2] {
+        self.0.as_array()
     }
 
     pub fn apply<T2: Primitive + Default, F: (Fn(T) -> T2)>(&self, f: F) -> Point2<T2> {

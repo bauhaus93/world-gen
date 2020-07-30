@@ -104,7 +104,7 @@ impl Application {
             }
 
             if self.core.key_pressed(glutin::VirtualKeyCode::Space) {
-                self.player.jump(6.);
+                self.player.jump(3.);
             }
         }
     }

@@ -1,6 +1,10 @@
+use std::cmp::Ordering;
+
 use glm;
 
 use super::{Point2, Point2i};
+
+const EPSILON: f32 = 1e-6;
 
 pub type Point2f = Point2<f32>;
 
@@ -13,6 +17,34 @@ impl Point2f {
         glm::length(self.0)
     }
 }
+
+impl Ord for Point2f {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self[0] - other[0] {
+            diff if diff >= EPSILON => Ordering::Greater,
+            diff if diff <= -EPSILON => Ordering::Less,
+            _ => match self[1] - other[1] {
+                diff if diff >= EPSILON => Ordering::Greater,
+                diff if diff <= -EPSILON => Ordering::Less,
+                _ => Ordering::Equal,
+            },
+        }
+    }
+}
+
+impl PartialOrd for Point2f {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Point2f {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
+}
+
+impl Eq for Point2f {}
 
 impl From<Point2i> for Point2f {
     fn from(p: Point2i) -> Point2f {

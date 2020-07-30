@@ -37,3 +37,13 @@ pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
         .finish();
     height_noise
 }
+
+pub fn get_default_tree_noise(seed: Seed) -> Box<dyn Noise> {
+    NoiseBuilder::new()
+        .seed(seed)
+        .octaves(3)
+        .scale(5e-2)
+        .roughness(0.5)
+        .range([-1.5, 1.])
+        .finish()
+}

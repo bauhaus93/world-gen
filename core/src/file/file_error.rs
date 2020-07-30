@@ -6,6 +6,7 @@ use std::num;
 #[derive(Debug)]
 pub enum FileError {
     IO(io::Error),
+    InvalidPath(String),
     ParseFloat(num::ParseFloatError),
     ParseInt(num::ParseIntError),
     UnexpectedFormat(String),
@@ -34,6 +35,7 @@ impl Error for FileError {
     fn description(&self) -> &str {
         match *self {
             FileError::IO(_) => "io",
+            FileError::InvalidPath(_) => "invalid path",
             FileError::ParseFloat(_) => "parse float",
             FileError::ParseInt(_) => "parse int",
             FileError::UnexpectedFormat(_) => "unexpected format",
@@ -48,6 +50,7 @@ impl Error for FileError {
             FileError::ParseInt(ref err) => Some(err),
             FileError::UnexpectedFormat(_) => None,
             FileError::InconsistentData(_) => None,
+            FileError::InvalidPath(_) => None,
         }
     }
 }
@@ -56,8 +59,11 @@ impl fmt::Display for FileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             FileError::IO(ref err) => write!(f, "{}:{}", self.description(), err),
-            FileError::ParseFloat(ref err) => write!(f, "{}:{}", self.description(), err),
-            FileError::ParseInt(ref err) => write!(f, "{}:{}", self.description(), err),
+            FileError::InvalidPath(ref which_path) => {
+                write!(f, "{}: {}", self.description(), which_path)
+            }
+            FileError::ParseFloat(ref err) => write!(f, "{}: {}", self.description(), err),
+            FileError::ParseInt(ref err) => write!(f, "{}: {}", self.description(), err),
             FileError::UnexpectedFormat(ref unexpected_str) => {
                 write!(f, "{}: {}", self.description(), unexpected_str)
             }

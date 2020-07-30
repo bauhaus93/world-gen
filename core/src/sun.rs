@@ -1,7 +1,10 @@
+use palette::{Hsv, LinSrgb, Pixel};
 use std::f32::consts::PI;
 
 use crate::traits::Updatable;
 use crate::{graphics::transformation::create_direction, Point3f, UpdateError};
+
+const MAX_INTENSITY: f32 = 1e8;
 
 pub struct Sun {
     rotation_center: Point3f,
@@ -24,7 +27,7 @@ impl Sun {
         self.rotation_speed = calculate_rotation_speed(length_seconds);
     }
     pub fn calculate_position(&self) -> Point3f {
-        (create_direction(self.rotation) * self.center_distance) - self.rotation_center
+        (create_direction(self.rotation) * self.center_distance) + self.rotation_center
     }
     #[allow(unused)]
     pub fn calculate_daytime(&self) -> f32 {
@@ -33,8 +36,8 @@ impl Sun {
             t => t,
         }
     }
-    pub fn calculate_light_level(&self) -> f32 {
-        (1. - self.rotation[1] / PI).abs()
+    pub fn calculate_intensity(&self) -> f32 {
+        MAX_INTENSITY * (1. - self.rotation[1] / PI).abs()
     }
 }
 

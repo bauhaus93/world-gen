@@ -8,6 +8,7 @@ use crate::{Model, Point3f};
 pub struct Object {
     id: u32,
     prototype: Rc<ObjectPrototype>,
+    persistent: bool,
     model: Model,
 }
 
@@ -16,14 +17,24 @@ impl Object {
         Object {
             id: id,
             prototype: prototype,
+            persistent: false,
             model: Model::default(),
         }
+    }
+
+    pub fn set_persitent(&mut self) {
+        self.persistent = true;
     }
 
     pub fn get_id(&self) -> u32 {
         self.id
     }
-    
+
+    pub fn is_persistent(&self) -> bool {
+        self.persistent
+    }
+
+
     pub fn get_distance(&self, point: Point3f) -> f32 {
         self.model.get_distance(point)
     }

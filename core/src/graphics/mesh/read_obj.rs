@@ -1,4 +1,3 @@
-use glm::{Vector2, Vector3};
 
 use super::{Triangle, Vertex};
 use crate::file::{read_file, FileError};

@@ -56,8 +56,18 @@ float calculate_fog_factor() {
 }
 
 void main() {
-    float slope = dot(vertex.normal, vec3(0., 0., 1.));
-    color = texture(texture_array, vertex.uv).rgb;
+    float slope = max(0, dot(vertex.normal, vec3(0., 0., 1.)));
+	float height = vertex.frag_pos.z;
+    //color = texture(texture_array, vertex.uv).rgb;
+
+	color = vec3(0.2, 0.6, 0.2);
+	if (height > 140.){
+		color = mix(vec3(0.9, 0.9, 0.9), color, 1-min(1., (height - 140.)/100.));
+	}
+
+	float rock_factor = min(1., (max(0., (height - 120)) / 10.));
+
+	color = mix(vec3(0.3, 0.3, 0.3), color, pow(slope, 4.));
 
     vec3 light_factor = vec3(0., 0., 0.);
     for (int i = 0; i < active_lights; i++) {
@@ -70,5 +80,5 @@ void main() {
     color *= light_factor;
 
     float fog_factor = calculate_fog_factor();
-    color = mix(fog_color, color, fog_factor);
+    color = mix(fog_color * scene_lights[0].absolute_intensity / 1e8, color, fog_factor);
 }

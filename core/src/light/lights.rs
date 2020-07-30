@@ -47,7 +47,7 @@ impl SceneLights {
         &self,
         shader_program: &ShaderProgram,
     ) -> Result<(), GraphicsError> {
-        shader_program.set_resource_integer("active_lights", self.light_map.len() as i32);
+        shader_program.set_resource_integer("active_lights", self.light_map.len() as i32)?;
         for (index, light) in self.light_map.values() {
             shader_program.set_resource_vec3(
                 &format!("scene_lights[{}].color", index),

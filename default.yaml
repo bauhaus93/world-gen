@@ -5,7 +5,7 @@ mouse_sensitivity: 0.7
 near_radius: 20
 far_radius: 40
 active_radius: 80
-day_length: 20
+day_length: 720
 gravity: 0.20
 
 surface_shader_dir: shader/surface

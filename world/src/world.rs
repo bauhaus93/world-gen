@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::iter::repeat;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Instant;
 
 use rand::rngs::SmallRng;
 
@@ -11,7 +10,6 @@ use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::noise::presets::get_default_noise;
 use crate::surface::SurfaceTexture;
 use crate::WorldError;
-use core::format::format_number;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::light::{Light, SceneLights};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
@@ -218,7 +216,7 @@ impl World {
     fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
         let abs_pos = player_pos + rel_pos;
         if let Some(size) = self.size {
-            if (abs_pos[0] < 0 || abs_pos[1] < 0 || abs_pos[0] > size[0] || abs_pos[1] > size[1]) {
+            if abs_pos[0] < 0 || abs_pos[1] < 0 || abs_pos[0] > size[0] || abs_pos[1] > size[1] {
                 return None;
             }
         }
@@ -299,7 +297,7 @@ impl World {
 
 impl Renderable for World {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
-        self.surface_texture.activate();
+        //self.surface_texture.activate();
         info.push_shader(self.surface_shader_program.clone());
 
         self.chunks.values().try_for_each(|c| c.render(info))?;
@@ -308,7 +306,7 @@ impl Renderable for World {
 
         info.pop_shader();
 
-        self.surface_texture.deactivate();
+        //self.surface_texture.deactivate();
         self.skybox.render(info)?;
         Ok(())
     }
@@ -377,7 +375,7 @@ fn load_surface_shader(config: &Config) -> Result<ShaderProgram, WorldError> {
     let surface_shader_program = ShaderProgramBuilder::new()
         .add_vertex_shader((surface_shader_dir.clone() + "/VertexShader.glsl").as_str())
         .add_fragment_shader((surface_shader_dir + "/FragmentShader.glsl").as_str())
-        .add_resource("texture_array")
+        //.add_resource("texture_array")
         .add_resource("mvp")
         .add_resource("model")
         .add_resource("view_pos")
@@ -399,9 +397,9 @@ fn load_surface_shader(config: &Config) -> Result<ShaderProgram, WorldError> {
         .add_resource("scene_lights[1].specular_shininess")
         .finish()?;
     // setting texture slot to 0
-    if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
+    /*if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
         return Err(GraphicsError::from(e).into());
-    }
+    }*/
     Ok(surface_shader_program)
 }
 

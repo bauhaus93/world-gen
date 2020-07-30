@@ -4,7 +4,7 @@ use glm::{Matrix4, Vector3};
 use std::collections::BTreeMap;
 
 use super::ShaderProgramError;
-use crate::{graphics::check_opengl_error, Float};
+use crate::{graphics::check_opengl_error, Float, Point3i};
 
 pub struct ShaderProgram {
     id: GLuint,
@@ -117,6 +117,17 @@ impl ShaderProgram {
                 resource_name.to_string(),
             )),
         }
+    }
+
+    pub fn compute(&self, dim: Point3i) -> Result<(), ShaderProgramError> {
+        self.use_program();
+        unsafe {
+            gl::DispatchCompute(dim[0] as GLuint, dim[1] as GLuint, dim[2] as GLuint);
+            check_opengl_error("gl::DispatchCompute")?;
+            gl::MemoryBarrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            check_opengl_error("gl::MemoryBarrier")?;
+        }
+        Ok(())
     }
 }
 

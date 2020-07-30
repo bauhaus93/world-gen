@@ -60,6 +60,6 @@ pub use self::config::Config;
 pub use self::float::Float;
 pub use self::update_error::UpdateError;
 
-pub use self::point::{Point2f, Point2i, Point3f};
+pub use self::point::{Point2f, Point2i, Point3f, Point3i};
 pub use self::seed::Seed;
 pub use self::file::FileError;

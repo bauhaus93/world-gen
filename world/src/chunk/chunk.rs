@@ -97,7 +97,7 @@ impl Renderable for Chunk {
 }
 
 fn build_bounding_box(height_map: &HeightMap) -> BoundingBox {
-    let max_xy = ((height_map.get_size() - 1) as f32 * height_map.get_resolution());
+    let max_xy = (height_map.get_size() - 1) as f32 * height_map.get_resolution();
     let min = Vector3::new(0., 0., height_map.get_min() as f32);
     let max = Vector3::new(max_xy, max_xy, height_map.get_max() as f32);
     BoundingBox::from_min_max(min, max)

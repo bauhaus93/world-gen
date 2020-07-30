@@ -43,6 +43,10 @@ impl ShaderProgramBuilder {
         self.add_shader(gl::GEOMETRY_SHADER, shader_file_path)
     }
 
+    pub fn add_compute_shader(self, shader_file_path: &str) -> Self {
+        self.add_shader(gl::COMPUTE_SHADER, shader_file_path)
+    }
+
     pub fn add_resource(mut self, name: &str) -> Self {
         self.resource_list.push(name.to_string());
         self
@@ -174,6 +178,7 @@ fn compile_shader(shader: &Shader) -> Result<GLuint, ShaderError> {
         gl::FRAGMENT_SHADER => "fragment shader",
         gl::VERTEX_SHADER => "vertex shader",
         gl::GEOMETRY_SHADER => "geometry shader",
+        gl::COMPUTE_SHADER => "compute shader",
         unknown_type => { return Err(ShaderError::UnknownShaderType(unknown_type)); }
     };
     debug!("Compiling {}", shader_name);

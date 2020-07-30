@@ -85,7 +85,8 @@ impl FactoredNoise {
 
 impl Noise for FactoredNoise {
     fn get_noise(&self, point: Point2f) -> f32 {
-        self.base_noise.get_noise(point) * self.calculate_factor(point)
+        let bn = self.base_noise.get_noise(point);
+        bn * self.calculate_factor(point)
     }
 
     fn get_range(&self) -> [f32; 2] {

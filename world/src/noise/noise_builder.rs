@@ -1,10 +1,11 @@
 use super::{
     FactoredNoise, MergeType, ModifierType, Noise, NoiseModifier, OctavedNoise, RepeatingNoise,
-    SimplexNoise, Threshold, ThresholdNoise,
+    SimplexNoise, Threshold, ThresholdNoise, WorleyNoise,
 };
 use core::{Point2f, Seed};
 
 pub struct NoiseBuilder {
+    base_noise: u8,
     seed: Option<Seed>,
     octaves: Option<u8>,
     scale: Option<f32>,
@@ -20,6 +21,7 @@ pub struct NoiseBuilder {
 impl NoiseBuilder {
     pub fn new() -> Self {
         Self {
+            base_noise: 0,
             seed: None,
             octaves: None,
             scale: None,
@@ -31,6 +33,16 @@ impl NoiseBuilder {
             factor_merge_type: None,
             factors: Vec::new(),
         }
+    }
+
+    pub fn base_simplex(mut self) -> Self {
+        self.base_noise = 0;
+        self
+    }
+
+    pub fn base_worley(mut self) -> Self {
+        self.base_noise = 1;
+        self
     }
 
     pub fn seed(mut self, seed: Seed) -> Self {
@@ -89,9 +101,14 @@ impl NoiseBuilder {
     }
 
     fn handle_base_noise(&self) -> Box<dyn Noise> {
-        Box::new(SimplexNoise::from_seed(
-            self.seed.unwrap_or(Seed::from_entropy()),
-        ))
+        match self.base_noise {
+            1 => Box::new(WorleyNoise::from_seed(
+                self.seed.unwrap_or(Seed::from_entropy()),
+            )),
+            _ => Box::new(SimplexNoise::from_seed(
+                self.seed.unwrap_or(Seed::from_entropy()),
+            )),
+        }
     }
 
     fn handle_octaved_noise(&self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
@@ -152,8 +169,8 @@ impl NoiseBuilder {
     }
 
     pub fn finish(self) -> Box<dyn Noise> {
-        let n = self.handle_threshold(
-            self.handle_modifier(self.handle_repeat(self.handle_octaved_noise(self.handle_base_noise())),
+        let n = self.handle_modifier(self.handle_threshold(
+            self.handle_repeat(self.handle_octaved_noise(self.handle_base_noise())),
         ));
         self.handle_factors(n)
     }

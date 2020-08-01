@@ -8,7 +8,6 @@ use rand::rngs::SmallRng;
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::noise::presets::get_default_noise;
-use crate::surface::SurfaceTexture;
 use crate::WorldError;
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::light::{Light, SceneLights};
@@ -18,7 +17,6 @@ use core::{
 };
 
 pub struct World {
-    surface_texture: SurfaceTexture,
     surface_shader_program: Rc<ShaderProgram>,
     skybox: Skybox,
     sun: Sun,
@@ -42,11 +40,9 @@ impl World {
     pub fn new(config: &Config) -> Result<World, WorldError> {
         let object_prototypes_path = config.get_str("object_prototype_path")?;
         let day_length = config.get_uint_or_default("day_length", 180);
-        let surface_texture_info_path = config.get_str("surface_info_path")?;
         let gravity = config.get_float_or_default("gravity", 0.25);
 
         let surface_shader_program = load_surface_shader(config)?;
-        let surface_texture = SurfaceTexture::load(surface_texture_info_path)?;
 
         let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
 
@@ -60,7 +56,6 @@ impl World {
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
         let architect = Arc::new(Architect::from_noise(
             get_default_noise(Seed::from_rng(&mut rng)),
-            surface_texture.get_terrain_set(),
         ));
 
         let chunk_loader = ChunkLoader::new(architect.clone());
@@ -72,7 +67,6 @@ impl World {
         });
 
         let mut world = World {
-            surface_texture: surface_texture,
             surface_shader_program: Rc::new(surface_shader_program),
             skybox: Skybox::new(config)?,
             sun: Sun::with_day_length(day_length),

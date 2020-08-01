@@ -7,13 +7,11 @@ use crate::chunk::chunk_size::{get_world_pos, CHUNK_SIZE};
 use crate::height_map::HeightMap;
 use crate::noise::presets::get_default_tree_noise;
 use crate::noise::Noise;
-use crate::{Terrain, TerrainSet, TerrainType};
 use core::{FileError, Point2f, Point2i, Point3f, Seed};
 
 pub struct Architect {
     source: Source,
     tree_noise: Box<dyn Noise>,
-    terrain_set: TerrainSet,
 }
 
 enum Source {
@@ -22,19 +20,17 @@ enum Source {
 }
 
 impl Architect {
-    pub fn from_file(filepath: &Path, terrain_set: &TerrainSet) -> Result<Self, FileError> {
+    pub fn from_file(filepath: &Path) -> Result<Self, FileError> {
         Ok(Self {
             source: Source::Memory(HeightMap::from_file(filepath)?),
             tree_noise: get_default_tree_noise(Seed::from_entropy()),
-            terrain_set: terrain_set.clone(),
         })
     }
 
-    pub fn from_noise(noise: Box<dyn Noise>, terrain_set: &TerrainSet) -> Self {
+    pub fn from_noise(noise: Box<dyn Noise>) -> Self {
         Self {
             source: Source::Noise(noise),
             tree_noise: get_default_tree_noise(Seed::from_entropy()),
-            terrain_set: terrain_set.clone(),
         }
     }
 
@@ -61,12 +57,6 @@ impl Architect {
             }
         }
         height_map
-    }
-
-    pub fn get_terrain(&self, _absolute_pos: Point2f) -> &Terrain {
-        self.terrain_set
-            .get(&TerrainType::Grass)
-            .expect("Must have grass")
     }
 
     pub fn get_trees(&self, chunk_pos: Point2i) -> Vec<Point3f> {

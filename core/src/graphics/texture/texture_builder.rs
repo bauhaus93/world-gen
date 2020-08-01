@@ -1,100 +1,87 @@
 use std::collections::BTreeMap;
 
 use gl;
+use gl::types::GLenum;
 
-use crate::graphics::{ Texture, GraphicsError };
-use super::{ Orientation, TextureType, utility::* };
+use super::{utility::*, Orientation, TextureType};
+use crate::graphics::{GraphicsError, Texture};
+use crate::{Point2i, Point3i};
 
 pub struct TextureBuilder {
-    img_path: String,
-    texture_type: TextureType,
+    size: Point3i,
+    texture_type: GLenum,
+    format: Option<GLenum>,
+    use_mipmaps: Option<bool>,
 }
 
-
 impl TextureBuilder {
-    pub fn new_2d(img_path: &str) -> TextureBuilder {
-        TextureBuilder::new(
-            img_path,
-            TextureType::Single2D
-        )
+    pub fn new_1d(size: i32) -> TextureBuilder {
+        TextureBuilder::new(gl::TEXTURE_1D, Point3i::new(size, 0, 0))
     }
-    pub fn new_2d_array(img_path: &str, sub_size: [u32; 2]) -> TextureBuilder {
-        TextureBuilder::new(
-            img_path,
-            TextureType::Array2D { index_list: Vec::new(), size: sub_size }
-        )
+    pub fn new_2d(size: Point2i) -> TextureBuilder {
+        TextureBuilder::new(gl::TEXTURE_2D, size.extend(0))
     }
-    pub fn new_cube_map(img_path: &str, cube_size: u32) -> TextureBuilder {
-        TextureBuilder::new(
-            img_path,
-            TextureType::CubeMap { index_map: BTreeMap::new(), size: cube_size }
-        )
+    pub fn new_2d_array(size: Point3i) -> TextureBuilder {
+        TextureBuilder::new(gl::TEXTURE_2D_ARRAY, size)
+    }
+    pub fn new_cube_map(size: i32) -> TextureBuilder {
+        TextureBuilder::new(gl::TEXTURE_CUBE_MAP, Point2i::from_scalar(size).extend(0))
     }
 
-    fn new(img_path: &str, texture_type: TextureType) -> TextureBuilder {
+    fn new(texture_type: GLenum, size: Point3i) -> TextureBuilder {
         TextureBuilder {
-            img_path: img_path.into(),
-            texture_type: texture_type
+            size: size,
+            texture_type: texture_type,
+            format: None,
+            use_mipmaps: None,
         }
     }
 
-    pub fn add_array_element(&mut self, index: [u32; 3]) {
-        if let TextureType::Array2D { index_list, .. } = &mut self.texture_type {
-            index_list.push(index);
-        } else {
-            warn!("Wanted to add array element to non 2d array texture");
-        }
+    pub fn use_mipmaps(mut self) -> Self {
+        self.use_mipmaps = Some(true);
+        self
     }
 
-    pub fn add_cube_element(&mut self, index: [u32; 2], orientation: Orientation) {
-        if let TextureType::CubeMap { index_map, .. } = &mut self.texture_type {
-            match orientation {
-                Orientation::Right => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_X, index);
-                },
-                Orientation::Left => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_X, index);
-                },
-                Orientation::Top => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Z, index);
-                },
-                Orientation::Bottom => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Z, index);
-                },
-                Orientation::Back => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_POSITIVE_Y, index);
-                },
-                Orientation::Front => {
-                    index_map.insert(gl::TEXTURE_CUBE_MAP_NEGATIVE_Y, index);
-                }
-            }
-        } else {
-            warn!("Wanted to add array element to non cubemap texture");
-        }
+    pub fn format_rgba8(mut self) -> Self {
+        self.format = Some(gl::RGBA8);
+        self
+    }
+    pub fn format_rgba32f(mut self) -> Self {
+        self.format = Some(gl::RGBA32F);
+        self
+    }
+    pub fn format_r32f(mut self) -> Self {
+        self.format = Some(gl::R32F);
+        self
     }
 
-    pub fn finish(&self) -> Result<Texture, GraphicsError> {
-        let img = load_image(&self.img_path)?;
-        let texture_size = get_texture_size(&self.texture_type, &img);
+    pub fn format_rg32f(mut self) -> Self {
+        self.format = Some(gl::RG32F);
+        self
+    }
 
-        let id = initialize_texture(&self.texture_type)?;
+    pub fn format_rg32i(mut self) -> Self {
+        self.format = Some(gl::RG32I);
+        self
+    }
 
-        if let Err(e) = create_texture_storage(&self.texture_type, texture_size) {
+    pub fn finish(self) -> Result<Texture, GraphicsError> {
+        let id = initialize_texture(self.texture_type)?;
+
+        let use_mipmaps = self.use_mipmaps.unwrap_or(false);
+        let format = self.format.unwrap_or(gl::RGBA8);
+
+        if let Err(e) = create_texture_storage(self.texture_type, self.size, format, use_mipmaps) {
             delete_texture(id);
             return Err(e.into());
         }
 
-        if let Err(e) = fill_texture(&self.texture_type, img) {
+        if let Err(e) = unbind_texture(self.texture_type) {
             delete_texture(id);
             return Err(e.into());
         }
 
-        if let Err(e) = unbind_texture(&self.texture_type) {
-            delete_texture(id);
-            return Err(e.into());
-        }
-
-        let texture = Texture::new(id, get_opengl_texture_type(&self.texture_type));
+        let texture = Texture::new(id, self.size, self.texture_type, format, use_mipmaps);
         Ok(texture)
     }
 }

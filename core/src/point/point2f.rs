@@ -13,6 +13,10 @@ impl Point2f {
         Self(glm::normalize(self.0))
     }
 
+    pub fn rotate_ccw_90(&self) -> Self {
+        Point2f::new(self[1], -self[0])
+    }
+
     pub fn length(&self) -> f32 {
         glm::length(self.0)
     }

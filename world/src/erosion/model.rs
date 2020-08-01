@@ -69,6 +69,23 @@ impl Direction {
 }
 
 impl Model {
+    pub fn new_zeroed(size: usize) -> Self {
+        let mut m = Self {
+            size: size,
+            terrain_height: Vec::with_capacity(size * size),
+            water_height: Vec::with_capacity(size * size),
+            suspended_sediment: Vec::with_capacity(size * size),
+            outflow_flux: Vec::with_capacity(size * size),
+            velocity: Vec::with_capacity(size * size),
+        };
+        m.terrain_height.resize(size * size, 0.);
+        m.water_height.resize(size * size, 0.);
+        m.suspended_sediment.resize(size * size, 0.);
+        m.outflow_flux.resize(size * size, [0., 0., 0., 0.]);
+        m.velocity.resize(size * size, Point2f::from_scalar(0.));
+        m
+    }
+
     pub fn get_total_water(&self) -> f32 {
         self.water_height.iter().fold(0., |acc, h| acc + h)
     }

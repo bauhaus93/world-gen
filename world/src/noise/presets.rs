@@ -8,12 +8,11 @@ pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
 
     let mountain_factor = NoiseBuilder::new()
         .seed(Seed::from_rng(&mut local_rng))
-        .base_worley()
-        .octaves(1)
-        .scale(5e-2)
-        .roughness(1.)
-        .range([-1., 4.])
-        .modifier(ModifierType::FactoredExponent(2., 2.))
+        .octaves(6)
+        .scale(1e-3)
+        .roughness(0.5)
+        .range([-1., 1.])
+        .modifier(ModifierType::FactoredExponent(10., 2.))
         .above(0.)
         .finish();
 

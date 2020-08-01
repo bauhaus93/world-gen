@@ -5,9 +5,9 @@ use std::path::Path;
 
 use std::cmp::Ordering;
 
-use crate::erosion;
-use crate::Noise;
-use core::{FileError, Point2f, Point2i, Seed};
+use crate::{erosion, triangulate, Noise};
+use core::graphics::mesh::Triangle;
+use core::{FileError, Point2f, Point2i, Point3f, Seed};
 
 pub struct HeightMap {
     size: i32,
@@ -46,9 +46,8 @@ impl HeightMap {
         let mut height_list = Vec::with_capacity((size * size) as usize);
         for y in 0..size {
             for x in 0..size {
-                let h = noise.get_noise(
-                    origin + Point2f::new(x as f32 * resolution, y as f32 * resolution),
-                );
+                let h = noise
+                    .get_noise(origin + Point2f::new(x as f32 * resolution, y as f32 * resolution));
                 height_list.push(h);
                 if (height_list.len()) % ((size * size) as usize / 20) == 0 {
                     debug!(
@@ -169,6 +168,17 @@ impl HeightMap {
         res
     }
 
+    pub fn triangulate(&self) -> Option<Vec<Triangle>> {
+        let mut points = Vec::new();
+        for y in 0..self.size {
+            for x in 0..self.size {
+                let point = Point3f::new(x as f32, y as f32, self.get(Point2i::new(x, y)));
+                points.push(point);
+            }
+        }
+        triangulate(&points)
+    }
+
     #[allow(unused)]
     pub fn get_size(&self) -> i32 {
         self.size
@@ -263,4 +273,16 @@ where
     T: Ord,
 {
     T::min(T::max(value, min), max)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn check_heightmap_triangulation() {
+        let hm = HeightMap::new(16, 1.);
+        assert!(hm.triangulate().is_some());
+    }
 }

@@ -21,7 +21,8 @@ impl ChunkBuilder {
         };
         let height_map =
             architect.create_heightmap(pos, (CHUNK_SIZE as f32 / resolution) as i32, resolution);
-        let surface_buffer = create_surface_buffer(pos, &height_map, architect, resolution);
+        let surface_buffer = VertexBuffer::from(
+            height_map.triangulate().expect("Should not happen lel").as_slice());
         let builder = Self {
             pos: pos,
             lod: lod,
@@ -38,41 +39,19 @@ impl ChunkBuilder {
     }
 }
 
-fn create_surface_buffer(
-    origin: Point2i,
-    height_map: &HeightMap,
-    architect: &Architect,
-    resolution: f32,
-) -> VertexBuffer {
+fn create_surface_buffer(height_map: &HeightMap) -> VertexBuffer {
     let size = height_map.get_size();
-    let resolution = height_map.get_resolution();
     let mut triangles: Vec<Triangle> = Vec::with_capacity((size * size * 2) as usize);
     for y in 0..size - 1 {
         for x in 0..size - 1 {
             let rel_pos = Point2i::new(x, y);
-            let abs_pos = get_world_pos(origin, Point2f::from(rel_pos) * resolution);
-            let terrain = architect.get_terrain(abs_pos);
-            triangles.extend(&add_quad_triangles(
-                rel_pos,
-                origin,
-                height_map,
-                architect,
-                resolution,
-                terrain.get_layer(),
-            ));
+            triangles.extend(&add_quad_triangles(rel_pos, height_map));
         }
     }
     VertexBuffer::from(triangles.as_slice())
 }
 
-fn add_quad_triangles(
-    offset: Point2i,
-    origin: Point2i,
-    height_map: &HeightMap,
-    architect: &Architect,
-    resolution: f32,
-    texture_layer: u32,
-) -> [Triangle; 2] {
+fn add_quad_triangles(offset: Point2i, height_map: &HeightMap) -> [Triangle; 2] {
     const OFFSET: f32 = 1.;
     const VERTEX_OFFSETS: [[f32; 2]; 6] = [
         [0., 0.],
@@ -104,41 +83,11 @@ fn add_quad_triangles(
             ));
             debug_assert!(off[0] <= 1., off[1] <= 1.);
             vert.set_uv(Point2f::new(off[0], off[1]));
-
-            let r = height_map.get(offset + Point2i::new(1, 0));
-            let (l, t) = match map_pos {
-                mp if mp[0] == 0 && mp[1] == 0 => (
-                    architect.get_height(get_world_pos(origin, Point2f::new(-resolution, 0.))),
-                    architect.get_height(get_world_pos(origin, Point2f::new(0., -resolution))),
-                ),
-                mp if mp[0] == 0 => (
-                    architect.get_height(get_world_pos(
-                        origin,
-                        Point2f::new(-1., mp[1] as f32) * resolution,
-                    )),
-                    height_map.get(mp + Point2i::new(0, -1)),
-                ),
-                mp if mp[1] == 0 => (
-                    height_map.get(mp + Point2i::new(-1, 0)),
-                    architect.get_height(get_world_pos(
-                        origin,
-                        Point2f::new(mp[0] as f32, -1.) * resolution,
-                    )),
-                ),
-                mp => (
-                    height_map.get(mp + Point2i::new(-1, 0)),
-                    height_map.get(mp + Point2i::new(0, -1)),
-                ),
-            };
-            let b = height_map.get(offset + Point2i::new(0, 1));
-
-            let normal = Point3f::new((r - l) / 2., (b - t) / 2., 1.).as_normalized();
-            vert.set_normal(normal);
         }
         triangles[i] = Triangle::new(vertices);
     }
-    triangles
-        .iter_mut()
-        .for_each(|t| { t.set_uv_layer(texture_layer); t.update_normals();});
+    triangles.iter_mut().for_each(|t| {
+        t.update_normals();
+    });
     triangles
 }

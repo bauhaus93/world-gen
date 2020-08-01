@@ -1,13 +1,14 @@
-use std::rc::Rc;
 use std::path::Path;
+use std::rc::Rc;
 
+use crate::file::read_image;
 use crate::graphics::mesh::vertex_buffer::BUFFER_POSTION;
 use crate::graphics::{
     texture::Orientation, GraphicsError, Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture,
     TextureBuilder,
 };
 use crate::traits::{RenderInfo, Renderable, Scalable, Translatable};
-use crate::{CoreError, FileError, Point3f, Config};
+use crate::{Config, CoreError, FileError, Point3f, Point3i, Point2i};
 
 pub struct Skybox {
     texture: Texture,
@@ -28,8 +29,16 @@ impl Skybox {
             cube_path, cube_img
         );
 
-        let vertex_shader_path = shader_dir.join("VertexShader.glsl").to_str().ok_or(FileError::InvalidPath("skybox_vertex_shader".to_owned()))?.to_owned();
-        let fragment_shader_path = shader_dir.join("FragmentShader.glsl").to_str().ok_or(FileError::InvalidPath("skybox_fragment_shader".to_owned()))?.to_owned();
+        let vertex_shader_path = shader_dir
+            .join("VertexShader.glsl")
+            .to_str()
+            .ok_or(FileError::InvalidPath("skybox_vertex_shader".to_owned()))?
+            .to_owned();
+        let fragment_shader_path = shader_dir
+            .join("FragmentShader.glsl")
+            .to_str()
+            .ok_or(FileError::InvalidPath("skybox_fragment_shader".to_owned()))?
+            .to_owned();
 
         let shader = ShaderProgramBuilder::new()
             .add_vertex_shader(&vertex_shader_path)
@@ -42,14 +51,34 @@ impl Skybox {
             return Err(GraphicsError::from(e).into());
         }
 
-        let mut builder = TextureBuilder::new_cube_map(cube_img, 512);
-        builder.add_cube_element([1, 0], Orientation::Top);
-        builder.add_cube_element([1, 2], Orientation::Bottom);
-        builder.add_cube_element([0, 1], Orientation::Left);
-        builder.add_cube_element([2, 1], Orientation::Right);
-        builder.add_cube_element([1, 1], Orientation::Front);
-        builder.add_cube_element([3, 1], Orientation::Back);
-        let texture = builder.finish()?;
+        const CUBE_SIZE: i32 = 512;
+        let mut texture = TextureBuilder::new_cube_map(CUBE_SIZE)
+            .use_mipmaps()
+            .format_rgba8()
+            .finish()?;
+        let img = read_image(cube_img)?;
+        texture.load_cube_image(Point3i::new(1, 0, 0), Point2i::new(CUBE_SIZE, 0), &img)?;
+        texture.load_cube_image(
+            Point3i::new(-1, 0, 0),
+            Point2i::new(CUBE_SIZE, 2 * CUBE_SIZE),
+            &img,
+        )?;
+        texture.load_cube_image(Point3i::new(0, 1, 0), Point2i::new(0, CUBE_SIZE), &img)?;
+        texture.load_cube_image(
+            Point3i::new(0, -1, 0),
+            Point2i::new(2 * CUBE_SIZE, CUBE_SIZE),
+            &img,
+        )?;
+        texture.load_cube_image(
+            Point3i::new(0, 0, 1),
+            Point2i::new(CUBE_SIZE, CUBE_SIZE),
+            &img,
+        )?;
+        texture.load_cube_image(
+            Point3i::new(0, 0, -1),
+            Point2i::new(3 * CUBE_SIZE, CUBE_SIZE),
+            &img,
+        )?;
 
         let mut model = Model::default();
         model.set_scale(Point3f::from_scalar(2000.));
@@ -83,7 +112,7 @@ impl Skybox {
 
 impl Renderable for Skybox {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
-        self.texture.activate();
+        self.texture.activate(0);
         info.push_shader(self.shader.clone());
 
         let mvp = info.get_camera().create_mvp_matrix(&self.model);

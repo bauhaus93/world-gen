@@ -10,35 +10,20 @@ use crate::noise::Noise;
 use core::{FileError, Point2f, Point2i, Point3f, Seed};
 
 pub struct Architect {
-    source: Source,
+    height_noise: Box<dyn Noise>,
     tree_noise: Box<dyn Noise>,
 }
 
-enum Source {
-    Memory(HeightMap),
-    Noise(Box<dyn Noise>),
-}
-
 impl Architect {
-    pub fn from_file(filepath: &Path) -> Result<Self, FileError> {
-        Ok(Self {
-            source: Source::Memory(HeightMap::from_file(filepath)?),
-            tree_noise: get_default_tree_noise(Seed::from_entropy()),
-        })
-    }
-
     pub fn from_noise(noise: Box<dyn Noise>) -> Self {
         Self {
-            source: Source::Noise(noise),
+            height_noise: noise,
             tree_noise: get_default_tree_noise(Seed::from_entropy()),
         }
     }
 
     pub fn get_height(&self, absolute_pos: Point2f) -> f32 {
-        match &self.source {
-            Source::Memory(data) => data.get(absolute_pos.into()),
-            Source::Noise(noise) => noise.get_noise(absolute_pos),
-        }
+        self.height_noise.get_noise(absolute_pos)
     }
 
     pub fn create_heightmap(

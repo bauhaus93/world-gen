@@ -5,9 +5,9 @@ use std::path::Path;
 
 use std::cmp::Ordering;
 
-use crate::{erosion, triangulate, Noise};
 use core::graphics::mesh::Triangle;
 use core::{FileError, Point2f, Point2i, Point3f, Seed};
+use crate::{Noise, triangulate};
 
 pub struct HeightMap {
     size: i32,
@@ -25,15 +25,6 @@ impl HeightMap {
             size: size,
             resolution: resolution,
             height_list: height_list,
-        }
-    }
-    pub fn from_list(size: i32, resolution: f32, height_list: &[f32]) -> Self {
-        debug_assert!(size > 0);
-        debug_assert!(resolution > 0.);
-        Self {
-            size: size,
-            resolution: resolution,
-            height_list: Vec::from(height_list),
         }
     }
 
@@ -62,75 +53,6 @@ impl HeightMap {
             resolution: resolution,
             height_list: height_list,
         }
-    }
-
-    pub fn from_file(path: &Path) -> Result<Self, FileError> {
-        debug!("Reading heightmap from file...");
-        let mut file = BufReader::new(File::open(path)?);
-
-        let size = file.read_i32::<LittleEndian>()?;
-        let resolution = file.read_f32::<LittleEndian>()?;
-
-        if size < 0 {
-            return Err(FileError::InconsistentData(format!(
-                "Heightmap size expected to be positive, but was {}",
-                size
-            )));
-        }
-
-        if resolution < 0. {
-            return Err(FileError::InconsistentData(format!(
-                "Heightmap resolution expected to be positive, but was {}",
-                resolution
-            )));
-        }
-
-        debug!("Size = {}x{}, resolution = {}", size, size, resolution);
-
-        let mut data = Vec::with_capacity((size * size) as usize);
-        while let Ok(h) = file.read_f32::<LittleEndian>() {
-            data.push(h);
-            if data.len() % (size * size / 10) as usize == 0 {
-                trace!(
-                    "Progress: {:2} %",
-                    100 * data.len() / (size * size) as usize
-                )
-            }
-        }
-
-        if (size * size) as usize != data.len() {
-            return Err(FileError::InconsistentData(format!(
-                "Expected {} data points, but read only {}",
-                size * size,
-                data.len()
-            )));
-        }
-        debug!("Read heightmap from file!");
-        Ok(Self {
-            size: size,
-            resolution: resolution,
-            height_list: data,
-        })
-    }
-
-    pub fn erode(self, iterations: usize) -> Self {
-        erosion::Model::from(self)
-            .run(iterations, Seed::from_entropy())
-            .into()
-    }
-
-    pub fn into_file(&self, path: &Path) -> Result<(), FileError> {
-        info!("Writing heightmap to file...");
-        let mut file = BufWriter::new(File::create(path)?);
-
-        file.write_i32::<LittleEndian>(self.size)?;
-        file.write_f32::<LittleEndian>(self.resolution)?;
-
-        self.height_list
-            .iter()
-            .try_for_each(|h| file.write_f32::<LittleEndian>(*h))?;
-        debug!("Written heightmap to file!");
-        Ok(())
     }
 
     pub fn get_interpolated_height(&self, relative_pos: Point2f) -> f32 {

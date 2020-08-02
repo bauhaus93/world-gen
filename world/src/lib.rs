@@ -18,7 +18,7 @@ extern crate test;
 extern crate core;
 
 mod chunk;
-pub mod erosion;
+//pub mod erosion;
 pub mod height_map;
 pub mod noise;
 pub mod world;

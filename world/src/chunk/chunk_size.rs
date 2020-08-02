@@ -13,11 +13,6 @@ pub fn get_chunk_pos(world_pos: Point3f) -> Point2i {
     chunk_pos
 }
 
-#[allow(unused)]
-pub fn get_chunk_relative_pos(chunk_pos: Point3f, world_pos: Point3f, resolution: i32) -> Point2i {
-    Point2i::from(world_pos.as_xy()) / resolution
-}
-
 pub fn get_world_pos(chunk_pos: Point2i, offset: Point2f) -> Point2f {
     Point2f::from(chunk_pos * CHUNK_SIZE) + offset
 }

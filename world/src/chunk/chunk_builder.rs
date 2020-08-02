@@ -21,7 +21,7 @@ impl ChunkBuilder {
             _ => 8.,
         };
         let height_map =
-            architect.create_heightmap(pos, (CHUNK_SIZE as f32 / resolution) as i32, resolution);
+            architect.create_heightmap(pos, (CHUNK_SIZE as f32 / resolution) as i32 + 1, resolution);
         let surface_buffer = VertexBuffer::from(
             height_map.triangulate().expect("Should not happen lel").as_slice());
         let builder = Self {

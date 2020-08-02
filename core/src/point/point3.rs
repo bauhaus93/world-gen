@@ -1,6 +1,6 @@
-use std::fmt;
 use glm::{Primitive, Vector3};
-use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
+use std::fmt;
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 use super::Point2;
 
@@ -110,6 +110,16 @@ impl<T: Mul<Output = T> + Primitive + MulAssign> Mul<T> for Point3<T> {
     fn mul(mut self, scalar: T) -> Self {
         for i in 0..3 {
             self.0[i] *= scalar;
+        }
+        self
+    }
+}
+
+impl<T: Div<Output = T> + Primitive + DivAssign> Div<T> for Point3<T> {
+    type Output = Self;
+    fn div(mut self, scalar: T) -> Self {
+        for i in 0..3 {
+            self.0[i] /= scalar;
         }
         self
     }

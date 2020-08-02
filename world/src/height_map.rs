@@ -5,14 +5,16 @@ use std::path::Path;
 
 use std::cmp::Ordering;
 
+use crate::{triangulate, Noise};
 use core::graphics::mesh::Triangle;
 use core::{FileError, Point2f, Point2i, Point3f, Seed};
-use crate::{Noise, triangulate};
 
 pub struct HeightMap {
     size: i32,
     resolution: f32,
+    origin: Point2f,
     height_list: Vec<f32>,
+    normal_list: Vec<Point3f>,
 }
 
 impl HeightMap {
@@ -21,10 +23,14 @@ impl HeightMap {
         debug_assert!(resolution > 0.);
         let mut height_list = Vec::new();
         height_list.resize((size * size) as usize, 0.);
+        let mut normal_list = Vec::new();
+        normal_list.resize((size * size) as usize, Point3f::new(0., 0., 1.));
         Self {
             size: size,
             resolution: resolution,
+            origin: Point2f::from_scalar(0.),
             height_list: height_list,
+            normal_list: normal_list,
         }
     }
 
@@ -32,26 +38,72 @@ impl HeightMap {
         debug_assert!(size > 0);
         debug_assert!(resolution > 0.);
 
-        debug!("Creating heightmap from noise, size = {}x{}", size, size);
         let mut height_list = Vec::with_capacity((size * size) as usize);
         for y in 0..size {
             for x in 0..size {
                 let h = noise
                     .get_noise(origin + Point2f::new(x as f32 * resolution, y as f32 * resolution));
                 height_list.push(h);
-                if (height_list.len()) % ((size * size) as usize / 20) == 0 {
-                    debug!(
-                        "Progress: {:2}%",
-                        100 * height_list.len() / (size * size) as usize
-                    )
-                }
             }
         }
-        debug!("Created heightmap from noise!");
-        Self {
+
+        let mut normal_list = Vec::with_capacity((size * size) as usize);
+        normal_list.resize((size * size) as usize, Point3f::new(0., 0., 1.));
+        let mut hm = Self {
             size: size,
             resolution: resolution,
+            origin: origin,
             height_list: height_list,
+            normal_list: normal_list,
+        };
+        hm.update_normals(noise);
+        hm
+    }
+
+    fn update_normals(&mut self, fallback_noise: &dyn Noise) {
+        for y in 0..self.size {
+            for x in 0..self.size {
+                let r = if x + 1 == self.size {
+                    fallback_noise.get_noise(
+                        Point2f::new((x + 1) as f32 * self.resolution, y as f32 * self.resolution)
+                            + self.origin,
+                    )
+                } else {
+                    self.get(Point2i::new(x + 1, y))
+                };
+                let l = if x == 0 {
+                    fallback_noise.get_noise(
+                        Point2f::new((x - 1) as f32 * self.resolution, y as f32 * self.resolution)
+                            + self.origin,
+                    )
+                } else {
+                    self.get(Point2i::new(x - 1, y))
+                };
+                let b = if y + 1 == self.size {
+                    fallback_noise.get_noise(
+                        Point2f::new(x as f32 * self.resolution, (y + 1) as f32 * self.resolution)
+                            + self.origin,
+                    )
+                } else {
+                    self.get(Point2i::new(x, y + 1))
+                };
+                let t = if y == 0 {
+                    fallback_noise.get_noise(
+                        Point2f::new(x as f32 * self.resolution, (y - 1) as f32 * self.resolution)
+                            + self.origin,
+                    )
+                } else {
+                    self.get(Point2i::new(x, y - 1))
+                };
+
+                let normal = Point3f::new(
+                    (r - l) / (2. * self.resolution),
+                    (b - t) / (2. * self.resolution),
+                    1.,
+                )
+                .as_normalized();
+                self.set_normal(Point2i::new(x, y), normal);
+            }
         }
     }
 
@@ -93,11 +145,26 @@ impl HeightMap {
         let mut points = Vec::new();
         for y in 0..self.size {
             for x in 0..self.size {
-                let point = Point3f::new(x as f32 * self.resolution, y as f32 * self.resolution, self.get(Point2i::new(x, y)));
+                let point = Point3f::new(
+                    x as f32 * self.resolution,
+                    y as f32 * self.resolution,
+                    self.get(Point2i::new(x, y)),
+                );
                 points.push(point);
             }
         }
-        triangulate(&points)
+        match triangulate(&points) {
+            Some(mut triangulation) => {
+                for triangle in triangulation.iter_mut() {
+                    for v in triangle.get_vertices_mut() {
+                        let pos = Point2i::from(v.get_pos().as_xy() / self.resolution);
+                        v.set_normal(self.get_normal(pos));
+                    }
+                }
+                Some(triangulation)
+            }
+            None => None,
+        }
     }
 
     #[allow(unused)]
@@ -150,6 +217,13 @@ impl HeightMap {
 
     pub fn get(&self, pos: Point2i) -> f32 {
         self.height_list[self.calculate_index(pos)]
+    }
+    pub fn get_normal(&self, pos: Point2i) -> Point3f {
+        self.normal_list[self.calculate_index(pos)]
+    }
+    pub fn set_normal(&mut self, pos: Point2i, normal: Point3f) {
+        let index = self.calculate_index(pos);
+        self.normal_list[index] = normal;
     }
     #[allow(unused)]
     pub fn set_by_index(&mut self, index: usize, height: f32) {

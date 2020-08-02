@@ -64,6 +64,9 @@ impl Triangle {
     pub fn as_vertices(&self) -> &[Vertex; 3] {
         &self.vertex
     }
+    pub fn get_vertices_mut(&mut self) -> &mut [Vertex; 3] {
+        &mut self.vertex
+    }
 }
 
 fn has_winding_order_ccw(points: &[Point2f; 3]) -> bool {

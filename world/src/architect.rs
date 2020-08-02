@@ -33,15 +33,12 @@ impl Architect {
         resolution: f32,
     ) -> HeightMap {
         let size = chunk_size + 1;
-        let mut height_map = HeightMap::new(size, resolution);
-        for y in 0..size {
-            for x in 0..size {
-                let rel_pos = Point2i::new(x, y);
-                let abs_pos = get_world_pos(chunk_pos, Point2f::from(rel_pos) * resolution);
-                height_map.set(rel_pos, self.get_height(abs_pos));
-            }
-        }
-        height_map
+        HeightMap::from_noise(
+            get_world_pos(chunk_pos, Point2f::new(0., 0.)),
+            chunk_size,
+            resolution,
+            self.height_noise.as_ref()
+        )
     }
 
     pub fn get_trees(&self, chunk_pos: Point2i) -> Vec<Point3f> {

@@ -14,3 +14,6 @@ object_prototype_path: prototypes.yaml
 skybox_texture_path: resources/img/sky.png
 skybox_cube_path: resources/obj/cube_inward.obj
 skybox_shader_directory: shader/skybox
+
+water_shader_directory: shader/water
+water_surface_mesh: resources/obj/water_surface.obj

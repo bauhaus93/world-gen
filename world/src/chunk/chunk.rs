@@ -73,11 +73,13 @@ impl Chunk {
     ) -> Result<(), ChunkError> {
         let tree_positions = architect.get_trees(self.pos);
         for tp in tree_positions.into_iter() {
-            let id = object_manager.create_object("tree", false)?;
-            object_manager.mod_object(id, |t| {
-                t.set_translation(tp);
-            });
-            self.objects.push(id);
+            if tp[2] > 20. {
+                let id = object_manager.create_object("tree", false)?;
+                object_manager.mod_object(id, |t| {
+                    t.set_translation(tp);
+                });
+                self.objects.push(id);
+            }
         }
         Ok(())
     }

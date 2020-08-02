@@ -24,6 +24,7 @@ pub fn read_obj(obj_path: &str) -> Result<Vec<Triangle>, FileError> {
             vert.set_uv(Point2f::new(uv[0], uv[1]));
             triangle.set_vertex(vert, i);
         }
+        triangle.update_triangle_normal();
         triangle.update_vertex_normals();
         triangles.push(triangle);
     }

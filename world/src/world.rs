@@ -8,7 +8,7 @@ use rand::rngs::SmallRng;
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
 use crate::noise::presets::get_default_noise;
-use crate::WorldError;
+use crate::{Water, WorldError};
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
 use core::light::{Light, SceneLights};
 use core::traits::{RenderInfo, Renderable, Rotatable, Scalable, Translatable, Updatable};
@@ -19,6 +19,7 @@ use core::{
 pub struct World {
     surface_shader_program: Rc<ShaderProgram>,
     skybox: Skybox,
+    water_surface: Water,
     sun: Sun,
     architect: Arc<Architect>,
     chunk_loader: ChunkLoader,
@@ -54,9 +55,9 @@ impl World {
         let mut rng: SmallRng = seed.into();
 
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
-        let architect = Arc::new(Architect::from_noise(
-            get_default_noise(Seed::from_rng(&mut rng)),
-        ));
+        let architect = Arc::new(Architect::from_noise(get_default_noise(Seed::from_rng(
+            &mut rng,
+        ))));
 
         let chunk_loader = ChunkLoader::new(architect.clone());
 
@@ -69,6 +70,7 @@ impl World {
         let mut world = World {
             surface_shader_program: Rc::new(surface_shader_program),
             skybox: Skybox::new(config)?,
+            water_surface: Water::new(config)?,
             sun: Sun::with_day_length(day_length),
             architect: architect,
             chunk_loader: chunk_loader,
@@ -186,7 +188,7 @@ impl World {
         let mut finished_chunks = self.chunk_loader.get(200)?;
         if finished_chunks.len() > 0 {
             for chunk in finished_chunks.values_mut() {
-                if chunk.get_lod() == 0 {
+                if chunk.get_lod() <= 1 {
                     chunk.load_objects(&mut self.object_manager, &self.architect)?;
                 }
             }
@@ -302,6 +304,7 @@ impl Renderable for World {
 
         //self.surface_texture.deactivate();
         self.skybox.render(info)?;
+        self.water_surface.render(info)?;
         Ok(())
     }
 }
@@ -334,6 +337,8 @@ impl Updatable for World {
         self.skybox.set_translation(self.center);
         self.sun.set_rotation_center(self.center);
         self.sun.tick(time_passed)?;
+        self.water_surface.set_translation(self.center);
+        self.water_surface.tick(time_passed)?;
 
         let sun_pos = self.sun.calculate_position();
         let center = self.center;

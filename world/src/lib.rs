@@ -25,6 +25,7 @@ pub mod world;
 pub mod world_error;
 pub mod architect;
 pub mod triangulation;
+pub mod water;
 
 pub use self::triangulation::triangulate;
 pub use self::architect::Architect;
@@ -33,3 +34,4 @@ pub use self::noise::{Noise, NoiseBuilder};
 pub use self::world::World;
 pub use self::world_error::WorldError;
 pub use self::chunk::CHUNK_SIZE;
+pub use self::water::Water;

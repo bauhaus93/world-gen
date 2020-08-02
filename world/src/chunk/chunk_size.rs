@@ -1,6 +1,6 @@
 use core::{Point2f, Point2i, Point3f};
 
-pub const CHUNK_SIZE: i32 = 64;
+pub const CHUNK_SIZE: i32 = 32;
 
 pub fn get_chunk_pos(world_pos: Point3f) -> Point2i {
     let mut chunk_pos = Point2i::from_scalar(0);

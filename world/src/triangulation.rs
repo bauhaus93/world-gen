@@ -6,6 +6,7 @@ use core::{Point2f, Point3f};
 
 pub fn triangulate(points: &[Point3f]) -> Option<Vec<mesh::Triangle>> {
     // TODO: maybe optimize search for correct 3d point / use 3d through whole algo
+
     let points_2d: Vec<Point2f> = points.iter().map(|p| p.as_xy()).collect();
     let triangulation = match triangulate_bowyer_watson(&points_2d) {
         Some(t) => t,
@@ -25,7 +26,9 @@ pub fn triangulate(points: &[Point3f]) -> Option<Vec<mesh::Triangle>> {
             }
         }
         let mut triangle = mesh::Triangle::new(vertices);
-        triangle.update_normals();
+        triangle.force_ccw();
+        triangle.update_triangle_normal();
+        triangle.update_vertex_normals();
         mesh_triangles.push(triangle);
     }
     Some(mesh_triangles)
@@ -101,6 +104,10 @@ impl Triangle {
         (*point - self.circumcenter).length() < self.radius
     }
 
+    pub fn shares_edge(&self, other: &Triangle) -> bool {
+        self.edges.iter().any(|e| other.edges.iter().any(|eo| e == eo))
+    }
+
     pub fn contains_edge(&self, edge: &Edge) -> bool {
         self.edges.iter().any(|e| e == edge)
     }
@@ -114,24 +121,13 @@ impl Triangle {
     }
 }
 
-fn force_winding_order_ccw(points: &mut [Point2f; 3]) {
-    if points
-        .iter()
-        .zip(points.iter().skip(1).cycle())
-        .fold(0., |acc, (a, b)| acc + (b[0] - a[0]) * (a[1] + b[1]))
-        > 0.
-    {
-        points.swap(0, 2);
-    }
-}
-
 fn triangulate_bowyer_watson(points: &[Point2f]) -> Option<Vec<Triangle>> {
     let super_triangle = Triangle::new_super(&points);
     let mut triangulation: Vec<Triangle> = Vec::new();
     triangulation.push(super_triangle);
 
     for new_point in points.iter() {
-        println!("new point: {}", new_point);
+        //println!("new point: {}", new_point);
         let (bad_triangles, good_triangles): (Vec<Triangle>, Vec<Triangle>) = triangulation
             .into_iter()
             .partition(|t| t.circumcircle_contains(&new_point));
@@ -148,12 +144,13 @@ fn triangulate_bowyer_watson(points: &[Point2f]) -> Option<Vec<Triangle>> {
                     .chain(bad_triangles.iter().skip(i + 1))
                     .any(|tc| tc.contains_edge(e))
                 {
-                    println!("non-sharing edge: {} -> {}, p = {}", e.0, e.1, new_point );
+                    //println!("non-sharing edge: {} -> {}, p = {}", e.0, e.1, new_point);
                     match Triangle::new([e.0, e.1, *new_point]) {
                         Some(t) => {
                             new_triangles.push(t);
                         }
                         None => {
+                            continue;
                             return None;
                         }
                     }
@@ -206,8 +203,10 @@ mod tests {
     use super::*;
     use rand::rngs::SmallRng;
     use rand::{Rng, SeedableRng};
+    use test::{black_box, Bencher};
 
     const RANDOM_SEED: u64 = 9001;
+    const BENCH_GRID_SIZE: usize = 16;
 
     #[test]
     fn test_line_intersection_ortho_lines() {
@@ -356,5 +355,28 @@ mod tests {
                     .any(|p| t.circumcircle_contains(p)));
             }
         }
+    }
+
+    #[bench]
+    fn triangulation_with_mesh_vertices(b: &mut Bencher) {
+        let mut points = Vec::new();
+        for y in 0..BENCH_GRID_SIZE {
+            for x in 0..BENCH_GRID_SIZE {
+                points.push(Point3f::new(x as f32, y as f32, 0.));
+            }
+        }
+
+        b.iter(|| triangulate(&points));
+    }
+
+    #[bench]
+    fn triangulation_bw_only(b: &mut Bencher) {
+        let mut points = Vec::new();
+        for y in 0..BENCH_GRID_SIZE {
+            for x in 0..BENCH_GRID_SIZE {
+                points.push(Point2f::new(x as f32, y as f32));
+            }
+        }
+        b.iter(|| triangulate_bowyer_watson(&points));
     }
 }

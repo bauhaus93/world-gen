@@ -1,3 +1,4 @@
+#![feature(test)]
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -12,6 +13,7 @@ extern crate bytes;
 extern crate serde;
 extern crate serde_yaml;
 extern crate rayon;
+extern crate test;
 
 extern crate core;
 

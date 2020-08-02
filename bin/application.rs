@@ -41,6 +41,10 @@ impl Application {
                 self.update_camera();
                 self.update_world()?;
 
+                if self.core.key_pressed(glutin::VirtualKeyCode::E) {
+                    info!("player pos = {}", self.player.get_translation());
+                }
+
                 let mut render_info = RenderInfo::new(&self.camera);
                 self.core.render(&self.world, &mut render_info)?;
             }

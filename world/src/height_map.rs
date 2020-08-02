@@ -27,7 +27,6 @@ impl HeightMap {
             height_list: height_list,
         }
     }
-
     pub fn from_list(size: i32, resolution: f32, height_list: &[f32]) -> Self {
         debug_assert!(size > 0);
         debug_assert!(resolution > 0.);
@@ -172,7 +171,7 @@ impl HeightMap {
         let mut points = Vec::new();
         for y in 0..self.size {
             for x in 0..self.size {
-                let point = Point3f::new(x as f32, y as f32, self.get(Point2i::new(x, y)));
+                let point = Point3f::new(x as f32 * self.resolution, y as f32 * self.resolution, self.get(Point2i::new(x, y)));
                 points.push(point);
             }
         }

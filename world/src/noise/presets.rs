@@ -16,16 +16,16 @@ pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
         .above(0.)
         .finish();
 
-    /*
-    let mountain_factor = NoiseBuilder::new()
-        .seed(Seed::from_rng(&mut local_rng))
-        .base_worley()
-        .octaves(1)
-        .scale(6e-2)
-        .roughness(0.5)
-        .range([-2., 4.])
-        .modifier(ModifierType::FactoredExponent(2., 2.))
-        .above(0.)*/
+    /*let mountain_factor = NoiseBuilder::new()
+    .seed(Seed::from_rng(&mut local_rng))
+    .base_worley()
+    .octaves(1)
+    .scale(6e-2)
+    .roughness(0.5)
+    .range([-2., 4.])
+    .modifier(ModifierType::FactoredExponent(2., 2.))
+    .above(0.)
+    .finish();*/
 
     let _lake_factor = NoiseBuilder::new()
         .seed(Seed::from_rng(&mut local_rng))

@@ -17,6 +17,7 @@ impl ChunkBuilder {
     pub fn new(pos: Point2i, lod: u8, architect: &Architect) -> Result<Self, ChunkError> {
         let resolution = match lod {
             0 => 1.,
+            1 => 4.,
             _ => 8.,
         };
         let height_map =
@@ -87,7 +88,7 @@ fn add_quad_triangles(offset: Point2i, height_map: &HeightMap) -> [Triangle; 2] 
         triangles[i] = Triangle::new(vertices);
     }
     triangles.iter_mut().for_each(|t| {
-        t.update_normals();
+        t.update_triangle_normal();
     });
     triangles
 }

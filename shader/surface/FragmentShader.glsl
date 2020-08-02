@@ -62,7 +62,7 @@ void main() {
 
 	color = vec3(0.2, 0.6, 0.2);
 	if (height > 140.){
-		color = mix(vec3(0.9, 0.9, 0.9), color, 1-min(1., (height - 140.)/100.));
+		color = mix(vec3(0.8, 0.8, 0.8), color, 1 - min(1., (height - 140.)/40.));
 	}
 
 	float rock_factor = min(1., (max(0., (height - 120)) / 10.));

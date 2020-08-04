@@ -140,6 +140,8 @@ pub fn calculate_mipmaps(texture_size: Point3i) -> GLsizei {
     }
 }
 
+
+
 pub fn unbind_texture(texture_type: GLenum) -> Result<(), OpenglError> {
     unsafe {
         gl::BindTexture(texture_type, 0);

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::rc::Rc;
 
-use crate::file::read_image;
+use crate::file::read_image_rgba;
 use crate::graphics::mesh::vertex_buffer::BUFFER_POSTION;
 use crate::graphics::{
     texture::Orientation, GraphicsError, Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture,
@@ -56,7 +56,7 @@ impl Skybox {
             .use_mipmaps()
             .format_rgba8()
             .finish()?;
-        let img = read_image(cube_img)?;
+        let img = read_image_rgba(cube_img)?;
         texture.load_cube_image(Point3i::new(1, 0, 0), Point2i::new(CUBE_SIZE, 0), &img)?;
         texture.load_cube_image(
             Point3i::new(-1, 0, 0),

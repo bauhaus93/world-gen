@@ -29,11 +29,11 @@ pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
 
     let _lake_factor = NoiseBuilder::new()
         .seed(Seed::from_rng(&mut local_rng))
-        .octaves(6)
-        .scale(1e-4)
+        .octaves(3)
+        .scale(5e-4)
         .roughness(0.5)
-        .range([-1., 1.])
-        .modifier(ModifierType::FactoredExponent(-10., 2.))
+        .range([-1., 1.0])
+        .modifier(ModifierType::FactoredExponent(10., 3.))
         .below(0.)
         .finish();
 

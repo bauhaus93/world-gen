@@ -42,8 +42,8 @@ vec3 calculate_light_factor(int index) {
     if (lambert > 0.) {
         diffuse = scene_lights[index].color * lambert * scene_lights[index].diffuse_intensity * scene_lights[index].absolute_intensity / distance;
         vec3 view_dir = normalize(view_pos - vertex.frag_pos);
-        vec3 half_dir = normalize(light_dir + view_dir);
-        float spec_angle = max(dot(half_dir, vertex.normal), 0.);
+		vec3 reflect_dir = reflect(-light_dir, vertex.normal);
+        float spec_angle = max(dot(reflect_dir, view_dir), 0.);
         float spec_strength = pow(spec_angle, scene_lights[index].specular_shininess);
         specular = scene_lights[index].color * spec_strength * scene_lights[index].specular_intensity * scene_lights[index].absolute_intensity / distance;
     }
@@ -63,8 +63,8 @@ void main() {
 	color = vec3(0.2, 0.6, 0.2);
 	if (height > 140.){
 		color = mix(vec3(0.8, 0.8, 0.8), color, 1 - min(1., (height - 140.)/40.));
-	} else if (height < 20.) {
-		color = mix(vec3(0.8, 0.7, 0.5), color, 1 - max(0., min(1., (20. - height) /5.)));
+	} else if (height < 10.) {
+		color = mix(vec3(0.8, 0.7, 0.5), color, 1 - max(0., min(1., (10. - height) /5.)));
     }
 
 	float rock_factor = min(1., (max(0., (height - 120)) / 10.));

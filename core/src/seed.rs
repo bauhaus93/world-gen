@@ -1,9 +1,9 @@
+use crate::Point2i;
 use rand::{
     rngs::{SmallRng, StdRng},
     FromEntropy, Rng, SeedableRng,
 };
 use std::fmt;
-use crate::Point2i;
 
 #[derive(Clone, Copy)]
 pub struct Seed([u8; 16]);
@@ -17,6 +17,31 @@ impl Seed {
         let mut seed = [0; 16];
         rng.fill_bytes(&mut seed);
         Self(seed)
+    }
+
+    pub fn from_string(string: &str) -> Self {
+        let mut seed = [0; 16];
+        for (s, c) in seed.iter_mut().zip(string.bytes()) {
+            *s = c;
+        }
+        Self(seed)
+    }
+
+    pub fn from_byte_string(byte_string: &str) -> Option<Self> {
+        let mut seed = [0; 16];
+        if byte_string.len() != 32 || !byte_string.chars().all(|b| b.is_ascii_hexdigit()) {
+            return None
+        }
+        let bytes: Vec<u8> = byte_string
+            .chars()
+            .step_by(2)
+            .zip(byte_string.chars().skip(1).step_by(2))
+            .map(|(a, b)| (a.to_digit(16).unwrap() * 16 + b.to_digit(16).unwrap()) as u8)
+            .collect();
+        for (s, c) in seed.iter_mut().zip(bytes.into_iter()) {
+            *s = c;
+        }
+        Some(Self(seed))
     }
 
     pub fn mix_with_point(&self, point: Point2i) -> Self {

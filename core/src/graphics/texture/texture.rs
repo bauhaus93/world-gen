@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 
 use image::{GenericImageView, RgbaImage};
 
+use crate::file::read_image_rgb;
 use crate::graphics::{check_opengl_error, GraphicsError, OpenglError};
 use crate::{Point2f, Point2i, Point3i};
 
@@ -98,6 +99,37 @@ impl Texture {
         Ok(data_vec)
     }
 
+    pub fn fill_with_image(&self, img_path: &str) -> Result<(), GraphicsError> {
+        let img = read_image_rgb(img_path)?;
+        let (width, height) = img.dimensions();
+        let data: Vec<u8> = img.into_raw();
+        unsafe {
+            self.activate(0);
+            match self.tex_type {
+                t if t == gl::TEXTURE_2D => {
+                    gl::TexSubImage2D(
+                        t,
+                        0,
+                        0,
+                        0,
+                        width as GLsizei,
+                        height as GLsizei,
+                        gl::RGB,
+                        gl::UNSIGNED_BYTE,
+                        data.as_ptr() as *const _,
+                    );
+                    check_opengl_error("TexSubImage2D")?;
+                    handle_new_2d_image(self.mipmaps)?;    
+                }
+                _ => {
+                    unimplemented!();
+                }
+            }
+            self.deactivate();
+        }
+        Ok(())
+    }
+
     pub fn write_data_rgba32f(&self, data: &[Vector4<GLfloat>]) -> Result<(), OpenglError> {
         /*self.activate(0);
         let data_floats: Vec<GLfloat> = data.iter().flat_map(|v| vec!(v[0], v[1], v[2], v[3])).collect();
@@ -142,7 +174,7 @@ impl Texture {
                     unreachable!();
                 }
             };
-            self.activate(00);
+            self.activate(0);
             let sub_img = img
                 .view(
                     img_origin[0] as u32,
@@ -205,6 +237,42 @@ fn handle_new_cubemap_image(mipmaps: bool) -> Result<(), OpenglError> {
         check_opengl_error("gl::TexParameteri")?;
         if mipmaps {
             gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
+            check_opengl_error("gl::GenerateMipmap")?;
+        }
+    }
+    Ok(())
+}
+
+fn handle_new_2d_image(mipmaps: bool) -> Result<(), OpenglError> {
+    unsafe {
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_S,
+            gl::REPEAT as GLint,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_T,
+            gl::REPEAT as GLint,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_R,
+            gl::REPEAT as GLint,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::NEAREST_MIPMAP_NEAREST as GLint,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MAG_FILTER,
+            gl::NEAREST as GLint,
+        );
+        check_opengl_error("gl::TexParameteri")?;
+        if mipmaps {
+            gl::GenerateMipmap(gl::TEXTURE_2D);
             check_opengl_error("gl::GenerateMipmap")?;
         }
     }

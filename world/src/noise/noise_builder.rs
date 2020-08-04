@@ -158,7 +158,7 @@ impl NoiseBuilder {
     fn handle_factors(self, noise: Box<dyn Noise>) -> Box<dyn Noise> {
         if self.factors.len() > 0 {
             let mut factored_noise =
-                FactoredNoise::new(noise, self.factor_merge_type.unwrap_or(MergeType::AVG));
+                FactoredNoise::new(noise, self.factor_merge_type.unwrap_or(MergeType::SUM));
             self.factors
                 .into_iter()
                 .for_each(|n| factored_noise.add_factor(n));
@@ -169,7 +169,7 @@ impl NoiseBuilder {
     }
 
     pub fn finish(self) -> Box<dyn Noise> {
-        let n = self.handle_threshold(self.handle_modifier(
+        let n = self.handle_modifier(self.handle_threshold(
             self.handle_repeat(self.handle_octaved_noise(self.handle_base_noise())),
         ));
         self.handle_factors(n)

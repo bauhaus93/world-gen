@@ -50,7 +50,8 @@ impl World {
         info!("Day length is {}s", day_length);
         info!("Gravity is {}", gravity);
 
-        let seed = Seed::from_entropy();
+        //let seed = Seed::from_entropy();
+        let seed = Seed::from_byte_string("598FA4C6E7911AAA26DA2327D2D183B2").unwrap_or_else(|| Seed::from_entropy());
         info!("World seed = {}", seed);
         let mut rng: SmallRng = seed.into();
 
@@ -282,7 +283,9 @@ impl World {
         self.surface_shader_program
             .set_resource_vec3("fog_color", &fog_color.as_glm())?;
         self.skybox.update_light_level(light_level)?;
-        self.surface_shader_program.use_program();
+
+        self.water_surface.update_shader_resources(self.center, &self.scene_lights)?;
+
         Ok(())
     }
 
@@ -409,8 +412,8 @@ fn create_default_scene_lights() -> SceneLights {
     sun_light.set_color(Point3f::from_scalar(1.));
     sun_light.set_absolute_intensity(1e8);
     sun_light.set_ambient_intensity(0.1);
-    sun_light.set_diffuse_intensity(0.5);
-    sun_light.set_specular_intensity(0.2);
+    sun_light.set_diffuse_intensity(1.);
+    sun_light.set_specular_intensity(0.4);
     sun_light.set_specular_shininess(2.);
 
     if !scene_lights.add_light("sun", sun_light) {
@@ -421,8 +424,8 @@ fn create_default_scene_lights() -> SceneLights {
     player_light.set_color(Point3f::new(1., 1., 1.));
     player_light.set_absolute_intensity(1e4);
     player_light.set_ambient_intensity(0.);
-    player_light.set_diffuse_intensity(1.);
-    player_light.set_specular_intensity(1.);
+    player_light.set_diffuse_intensity(0.5);
+    player_light.set_specular_intensity(0.1);
     player_light.set_specular_shininess(2.);
 
     if !scene_lights.add_light("player", player_light) {

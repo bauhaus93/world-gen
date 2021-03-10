@@ -1,10 +1,14 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 use glutin;
 use image;
 
-use crate::graphics::{OpenglError, mesh::MeshError, shader::{ ShaderError, ShaderProgramError }};
+use crate::graphics::{
+    mesh::MeshError,
+    shader::{ShaderError, ShaderProgramError},
+    OpenglError,
+};
 
 #[derive(Debug)]
 pub enum GraphicsError {
@@ -16,7 +20,7 @@ pub enum GraphicsError {
     ShaderProgram(ShaderProgramError),
     Opengl(OpenglError),
     FunctionFailure(String),
-    InvalidImageFormat(String)
+    InvalidImageFormat(String),
 }
 
 impl From<glutin::CreationError> for GraphicsError {
@@ -61,7 +65,6 @@ impl From<OpenglError> for GraphicsError {
     }
 }
 impl Error for GraphicsError {
-
     fn description(&self) -> &str {
         match *self {
             GraphicsError::GlutinCreation(_) => "glutin creation",
@@ -72,7 +75,7 @@ impl Error for GraphicsError {
             GraphicsError::Mesh(_) => "mesh",
             GraphicsError::Opengl(_) => "opengl",
             GraphicsError::FunctionFailure(_) => "function failure",
-            GraphicsError::InvalidImageFormat(_) => "invalid image format"        
+            GraphicsError::InvalidImageFormat(_) => "invalid image format",
         }
     }
 
@@ -86,7 +89,7 @@ impl Error for GraphicsError {
             GraphicsError::Mesh(ref err) => Some(err),
             GraphicsError::Opengl(ref err) => Some(err),
             GraphicsError::FunctionFailure(_) => None,
-            GraphicsError::InvalidImageFormat(_) => None
+            GraphicsError::InvalidImageFormat(_) => None,
         }
     }
 }
@@ -101,8 +104,15 @@ impl fmt::Display for GraphicsError {
             GraphicsError::ShaderProgram(ref err) => write!(f, "{}/{}", self.description(), err),
             GraphicsError::Mesh(ref err) => write!(f, "{}/{}", self.description(), err),
             GraphicsError::Opengl(ref err) => write!(f, "{}/{}", self.description(), err),
-            GraphicsError::FunctionFailure(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            GraphicsError::InvalidImageFormat(ref img_name) => write!(f, "{}: Image not of format rgba8: '{}'", self.description(), img_name)
+            GraphicsError::FunctionFailure(ref func_name) => {
+                write!(f, "{} @ {}", self.description(), func_name)
+            }
+            GraphicsError::InvalidImageFormat(ref img_name) => write!(
+                f,
+                "{}: Image not of format rgba8: '{}'",
+                self.description(),
+                img_name
+            ),
         }
     }
 }

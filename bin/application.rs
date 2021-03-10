@@ -2,7 +2,7 @@ use glutin;
 
 use crate::ApplicationError;
 use core::traits::{RenderInfo, Rotatable, Translatable, Updatable};
-use core::{Point3f, Camera, Config, Core, Float, Player};
+use core::{Camera, Config, Core, Float, Player, Point3f};
 use world::World;
 
 pub struct Application {
@@ -10,7 +10,7 @@ pub struct Application {
     camera: Camera,
     player: Player,
     world: World,
-	mouse_sensitivity: f32
+    mouse_sensitivity: f32,
 }
 
 impl Application {
@@ -28,7 +28,7 @@ impl Application {
             camera: camera,
             player: player,
             world: world,
-			mouse_sensitivity: config.get_float_or_default("mouse_sensitivity", 0.3)
+            mouse_sensitivity: config.get_float_or_default("mouse_sensitivity", 0.3),
         };
         Ok(app)
     }
@@ -56,12 +56,12 @@ impl Application {
         self.update_player_direction();
         self.update_player_momentum();
         self.world.interact(&mut self.player)?;
-		if self.core.key_pressed(glutin::VirtualKeyCode::F1) {
-			self.player.mod_speed(0.25);
-		}
-		if self.core.key_pressed(glutin::VirtualKeyCode::F2) {
-			self.player.mod_speed(-0.25);
-		}
+        if self.core.key_pressed(glutin::VirtualKeyCode::F1) {
+            self.player.mod_speed(0.25);
+        }
+        if self.core.key_pressed(glutin::VirtualKeyCode::F2) {
+            self.player.mod_speed(-0.25);
+        }
 
         self.player.tick(self.core.get_time_passed())?;
         Ok(())
@@ -81,7 +81,8 @@ impl Application {
         if self.core.has_mouse_delta() {
             let delta = self.core.get_mouse_delta();
             let offset = Point3f::new(-delta.0 as f32, delta.1 as f32, 0.);
-            let rotation = offset * self.mouse_sensitivity * (self.core.get_time_passed() as Float / 1000.);
+            let rotation =
+                offset * self.mouse_sensitivity * (self.core.get_time_passed() as Float / 1000.);
             self.player.mod_rotation(rotation);
             self.core.center_mouse();
         }

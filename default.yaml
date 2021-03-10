@@ -5,8 +5,8 @@ mouse_sensitivity: 0.7
 near_radius: 10
 far_radius: 30
 active_radius: 80
-day_length: 10
-gravity: 0.20
+day_length: 720
+gravity: 0.10
 
 surface_shader_dir: shader/surface
 surface_info_path: surface_texture.yaml

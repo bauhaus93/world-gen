@@ -3,7 +3,7 @@ use std::iter::repeat;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use rand::rngs::SmallRng;
+use rand::rngs::StdRng;
 
 use crate::architect::Architect;
 use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
@@ -51,9 +51,10 @@ impl World {
         info!("Gravity is {}", gravity);
 
         //let seed = Seed::from_entropy();
-        let seed = Seed::from_byte_string("598FA4C6E7911AAA26DA2327D2D183B2").unwrap_or_else(|| Seed::from_entropy());
+        let seed = Seed::from_byte_string("598FA4C6E7911AAA26DA2327D2D183B2")
+            .unwrap_or_else(|| Seed::from_entropy());
         info!("World seed = {}", seed);
-        let mut rng: SmallRng = seed.into();
+        let mut rng: StdRng = seed.into();
 
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
         let architect = Arc::new(Architect::from_noise(get_default_noise(Seed::from_rng(
@@ -186,7 +187,7 @@ impl World {
     }
 
     fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
-        let mut finished_chunks = self.chunk_loader.get(200)?;
+        let mut finished_chunks = self.chunk_loader.get(500)?;
         if finished_chunks.len() > 0 {
             for chunk in finished_chunks.values_mut() {
                 if chunk.get_lod() <= 1 {
@@ -284,7 +285,8 @@ impl World {
             .set_resource_vec3("fog_color", &fog_color.as_glm())?;
         self.skybox.update_light_level(light_level)?;
 
-        self.water_surface.update_shader_resources(self.center, &self.scene_lights)?;
+        self.water_surface
+            .update_shader_resources(self.center, &self.scene_lights)?;
 
         Ok(())
     }
@@ -331,8 +333,9 @@ impl Updatable for World {
         }
         if self.chunk_build_stats_timer.fires() {
             info!(
-                "Avg chunk build time = {:.2} ms, active objects = {}",
+                "Avg chunk build time = {:.2} ms, active chunks = {}, active objects = {}",
                 self.chunk_loader.get_avg_build_time(),
+                self.chunks.len(),
                 self.object_manager.count_active_objects()
             );
         }

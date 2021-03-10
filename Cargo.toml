@@ -25,16 +25,16 @@ feat-ncurses = ["ncurses"]
 core = { path = "./core" }
 world = { path = "./world" }
 
-gl = "0.11"
-glutin = "0.19"
-glm = "0.2"
-log = "0.4"
-env_logger = "0.6"
-chrono = "0.4"
-rand = "0.6"
-num-traits = "0.2"
-lazy_static = "1.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
-byteorder = "1.3"
+gl = "^0.14.0"
+glutin = "^0.26.0"
+glm = "^0.2.3"
+log = "^0.4.14"
+env_logger = "^0.8.3"
+chrono = "^0.4.19"
+rand = "^0.8.3"
+num-traits = "^0.2.14"
+lazy_static = "^1.4.0"
+serde = { version = "^1.0.124", features = ["derive"] }
+serde_yaml = "^0.8.17"
+byteorder = "^1.4.2"
 ncurses = { version = "5.99", optional = true }

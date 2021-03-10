@@ -1,12 +1,9 @@
 use crate::Point2i;
-use rand::{
-    rngs::{SmallRng, StdRng},
-    FromEntropy, Rng, SeedableRng,
-};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::fmt;
 
 #[derive(Clone, Copy)]
-pub struct Seed([u8; 16]);
+pub struct Seed([u8; 32]);
 
 impl Seed {
     pub fn from_entropy() -> Self {
@@ -14,13 +11,13 @@ impl Seed {
     }
 
     pub fn from_rng(rng: &mut impl Rng) -> Self {
-        let mut seed = [0; 16];
+        let mut seed = [0; 32];
         rng.fill_bytes(&mut seed);
         Self(seed)
     }
 
     pub fn from_string(string: &str) -> Self {
-        let mut seed = [0; 16];
+        let mut seed = [0; 32];
         for (s, c) in seed.iter_mut().zip(string.bytes()) {
             *s = c;
         }
@@ -28,9 +25,9 @@ impl Seed {
     }
 
     pub fn from_byte_string(byte_string: &str) -> Option<Self> {
-        let mut seed = [0; 16];
+        let mut seed = [0; 32];
         if byte_string.len() != 32 || !byte_string.chars().all(|b| b.is_ascii_hexdigit()) {
-            return None
+            return None;
         }
         let bytes: Vec<u8> = byte_string
             .chars()
@@ -56,9 +53,9 @@ impl Seed {
     }
 }
 
-impl Into<SmallRng> for Seed {
-    fn into(self) -> SmallRng {
-        SmallRng::from_seed(self.0)
+impl Into<StdRng> for Seed {
+    fn into(self) -> StdRng {
+        StdRng::from_seed(self.0)
     }
 }
 

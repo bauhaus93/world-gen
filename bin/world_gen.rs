@@ -6,31 +6,41 @@ extern crate env_logger;
 extern crate core;
 extern crate world;
 
-mod application;
-mod application_error;
-
+use core::{Config, Core, State};
 use env_logger::{fmt::Formatter, Builder};
 use log::Record;
 use std::io::Write;
-
-use crate::{application::Application, application_error::ApplicationError};
+use world::WorldState;
 
 fn main() {
     const CONFIG_PATH: &'static str = "default.yaml";
 
     init_custom_logger();
 
-    let app = match Application::new(CONFIG_PATH) {
-        Ok(app) => app,
+    let config = match Config::read(CONFIG_PATH) {
+        Ok(c) => c,
         Err(e) => {
-            error!("{}", e);
+            error!("Could not read config: {}", e);
             return;
         }
     };
-    match app.run() {
-        Ok(_) => info!("Application exited successfully"),
-        Err(e) => error!("{}", e),
-    }
+
+    let core = match Core::new(&config) {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Could not initialize core: {}", e);
+            return;
+        }
+    };
+
+    let state: Box<dyn State> = match WorldState::new(&config) {
+        Ok(s) => Box::new(s),
+        Err(e) => {
+            error!("Could not created world state: {}", e);
+            return;
+        }
+    };
+    core.run(state);
 }
 
 fn init_custom_logger() {

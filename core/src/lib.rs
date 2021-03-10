@@ -18,20 +18,23 @@ pub mod file;
 pub mod float;
 pub mod format;
 pub mod graphics;
+pub mod light;
 pub mod object;
 pub mod player;
 pub mod point;
+pub mod seed;
 pub mod skybox;
+pub mod state;
 pub mod sun;
 pub mod timer;
 pub mod traits;
 pub mod update_error;
-pub mod seed;
-pub mod light;
 mod window;
 
 pub use self::core::Core;
 pub use self::core_error::CoreError;
+
+pub use self::state::{Input, State, StateError};
 
 pub use self::bounding_box::BoundingBox;
 pub use self::camera::Camera;
@@ -40,11 +43,11 @@ pub use self::skybox::Skybox;
 pub use self::sun::Sun;
 pub use self::timer::Timer;
 
-pub use self::traits::Renderable;
 pub use self::traits::Rotatable;
 pub use self::traits::Scalable;
 pub use self::traits::Translatable;
 pub use self::traits::Updatable;
+pub use self::traits::{RenderInfo, Renderable};
 
 pub use self::object::Object;
 pub use self::object::ObjectManager;
@@ -60,6 +63,6 @@ pub use self::config::Config;
 pub use self::float::Float;
 pub use self::update_error::UpdateError;
 
+pub use self::file::FileError;
 pub use self::point::{Point2f, Point2i, Point3f, Point3i};
 pub use self::seed::Seed;
-pub use self::file::FileError;

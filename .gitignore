@@ -1,6 +1,7 @@
 /target
 /resources
 Cargo.lock
+tags
 *.rs.bk
 *.rs.swp
 *.dat

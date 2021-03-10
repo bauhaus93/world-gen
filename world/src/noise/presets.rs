@@ -1,10 +1,10 @@
-use rand::rngs::SmallRng;
+use rand::rngs::StdRng;
 
 use super::{ModifierType, Noise, NoiseBuilder};
 use core::Seed;
 
 pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
-    let mut local_rng: SmallRng = seed.into();
+    let mut local_rng: StdRng = seed.into();
 
     let mountain_factor = NoiseBuilder::new()
         .seed(Seed::from_rng(&mut local_rng))

@@ -1,5 +1,5 @@
 use rand;
-use rand::prelude::SmallRng;
+use rand::prelude::StdRng;
 use rand::Rng;
 use std::f32;
 
@@ -64,10 +64,12 @@ impl WorleyNoise {
     }
 
     fn get_point_for_grid(&self, grid_pos: Point2i) -> Point2f {
-        let mut rng: SmallRng = self.seed.mix_with_point(grid_pos).into();
+        let mut rng: StdRng = self.seed.mix_with_point(grid_pos).into();
         Point2f::new(
-            (grid_pos[0] * self.grid_size) as f32 + rng.gen_range(0., self.grid_size as f32 - 1e-3),
-            (grid_pos[1] * self.grid_size) as f32 + rng.gen_range(0., self.grid_size as f32 - 1e-3),
+            (grid_pos[0] * self.grid_size) as f32
+                + rng.gen_range(0.0..self.grid_size as f32 - 1e-3),
+            (grid_pos[1] * self.grid_size) as f32
+                + rng.gen_range(0.0..self.grid_size as f32 - 1e-3),
         )
     }
 }

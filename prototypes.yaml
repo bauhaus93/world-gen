@@ -8,7 +8,3 @@ asset_list:
   name: tree
   lod0: tree_lod1.obj
   lod1: tree_lod1.obj
--
-  name: grass
-  lod0: grass.obj
-  lod1: grass.obj

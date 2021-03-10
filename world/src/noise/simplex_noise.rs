@@ -1,5 +1,5 @@
 use rand;
-use rand::prelude::{SliceRandom, SmallRng};
+use rand::prelude::{SliceRandom, StdRng};
 use std::{f32, iter};
 
 use super::Noise;
@@ -38,7 +38,7 @@ pub struct SimplexNoise {
 }
 
 fn create_permutation_table(seed: Seed) -> Vec<u8> {
-    let mut rng: SmallRng = seed.into();
+    let mut rng: StdRng = seed.into();
     let mut permutation: Vec<u8> = (0u8..255).chain(iter::once(255u8)).collect();
     permutation.shuffle(&mut rng);
     let perm_clone = permutation.clone();

@@ -1,4 +1,4 @@
-use rand::rngs::SmallRng;
+use rand::rngs::StdRng;
 use rand::Rng;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -37,7 +37,7 @@ impl Architect {
             get_world_pos(chunk_pos, Point2f::new(0., 0.)),
             chunk_size,
             resolution,
-            self.height_noise.as_ref()
+            self.height_noise.as_ref(),
         )
     }
 
@@ -45,11 +45,11 @@ impl Architect {
         let n = self.tree_noise.get_noise(chunk_pos.into());
         if n > 0. {
             let tree_count = (40. * n).round() as usize;
-            let mut rng: SmallRng = Seed::from_entropy().into();
+            let mut rng: StdRng = Seed::from_entropy().into();
             let mut trees = BTreeSet::new();
             for _i in 0..tree_count {
                 let offset =
-                    Point2i::new(rng.gen_range(0, CHUNK_SIZE), rng.gen_range(0, CHUNK_SIZE));
+                    Point2i::new(rng.gen_range(0..CHUNK_SIZE), rng.gen_range(0..CHUNK_SIZE));
                 trees.insert(offset);
             }
             trees

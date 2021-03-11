@@ -1,30 +1,16 @@
-use std::fmt;
-use std::error::Error;
+use thiserror::Error;
 
-#[derive(Debug)]
+use crate::GraphicsError;
+
+#[derive(Error, Debug)]
 pub enum UpdateError {
-	Resource(String)
-}
-
-impl Error for UpdateError {
-
-    fn description(&self) -> &str {
-        match *self {
-            UpdateError::Resource(_) => "resource"
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
-        match *self {
-            UpdateError::Resource(_) => None, 
-        }
-    }
-}
-
-impl fmt::Display for UpdateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            UpdateError::Resource(ref s) => write!(f, "{}:{}", self.description(), s)
-        }
-    }
+    #[error("resource: {0}")]
+    Resource(String),
+    #[error("graphics: {source}")]
+    Graphics {
+        #[from]
+        source: GraphicsError,
+    },
+    #[error("internal: {0}")]
+    Internal(String),
 }

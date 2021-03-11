@@ -1,19 +1,26 @@
-use std::fmt;
-use std::error::Error;
+use thiserror::Error;
 
 use gl;
 use gl::types::GLuint;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum OpenglError {
+    #[error("invalid value: {0}")]
     InvalidValue(String),
+    #[error("invalid operation: {0}")]
     InvalidOperation(String),
+    #[error("invalid enum: {0}")]
     InvalidEnum(String),
+    #[error("stack overflow: {0}")]
     StackOverflow(String),
+    #[error("stack underflow: {0}")]
     StackUnderflow(String),
+    #[error("out of memory: {0}")]
     OutOfMemory(String),
+    #[error("invalid framebuffer operation: {0}")]
     InvalidFramebufferOperation(String),
-    ContextLost(String)
+    #[error("context lost: {0}")]
+    ContextLost(String),
 }
 
 pub fn check_opengl_error(func_name: &str) -> Result<(), OpenglError> {
@@ -26,48 +33,14 @@ pub fn check_opengl_error(func_name: &str) -> Result<(), OpenglError> {
         gl::STACK_OVERFLOW => Err(OpenglError::StackOverflow(func_string)),
         gl::STACK_UNDERFLOW => Err(OpenglError::StackUnderflow(func_string)),
         gl::OUT_OF_MEMORY => Err(OpenglError::OutOfMemory(func_string)),
-        gl::INVALID_FRAMEBUFFER_OPERATION => Err(OpenglError::InvalidFramebufferOperation(func_string)),
+        gl::INVALID_FRAMEBUFFER_OPERATION => {
+            Err(OpenglError::InvalidFramebufferOperation(func_string))
+        }
         gl::CONTEXT_LOST => Err(OpenglError::ContextLost(func_string)),
-        _ => unreachable!()
-    }
-}
-
-impl Error for OpenglError {
-    fn description(&self) -> &str {
-        match *self {
-            OpenglError::InvalidValue(_) => "invalid value",
-            OpenglError::InvalidOperation(_) => "invalid operation",
-            OpenglError::InvalidEnum(_) => "invalid enum",
-            OpenglError::StackOverflow(_) => "stack overflow",
-            OpenglError::StackUnderflow(_) => "stack underflow",
-            OpenglError::OutOfMemory(_) => "out of memory",
-            OpenglError::InvalidFramebufferOperation(_) => "invalid framebuffer operation",
-            OpenglError::ContextLost(_) => "context lost"
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
-        None
-    }
-}
-
-impl fmt::Display for OpenglError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            OpenglError::InvalidValue(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::InvalidOperation(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::InvalidEnum(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::StackOverflow(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::StackUnderflow(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::OutOfMemory(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::InvalidFramebufferOperation(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-            OpenglError::ContextLost(ref func_name) => write!(f, "{} @ {}", self.description(), func_name),
-        }
+        _ => unreachable!(),
     }
 }
 
 fn get_opengl_error_code() -> GLuint {
-    unsafe {
-        gl::GetError()    
-    }
+    unsafe { gl::GetError() }
 }

@@ -97,7 +97,10 @@ impl Core {
                     }
 
                     unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT) }
-                    state.render().unwrap(); // TODO: Proper handling
+                    if let Err(e) = state.render() {
+                        error!("Render state: {}", e);
+                        *control_flow = ControlFlow::Exit;
+                    }
                     if let Err(e) = context.swap_buffers() {
                         error!("Swap Buffers: {}", e);
                         *control_flow = ControlFlow::Exit;
@@ -169,6 +172,12 @@ fn handle_keyboard_event(event: &KeyboardInput, input: &mut Input) {
         }
         0x39 => {
             input.set_key_pressed("SPACE", pressed);
+        }
+        0x3B => {
+            input.set_key_pressed("F1", pressed);
+        }
+        0x3C => {
+            input.set_key_pressed("F2", pressed);
         }
         _ => {}
     }

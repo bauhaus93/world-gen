@@ -102,7 +102,7 @@ impl World {
         (self.active_chunk_radius * CHUNK_SIZE * 8) as f32
     }
 
-    pub fn interact(&mut self, player: &mut Player) -> Result<(), WorldError> {
+    pub fn interact(&mut self, player: &mut Player) {
         let player_pos = player.get_translation();
 
         let chunk_height = match self.get_chunk_by_world_pos(player_pos) {
@@ -137,8 +137,6 @@ impl World {
             }
             player.set_z(chunk_height as f32);
         }
-
-        Ok(())
     }
 
     pub fn request_chunks(&mut self) -> Result<(), WorldError> {
@@ -317,13 +315,11 @@ impl Renderable for World {
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
         if self.chunk_update_timer.fires() {
-            if let Err(e) = self.get_finished_chunks() {
-                error!("{}", e); // TODO: handle error
-            }
+            self.get_finished_chunks()
+                .map_err(|e| UpdateError::Internal(e.to_string()))?;
             self.unload_distant_chunks();
-            if let Err(e) = self.request_chunks() {
-                error!("{}", e); // TODO: handle error
-            }
+            self.request_chunks()
+                .map_err(|e| UpdateError::Internal(e.to_string()))?;
             let rem_count = self
                 .object_manager
                 .unload_distant(self.center, (self.lod_far_radius * CHUNK_SIZE) as f32);
@@ -353,9 +349,7 @@ impl Updatable for World {
             o.mod_rotation(Point3f::new(0., 0., 0.25));
         });
 
-        if let Err(e) = self.update_shader_resources() {
-            error!("{}", e); // TODO: handle error
-        }
+        self.update_shader_resources()?;
         self.chunk_update_timer.tick(time_passed)?;
         self.chunk_build_stats_timer.tick(time_passed)?;
         Ok(())

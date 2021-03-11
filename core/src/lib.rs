@@ -52,6 +52,7 @@ pub use self::traits::{RenderInfo, Renderable};
 pub use self::object::Object;
 pub use self::object::ObjectManager;
 
+pub use self::graphics::GraphicsError;
 pub use self::graphics::Mesh;
 pub use self::graphics::Model;
 pub use self::graphics::ShaderProgram;

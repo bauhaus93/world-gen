@@ -1,75 +1,29 @@
-use std::error::Error;
-use std::fmt;
 use std::io;
 use std::num;
 
-#[derive(Debug)]
+use thiserror::Error;
+
+#[derive(Error, Debug)]
 pub enum FileError {
-    IO(io::Error),
+    #[error("io: {source}")]
+    IO {
+        #[from]
+        source: io::Error,
+    },
+    #[error("invalid path: {0}")]
     InvalidPath(String),
-    ParseFloat(num::ParseFloatError),
-    ParseInt(num::ParseIntError),
+    #[error("parse float: {source}")]
+    ParseFloat {
+        #[from]
+        source: num::ParseFloatError,
+    },
+    #[error("parse int: {source}")]
+    ParseInt {
+        #[from]
+        source: num::ParseIntError,
+    },
+    #[error("unexpected format: {0}")]
     UnexpectedFormat(String),
+    #[error("inconsistent data: {0}")]
     InconsistentData(String),
-}
-
-impl From<io::Error> for FileError {
-    fn from(err: io::Error) -> FileError {
-        FileError::IO(err)
-    }
-}
-
-impl From<num::ParseFloatError> for FileError {
-    fn from(err: num::ParseFloatError) -> FileError {
-        FileError::ParseFloat(err)
-    }
-}
-
-impl From<num::ParseIntError> for FileError {
-    fn from(err: num::ParseIntError) -> FileError {
-        FileError::ParseInt(err)
-    }
-}
-
-impl Error for FileError {
-    fn description(&self) -> &str {
-        match *self {
-            FileError::IO(_) => "io",
-            FileError::InvalidPath(_) => "invalid path",
-            FileError::ParseFloat(_) => "parse float",
-            FileError::ParseInt(_) => "parse int",
-            FileError::UnexpectedFormat(_) => "unexpected format",
-            FileError::InconsistentData(_) => "inconsistent data",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
-        match *self {
-            FileError::IO(ref err) => Some(err),
-            FileError::ParseFloat(ref err) => Some(err),
-            FileError::ParseInt(ref err) => Some(err),
-            FileError::UnexpectedFormat(_) => None,
-            FileError::InconsistentData(_) => None,
-            FileError::InvalidPath(_) => None,
-        }
-    }
-}
-
-impl fmt::Display for FileError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            FileError::IO(ref err) => write!(f, "{}:{}", self.description(), err),
-            FileError::InvalidPath(ref which_path) => {
-                write!(f, "{}: {}", self.description(), which_path)
-            }
-            FileError::ParseFloat(ref err) => write!(f, "{}: {}", self.description(), err),
-            FileError::ParseInt(ref err) => write!(f, "{}: {}", self.description(), err),
-            FileError::UnexpectedFormat(ref unexpected_str) => {
-                write!(f, "{}: {}", self.description(), unexpected_str)
-            }
-            FileError::InconsistentData(ref inconsistent_str) => {
-                write!(f, "{}: {}", self.description(), inconsistent_str)
-            }
-        }
-    }
 }

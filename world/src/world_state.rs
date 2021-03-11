@@ -16,7 +16,7 @@ impl WorldState {
     pub fn new(config: &Config) -> Result<WorldState, StateError> {
         let mut camera = Camera::default();
         let player = Player::default();
-        let world = World::new(&config).unwrap(); // TODO: Proper handling
+        let world = World::new(&config).map_err(|e| StateError::Setup(e.to_string()))?;
 
         camera.set_far(world.get_active_radius() * 8.);
 
@@ -51,13 +51,13 @@ impl WorldState {
 
     fn update_world(&mut self, input: &Input) -> Result<(), StateError> {
         self.world.set_center(self.player.get_translation());
-        self.world.tick(input.get_time_passed()).unwrap(); // TODO: PROPER HANDLING
+        self.world.tick(input.get_time_passed())?;
         Ok(())
     }
     fn update_player(&mut self, input: &Input) -> Result<(), StateError> {
         self.update_player_direction(input);
         self.update_player_momentum(input);
-        self.world.interact(&mut self.player).unwrap(); // TODO HANDLE PROPELRY
+        self.world.interact(&mut self.player);
         if input.key_pressed("F1") {
             self.player.mod_speed(0.25);
         }

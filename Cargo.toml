@@ -8,19 +8,6 @@ edition = "2018"
 name = "world_gen"
 path = "bin/world_gen.rs"
 
-[[bin]]
-name = "heightmap_generator"
-path = "bin/heightmap_generator.rs"
-
-[[bin]]
-name = "erosion_viz"
-path = "bin/erosion_viz.rs"
-required-features = ["feat-ncurses"]
-
-
-[features]
-feat-ncurses = ["ncurses"]
-
 [dependencies]
 core = { path = "./core" }
 world = { path = "./world" }
@@ -38,4 +25,3 @@ lazy_static = "^1.4.0"
 serde = { version = "^1.0.124", features = ["derive"] }
 serde_yaml = "^0.8.17"
 byteorder = "^1.4.2"
-ncurses = { version = "5.99", optional = true }

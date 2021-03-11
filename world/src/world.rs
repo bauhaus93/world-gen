@@ -346,7 +346,7 @@ impl Updatable for World {
         let center = self.center;
         self.object_manager.mod_object(self.monkey_id, |o| {
             o.set_translation((sun_pos - center).as_normalized() * 200. + center);
-            o.mod_rotation(Point3f::new(0., 0., 0.25));
+            o.mod_rotation(Point3f::new(0., 0., 0.1));
         });
 
         self.update_shader_resources()?;

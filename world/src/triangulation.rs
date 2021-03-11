@@ -195,12 +195,11 @@ fn intersect_lines(a: [Point2f; 2], b: [Point2f; 2]) -> Option<Point2f> {
 mod tests {
 
     use super::*;
-    use rand::rngs::SmallRng;
+    use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
-    use test::{black_box, Bencher};
+    use test::Bencher;
 
     const RANDOM_SEED: u64 = 9001;
-    const BENCH_GRID_SIZE: usize = 16;
 
     #[test]
     fn test_line_intersection_ortho_lines() {
@@ -288,7 +287,7 @@ mod tests {
     #[test]
     fn test_triangle_circumcenter_random() {
         const RUN_COUNT: usize = 10000;
-        let mut rng = SmallRng::seed_from_u64(RANDOM_SEED);
+        let mut rng = StdRng::seed_from_u64(RANDOM_SEED);
         for _ in 0..RUN_COUNT {
             let a = Point2f::new(rng.gen(), rng.gen());
             let b = Point2f::new(rng.gen(), rng.gen());
@@ -319,12 +318,15 @@ mod tests {
     fn test_triangulation_random_check_points_in_triangles() {
         const RUN_COUNT: usize = 16;
         const VERTEX_MAX: usize = 128;
-        let mut rng = SmallRng::seed_from_u64(RANDOM_SEED);
+        let mut rng = StdRng::seed_from_u64(RANDOM_SEED);
         for _ in 0..RUN_COUNT {
-            let vertex_count: usize = rng.gen_range(1, VERTEX_MAX);
+            let vertex_count: usize = rng.gen_range(1..VERTEX_MAX);
             let mut points = Vec::with_capacity(vertex_count);
             for _ in 0..vertex_count {
-                points.push(Point2f::new(rng.gen_range(0., 64.), rng.gen_range(0., 64.)));
+                points.push(Point2f::new(
+                    rng.gen_range(0.0..64.0),
+                    rng.gen_range(0.0..64.0),
+                ));
             }
             let triangulation = triangulate_bowyer_watson(&points);
             assert!(triangulation.is_some());
@@ -351,26 +353,47 @@ mod tests {
         }
     }
 
-    #[bench]
-    fn triangulation_with_mesh_vertices(b: &mut Bencher) {
+    fn create_grid_points_2d(grid_size: usize) -> Vec<Point2f> {
         let mut points = Vec::new();
-        for y in 0..BENCH_GRID_SIZE {
-            for x in 0..BENCH_GRID_SIZE {
-                points.push(Point3f::new(x as f32, y as f32, 0.));
-            }
-        }
-
-        b.iter(|| triangulate(&points));
-    }
-
-    #[bench]
-    fn triangulation_bw_only(b: &mut Bencher) {
-        let mut points = Vec::new();
-        for y in 0..BENCH_GRID_SIZE {
-            for x in 0..BENCH_GRID_SIZE {
+        for y in 0..grid_size {
+            for x in 0..grid_size {
                 points.push(Point2f::new(x as f32, y as f32));
             }
         }
+        points
+    }
+
+    fn create_grid_points_3d(grid_size: usize) -> Vec<Point3f> {
+        let mut points = Vec::new();
+        for y in 0..grid_size {
+            for x in 0..grid_size {
+                points.push(Point3f::new(x as f32, y as f32, 0.));
+            }
+        }
+        points
+    }
+
+    #[bench]
+    fn triangulation_bw_only_grid16(b: &mut Bencher) {
+        let points = create_grid_points_2d(16);
         b.iter(|| triangulate_bowyer_watson(&points));
+    }
+
+    #[bench]
+    fn triangulation_bw_only_grid32(b: &mut Bencher) {
+        let points = create_grid_points_2d(32);
+        b.iter(|| triangulate_bowyer_watson(&points));
+    }
+
+    #[bench]
+    fn triangulation_bw_only_grid64(b: &mut Bencher) {
+        let points = create_grid_points_2d(64);
+        b.iter(|| triangulate_bowyer_watson(&points));
+    }
+
+    #[bench]
+    fn triangulation_with_mesh_vertices_grid32(b: &mut Bencher) {
+        let points = create_grid_points_3d(32);
+        b.iter(|| triangulate(&points));
     }
 }

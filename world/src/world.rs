@@ -185,7 +185,7 @@ impl World {
     }
 
     fn get_finished_chunks(&mut self) -> Result<(), WorldError> {
-        let mut finished_chunks = self.chunk_loader.get(500)?;
+        let mut finished_chunks = self.chunk_loader.get(200)?;
         if finished_chunks.len() > 0 {
             for chunk in finished_chunks.values_mut() {
                 if chunk.get_lod() <= 1 {
@@ -322,7 +322,7 @@ impl Updatable for World {
                 .map_err(|e| UpdateError::Internal(e.to_string()))?;
             let rem_count = self
                 .object_manager
-                .unload_distant(self.center, (self.lod_far_radius * CHUNK_SIZE) as f32);
+                .unload_distant(self.center, (self.lod_far_radius * (1 + CHUNK_SIZE)) as f32);
             if rem_count > 0 {
                 info!("Removed {} objects", rem_count);
             }

@@ -34,18 +34,9 @@ impl Core {
         Ok(core)
     }
 
-    /*WindowEvent::KeyboardInput { input, .. } => {
-        if let Some((key, down)) = get_keycode(*input) {
-            self.key_pressed.insert(key, down);
-        }
-    }
-    WindowEvent::MouseWheel { delta, phase, .. } if !self.hibernate => {
-        self.handle_mousewheel(*delta, *phase);
-    }*/
-
     pub fn run(self, mut state: Box<dyn State>) -> ! {
-        let mut hibernate = false;
         let context = self.context;
+        let mut hibernate = false;
         let mut state_input = Input::default();
         let mut last_update = Instant::now();
 
@@ -167,7 +158,6 @@ fn handle_window_event(window_event: &WindowEvent, window: &Window) -> i32 {
         } => 0,
         WindowEvent::Resized(physical_size) => {
             let new_size: LogicalSize<GLsizei> = physical_size.to_logical(window.scale_factor());
-            info!("PHYS SIZE= {:?}", physical_size);
             unsafe {
                 gl::Viewport(0, 0, new_size.width, new_size.height);
             }

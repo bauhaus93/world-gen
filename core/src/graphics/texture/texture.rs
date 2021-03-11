@@ -1,13 +1,12 @@
 use gl;
 use gl::types::{GLenum, GLfloat, GLint, GLsizei, GLuint};
 use glm::Vector4;
-use std::collections::VecDeque;
 
 use image::{GenericImageView, RgbaImage};
 
 use crate::file::read_image_rgb;
 use crate::graphics::{check_opengl_error, GraphicsError, OpenglError};
-use crate::{Point2f, Point2i, Point3i};
+use crate::{Point2i, Point3i};
 
 pub struct Texture {
     id: GLuint,
@@ -119,7 +118,7 @@ impl Texture {
                         data.as_ptr() as *const _,
                     );
                     check_opengl_error("TexSubImage2D")?;
-                    handle_new_2d_image(self.mipmaps)?;    
+                    handle_new_2d_image(self.mipmaps)?;
                 }
                 _ => {
                     unimplemented!();
@@ -131,8 +130,11 @@ impl Texture {
     }
 
     pub fn write_data_rgba32f(&self, data: &[Vector4<GLfloat>]) -> Result<(), OpenglError> {
-        /*self.activate(0);
-        let data_floats: Vec<GLfloat> = data.iter().flat_map(|v| vec!(v[0], v[1], v[2], v[3])).collect();
+        self.activate(0);
+        let data_floats: Vec<GLfloat> = data
+            .iter()
+            .flat_map(|v| vec![v[0], v[1], v[2], v[3]])
+            .collect();
         unsafe {
             match self.tex_type {
                 t if t == gl::TEXTURE_1D => {
@@ -151,7 +153,7 @@ impl Texture {
                 _ => unreachable!("Not yet handeled"),
             }
         }
-        self.deactivate();*/
+        self.deactivate();
         Ok(())
     }
 
@@ -245,31 +247,15 @@ fn handle_new_cubemap_image(mipmaps: bool) -> Result<(), OpenglError> {
 
 fn handle_new_2d_image(mipmaps: bool) -> Result<(), OpenglError> {
     unsafe {
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_WRAP_S,
-            gl::REPEAT as GLint,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_WRAP_T,
-            gl::REPEAT as GLint,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_WRAP_R,
-            gl::REPEAT as GLint,
-        );
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_R, gl::REPEAT as GLint);
         gl::TexParameteri(
             gl::TEXTURE_2D,
             gl::TEXTURE_MIN_FILTER,
             gl::NEAREST_MIPMAP_NEAREST as GLint,
         );
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_MAG_FILTER,
-            gl::NEAREST as GLint,
-        );
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
         check_opengl_error("gl::TexParameteri")?;
         if mipmaps {
             gl::GenerateMipmap(gl::TEXTURE_2D);

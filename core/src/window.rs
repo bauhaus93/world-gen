@@ -1,9 +1,9 @@
 use gl;
 use glutin;
-use glutin::dpi::{LogicalSize, Size};
+use glutin::dpi::LogicalSize;
 use glutin::event_loop::EventLoop;
 use glutin::window::{Window, WindowBuilder};
-use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent, WindowedContext};
+use glutin::{ContextBuilder, ContextWrapper, PossiblyCurrent};
 
 use crate::graphics;
 
@@ -21,7 +21,7 @@ pub fn init_opengl(
         .with_vsync(true)
         .with_depth_buffer(8)
         .build_windowed(window_builder, &event_loop)?;
-    let windowed_context = unsafe { windowed_context.make_current().map_err((|e| e.1))? };
+    let windowed_context = unsafe { windowed_context.make_current().map_err(|e| e.1)? };
     windowed_context.window().set_cursor_visible(false);
     info!("Loading opengl functions");
     gl::load_with(|s| windowed_context.get_proc_address(s) as *const _);

@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use gl;
 use gl::types::{GLenum, GLint, GLsizei, GLuint};
 
@@ -82,7 +80,7 @@ pub fn create_texture_storage(
             }
             check_opengl_error("gl::TexStorage2D(gl::TEXTURE_CUBE_MAP")?;
         }
-        t => {
+        _t => {
             error!("Unknown texture type");
         }
     }
@@ -91,6 +89,7 @@ pub fn create_texture_storage(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn add_subimage(
     size: [GLsizei; 2],
     layer: GLsizei,
@@ -139,8 +138,6 @@ pub fn calculate_mipmaps(texture_size: Point3i) -> GLsizei {
         _ => 0,
     }
 }
-
-
 
 pub fn unbind_texture(texture_type: GLenum) -> Result<(), OpenglError> {
     unsafe {

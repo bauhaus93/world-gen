@@ -1,5 +1,3 @@
-use crate::{Camera, Renderable};
-
 use super::{Input, StateError};
 
 pub trait State {

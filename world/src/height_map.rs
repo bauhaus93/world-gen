@@ -1,13 +1,8 @@
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
-use std::path::Path;
-
 use std::cmp::Ordering;
 
 use crate::{triangulate, Noise};
 use core::graphics::mesh::Triangle;
-use core::{FileError, Point2f, Point2i, Point3f, Seed};
+use core::{Point2f, Point2i, Point3f};
 
 pub struct HeightMap {
     size: i32,

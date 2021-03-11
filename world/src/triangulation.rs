@@ -1,4 +1,3 @@
-use rand::{seq::SliceRandom, thread_rng};
 use std::f32;
 
 use core::graphics::{mesh, mesh::Vertex};
@@ -54,7 +53,7 @@ impl PartialEq for Edge {
 impl Eq for Edge {}
 
 impl Triangle {
-    pub fn new(mut points: [Point2f; 3]) -> Option<Self> {
+    pub fn new(points: [Point2f; 3]) -> Option<Self> {
         let edges = [
             Edge(points[0], points[1]),
             Edge(points[1], points[2]),
@@ -104,10 +103,6 @@ impl Triangle {
         (*point - self.circumcenter).length() < self.radius
     }
 
-    pub fn shares_edge(&self, other: &Triangle) -> bool {
-        self.edges.iter().any(|e| other.edges.iter().any(|eo| e == eo))
-    }
-
     pub fn contains_edge(&self, edge: &Edge) -> bool {
         self.edges.iter().any(|e| e == edge)
     }
@@ -151,7 +146,6 @@ fn triangulate_bowyer_watson(points: &[Point2f]) -> Option<Vec<Triangle>> {
                         }
                         None => {
                             continue;
-                            return None;
                         }
                     }
                 }

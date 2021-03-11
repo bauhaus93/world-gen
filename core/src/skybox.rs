@@ -4,11 +4,10 @@ use std::rc::Rc;
 use crate::file::read_image_rgba;
 use crate::graphics::mesh::vertex_buffer::BUFFER_POSTION;
 use crate::graphics::{
-    texture::Orientation, GraphicsError, Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture,
-    TextureBuilder,
+    GraphicsError, Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder,
 };
 use crate::traits::{RenderInfo, Renderable, Scalable, Translatable};
-use crate::{Config, CoreError, FileError, Point3f, Point3i, Point2i};
+use crate::{Config, CoreError, FileError, Point2i, Point3f, Point3i};
 
 pub struct Skybox {
     texture: Texture,

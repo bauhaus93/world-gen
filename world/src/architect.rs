@@ -1,13 +1,12 @@
 use rand::rngs::StdRng;
 use rand::Rng;
 use std::collections::BTreeSet;
-use std::path::Path;
 
 use crate::chunk::chunk_size::{get_world_pos, CHUNK_SIZE};
 use crate::height_map::HeightMap;
 use crate::noise::presets::get_default_tree_noise;
 use crate::noise::Noise;
-use core::{FileError, Point2f, Point2i, Point3f, Seed};
+use core::{Point2f, Point2i, Point3f, Seed};
 
 pub struct Architect {
     height_noise: Box<dyn Noise>,
@@ -32,7 +31,6 @@ impl Architect {
         chunk_size: i32,
         resolution: f32,
     ) -> HeightMap {
-        let size = chunk_size + 1;
         HeightMap::from_noise(
             get_world_pos(chunk_pos, Point2f::new(0., 0.)),
             chunk_size,

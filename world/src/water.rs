@@ -1,13 +1,12 @@
 use std::path::Path;
 use std::rc::Rc;
 
-use core::file::read_image;
 use core::graphics::{
     GraphicsError, Mesh, Model, ShaderProgram, ShaderProgramBuilder, Texture, TextureBuilder,
 };
 use core::light::SceneLights;
 use core::traits::{RenderInfo, Renderable, Scalable, Translatable, Updatable};
-use core::{Config, CoreError, FileError, Point2i, Point3f, Point3i, UpdateError};
+use core::{Config, CoreError, FileError, Point2i, Point3f, UpdateError};
 
 pub struct Water {
     shader: Rc<ShaderProgram>,
@@ -22,7 +21,6 @@ pub struct Water {
 
 impl Water {
     pub fn new(config: &Config) -> Result<Self, CoreError> {
-
         let shader_dir = Path::new(config.get_str("water_shader_directory")?);
         let vertex_shader_path = shader_dir
             .join("VertexShader.glsl")
@@ -113,7 +111,7 @@ impl Water {
             mesh: mesh,
             water_level: 0.,
             dudv_offset: 0.,
-            dudv_offset_per_second: 5e-3
+            dudv_offset_per_second: 5e-3,
         })
     }
 
@@ -126,7 +124,8 @@ impl Water {
         lights.update_lights_for_shader(&self.shader)?;
         self.shader
             .set_resource_vec3("view_pos", &view_pos.as_glm())?;
-        self.shader.set_resource_float("dudv_offset", self.dudv_offset)?;
+        self.shader
+            .set_resource_float("dudv_offset", self.dudv_offset)?;
         Ok(())
     }
 

@@ -1,9 +1,7 @@
-use std::collections::BTreeMap;
-
 use gl;
 use gl::types::GLenum;
 
-use super::{utility::*, Orientation, TextureType};
+use super::utility::*;
 use crate::graphics::{GraphicsError, Texture};
 use crate::{Point2i, Point3i};
 

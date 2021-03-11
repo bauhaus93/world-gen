@@ -1,5 +1,5 @@
 use image;
-use image::{GenericImageView, RgbaImage, DynamicImage, RgbImage};
+use image::{RgbImage, RgbaImage};
 
 use crate::graphics::GraphicsError;
 

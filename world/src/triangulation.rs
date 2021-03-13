@@ -33,7 +33,7 @@ pub fn triangulate(points: &[Point3f]) -> Option<Vec<mesh::Triangle>> {
     Some(mesh_triangles)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Triangle {
     points: [Point2f; 3],
     edges: [Edge; 3],
@@ -41,7 +41,7 @@ struct Triangle {
     radius: f32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Edge(pub Point2f, pub Point2f);
 
 impl PartialEq for Edge {

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use rand::rngs::StdRng;
 
 use crate::architect::Architect;
-use crate::chunk::{chunk_size::get_chunk_pos, Chunk, ChunkLoader, CHUNK_SIZE};
+use crate::chunk::{chunk_size::get_chunk_pos, Chunks, CHUNK_SIZE};
 use crate::noise::presets::get_default_noise;
 use crate::{Water, WorldError};
 use core::graphics::{GraphicsError, ShaderProgram, ShaderProgramBuilder};
@@ -17,18 +17,11 @@ use core::{
 };
 
 pub struct World {
-    surface_shader_program: Rc<ShaderProgram>,
     skybox: Skybox,
     water_surface: Water,
     sun: Sun,
-    architect: Arc<Architect>,
-    chunk_loader: ChunkLoader,
-    chunks: BTreeMap<Point2i, Chunk>,
+    chunks: Chunks,
     chunk_update_timer: Timer,
-    chunk_build_stats_timer: Timer,
-    lod_near_radius: i32,
-    lod_far_radius: i32,
-    active_chunk_radius: i32,
     object_manager: ObjectManager,
     scene_lights: SceneLights,
     monkey_id: u32,
@@ -42,10 +35,6 @@ impl World {
         let object_prototypes_path = config.get_str("object_prototype_path")?;
         let day_length = config.get_uint_or_default("day_length", 180);
         let gravity = config.get_float_or_default("gravity", 0.25);
-
-        let surface_shader_program = load_surface_shader(config)?;
-
-        let (near_radius, far_radius, active_radius) = get_chunk_radii(config);
 
         info!("Day length is {}s", day_length);
         info!("Gravity is {}", gravity);
@@ -61,27 +50,23 @@ impl World {
             &mut rng,
         ))));
 
-        let chunk_loader = ChunkLoader::new(architect.clone());
-
         let monkey_id = object_manager.create_object("monkey", true)?;
         object_manager.mod_object(monkey_id, |o| {
             o.set_translation(Point3f::new(0., 0., 300.));
             o.set_scale(Point3f::from_scalar(10.));
         });
 
+        let mut skybox = Skybox::new(config)?;
+        skybox.scale((config.get_int_or_default("active_radius", 50) * CHUNK_SIZE * 2) as f32);
+
+        let chunks = Chunks::new(config)?;
+
         let mut world = World {
-            surface_shader_program: Rc::new(surface_shader_program),
-            skybox: Skybox::new(config)?,
+            skybox: skybox,
             water_surface: Water::new(config)?,
             sun: Sun::with_day_length(day_length),
-            architect: architect,
-            chunk_loader: chunk_loader,
-            chunks: BTreeMap::new(),
-            chunk_update_timer: Timer::new(500),
-            chunk_build_stats_timer: Timer::new(5000),
-            lod_near_radius: near_radius,
-            lod_far_radius: far_radius,
-            active_chunk_radius: active_radius,
+            chunks: chunks,
+            chunk_update_timer: Timer::new(1000),
             object_manager: object_manager,
             scene_lights: create_default_scene_lights(),
             monkey_id: monkey_id,
@@ -90,20 +75,11 @@ impl World {
             size: None,
         };
 
-        world.update_skybox_size();
-
-        world.chunk_loader.start(8);
-        world.request_chunks()?;
-
         Ok(world)
     }
 
-    pub fn get_active_radius(&self) -> f32 {
-        (self.active_chunk_radius * CHUNK_SIZE * 8) as f32
-    }
-
     pub fn interact(&mut self, player: &mut Player) {
-        let player_pos = player.get_translation();
+        /*let player_pos = player.get_translation();
 
         let chunk_height = match self.get_chunk_by_world_pos(player_pos) {
             Some(chunk) => {
@@ -136,10 +112,10 @@ impl World {
                 player.land();
             }
             player.set_z(chunk_height as f32);
-        }
+        }*/
     }
 
-    pub fn request_chunks(&mut self) -> Result<(), WorldError> {
+    /*pub fn request_chunks(&mut self) -> Result<(), WorldError> {
         let mut request_list: Vec<(Point2i, u8)> = Vec::new();
         let player_chunk_pos = get_chunk_pos(self.center);
 
@@ -203,13 +179,13 @@ impl World {
             .iter()
             .for_each(|(_, c)| vertex_count += c.get_vertex_count());
         vertex_count
-    }
+    }*/
 
     pub fn set_center(&mut self, pos: Point3f) {
         self.center = pos;
     }
 
-    fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
+    /*fn should_load_chunk(&self, rel_pos: Point2i, player_pos: Point2i) -> Option<(Point2i, u8)> {
         let abs_pos = player_pos + rel_pos;
         if let Some(size) = self.size {
             if abs_pos[0] < 0 || abs_pos[1] < 0 || abs_pos[0] > size[0] || abs_pos[1] > size[1] {
@@ -247,12 +223,9 @@ impl World {
         } else {
             2
         }
-    }
+    }*/
 
-    fn update_skybox_size(&mut self) {
-        self.skybox
-            .scale((self.active_chunk_radius * CHUNK_SIZE * 2) as f32);
-    }
+    fn scale_skybox(&mut self) {}
 
     fn update_shader_resources(&mut self) -> Result<(), GraphicsError> {
         match self.scene_lights.get_light_mut("sun") {
@@ -270,17 +243,11 @@ impl World {
             None => warn!("Could not get light source for player"),
         }
 
-        self.surface_shader_program.use_program();
-        self.surface_shader_program
-            .set_resource_vec3("view_pos", &self.center.as_glm())?;
-
-        self.scene_lights
-            .update_lights_for_shader(&self.surface_shader_program)?;
-
         let light_level = self.sun.calculate_intensity();
         let fog_color = Point3f::from_scalar(1. - (-light_level).exp());
-        self.surface_shader_program
-            .set_resource_vec3("fog_color", &fog_color.as_glm())?;
+
+        self.chunks
+            .update_shader_resources(self.center, fog_color, &self.scene_lights)?;
         self.skybox.update_light_level(light_level)?;
 
         self.water_surface
@@ -289,33 +256,36 @@ impl World {
         Ok(())
     }
 
-    fn get_chunk_by_world_pos(&self, world_pos: Point3f) -> Option<&Chunk> {
+    /*fn get_chunk_by_world_pos(&self, world_pos: Point3f) -> Option<&Chunk> {
         self.chunks.get(&get_chunk_pos(world_pos))
-    }
+    }*/
 }
 
 impl Renderable for World {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
-        //self.surface_texture.activate();
+        /*self.surface_texture.activate();
         info.push_shader(self.surface_shader_program.clone());
 
         self.chunks.values().try_for_each(|c| c.render(info))?;
 
-        self.object_manager.render(info)?;
 
         info.pop_shader();
 
-        //self.surface_texture.deactivate();
+        self.surface_texture.deactivate();*/
+        // self.object_manager.render(info)?;
+        self.chunks.render(info)?;
         self.skybox.render(info)?;
-        self.water_surface.render(info)?;
+        // self.water_surface.render(info)?;
         Ok(())
     }
 }
 
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
+        self.chunk_update_timer.tick(time_passed)?;
         if self.chunk_update_timer.fires() {
-            self.get_finished_chunks()
+            self.chunks.request(self.center);
+            /*self.get_finished_chunks()
                 .map_err(|e| UpdateError::Internal(e.to_string()))?;
             self.unload_distant_chunks();
             self.request_chunks()
@@ -325,16 +295,16 @@ impl Updatable for World {
                 .unload_distant(self.center, (self.lod_far_radius * (1 + CHUNK_SIZE)) as f32);
             if rem_count > 0 {
                 info!("Removed {} objects", rem_count);
-            }
+            }*/
         }
-        if self.chunk_build_stats_timer.fires() {
+        /*if self.chunk_build_stats_timer.fires() {
             info!(
                 "Avg chunk build time = {:.2} ms, active chunks = {}, active objects = {}",
                 self.chunk_loader.get_avg_build_time(),
                 self.chunks.len(),
                 self.object_manager.count_active_objects()
             );
-        }
+        }*/
 
         self.skybox.set_translation(self.center);
         self.sun.set_rotation_center(self.center);
@@ -350,8 +320,8 @@ impl Updatable for World {
         });
 
         self.update_shader_resources()?;
-        self.chunk_update_timer.tick(time_passed)?;
-        self.chunk_build_stats_timer.tick(time_passed)?;
+        // self.chunk_update_timer.tick(time_passed)?;
+        // self.chunk_build_stats_timer.tick(time_passed)?;
         Ok(())
     }
 }

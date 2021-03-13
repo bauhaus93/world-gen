@@ -1,10 +1,10 @@
-use std::rc::Rc;
 use crate::{graphics::GraphicsError, Camera, ShaderProgram};
+use std::rc::Rc;
 
 pub struct RenderInfo<'a> {
     shader_stack: Vec<Rc<ShaderProgram>>,
     camera: &'a Camera,
-    lod: u8
+    lod: u8,
 }
 
 impl<'a> RenderInfo<'a> {
@@ -20,9 +20,11 @@ impl<'a> RenderInfo<'a> {
         self.camera
     }
 
-    pub fn get_active_shader(&self) -> &ShaderProgram {
-        debug_assert!(!self.shader_stack.is_empty());
-        self.shader_stack.first().unwrap()
+    pub fn get_active_shader(&self) -> Result<&ShaderProgram, GraphicsError> {
+        self.shader_stack
+            .first()
+            .map(|s| s.as_ref())
+            .ok_or(GraphicsError::EmptyShaderStack)
     }
 
     pub fn get_lod(&self) -> u8 {

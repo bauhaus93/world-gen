@@ -148,9 +148,9 @@ impl Renderable for Water {
         self.dudv_map.activate(1);
 
         let mvp = info.get_camera().create_mvp_matrix(&self.model);
-        info.get_active_shader().set_resource_mat4("mvp", &mvp)?;
-        info.get_active_shader()
-            .set_resource_mat4("model", self.model.get_matrix_ref())?;
+        let shader = info.get_active_shader()?;
+        shader.set_resource_mat4("mvp", &mvp)?;
+        shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
         self.mesh.render(info)?;
 
         self.dudv_map.deactivate();

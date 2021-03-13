@@ -34,7 +34,6 @@ impl Object {
         self.persistent
     }
 
-
     pub fn get_distance(&self, point: Point3f) -> f32 {
         self.model.get_distance(point)
     }
@@ -43,7 +42,7 @@ impl Object {
 impl Renderable for Object {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         let mvp = info.get_camera().create_mvp_matrix(&self.model);
-        let shader = info.get_active_shader();
+        let shader = info.get_active_shader()?;
         shader.set_resource_mat4("mvp", &mvp)?;
         shader.set_resource_mat4("model", self.model.get_matrix_ref())?;
         self.prototype.render(info)

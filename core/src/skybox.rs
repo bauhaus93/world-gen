@@ -115,7 +115,7 @@ impl Renderable for Skybox {
         info.push_shader(self.shader.clone());
 
         let mvp = info.get_camera().create_mvp_matrix(&self.model);
-        info.get_active_shader().set_resource_mat4("mvp", &mvp)?;
+        info.get_active_shader()?.set_resource_mat4("mvp", &mvp)?;
         self.mesh.render(info)?;
 
         info.pop_shader();

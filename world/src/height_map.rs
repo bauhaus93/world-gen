@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
+use std::convert::TryInto;
 
-use crate::{triangulate, Noise};
+use crate::{triangulate, Noise, CHUNK_SIZE};
 use core::graphics::mesh::Triangle;
-use core::{Point2f, Point2i, Point3f};
+use core::{GraphicsError, Point2f, Point2i, Point3f, Texture, TextureBuilder};
 
 pub struct HeightMap {
     size: i32,
@@ -244,6 +245,17 @@ impl HeightMap {
     fn calculate_index(&self, pos: Point2i) -> usize {
         debug_assert!(pos[0] >= 0 && pos[1] >= 0);
         ((pos[0] % self.size) + self.size * (pos[1] % self.size)) as usize
+    }
+}
+
+impl TryInto<Texture> for HeightMap {
+    type Error = GraphicsError;
+    fn try_into(self) -> Result<Texture, Self::Error> {
+        let texture = TextureBuilder::new_2d(Point2i::from_scalar(CHUNK_SIZE))
+            .format_r32f()
+            .finish()?;
+        texture.write_data_r32f(self.height_list.as_slice())?;
+        Ok(texture)
     }
 }
 

@@ -129,31 +129,32 @@ impl Texture {
         Ok(())
     }
 
-    pub fn write_data_rgba32f(&self, data: &[Vector4<GLfloat>]) -> Result<(), OpenglError> {
+    pub fn write_data_r32f(&self, data: &[f32]) -> Result<(), OpenglError> {
         self.activate(0);
-        let data_floats: Vec<GLfloat> = data
-            .iter()
-            .flat_map(|v| vec![v[0], v[1], v[2], v[3]])
-            .collect();
-        unsafe {
-            match self.tex_type {
-                t if t == gl::TEXTURE_1D => {
-                    gl::TexImage1D(
+        let data_conv: Vec<GLfloat> = data.iter().map(|p| *p as GLfloat).collect(); // TODO: Maybe avoid unnecessary duplication
+
+        match self.tex_type {
+            t if t == gl::TEXTURE_2D => {
+                unsafe {
+                    gl::TexSubImage2D(
                         t,
                         0,
-                        self.format as GLint,
-                        data_floats.len() as GLsizei,
                         0,
-                        gl::RGBA,
-                        gl::FLOAT,
-                        data.as_ptr() as *const _,
+                        0,
+                        self.size[0] as GLsizei,
+                        self.size[1] as GLsizei,
+                        self.channels,
+                        self.channel_type,
+                        data_conv.as_ptr() as *const _,
                     );
-                    check_opengl_error("glTexImage1D")?;
                 }
-                _ => unreachable!("Not yet handeled"),
+                check_opengl_error("glTexSubImage2D")?;
             }
+            _ => unimplemented!("Not yet handeled"),
         }
+        handle_new_2d_image(self.mipmaps);
         self.deactivate();
+
         Ok(())
     }
 
@@ -267,9 +268,10 @@ fn handle_new_2d_image(mipmaps: bool) -> Result<(), OpenglError> {
 
 impl Drop for Texture {
     fn drop(&mut self) {
-        debug!(
+        trace!(
             "Deleting texture: id = {}, type = {}",
-            self.id, self.tex_type
+            self.id,
+            self.tex_type
         );
         if let Err(e) = delete_texture(self.id) {
             error!("{}", e);

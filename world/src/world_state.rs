@@ -3,7 +3,7 @@ use core::{
     StateError, Translatable, Updatable,
 };
 
-use crate::World;
+use crate::{World, CHUNK_SIZE};
 
 pub struct WorldState {
     camera: Camera,
@@ -18,7 +18,7 @@ impl WorldState {
         let player = Player::default();
         let world = World::new(&config).map_err(|e| StateError::Setup(e.to_string()))?;
 
-        camera.set_far(world.get_active_radius() * 8.);
+        camera.set_far((CHUNK_SIZE * config.get_int_or_default("active_radius", 50)) as f32 * 8.);
 
         Ok(WorldState {
             camera: camera,
@@ -31,7 +31,8 @@ impl WorldState {
 
 impl State for WorldState {
     fn update(&mut self, input: &Input) -> Result<(), StateError> {
-        self.update_player(input)?;
+        // self.update_player(input)?;
+        self.update_player_debug_free_camera(input)?;
         self.update_camera();
         self.update_world(input)?;
         Ok(())
@@ -58,11 +59,40 @@ impl WorldState {
         self.update_player_direction(input);
         self.update_player_momentum(input);
         self.world.interact(&mut self.player);
+
         if input.key_pressed("F1") {
             self.player.mod_speed(0.25);
         }
         if input.key_pressed("F2") {
             self.player.mod_speed(-0.25);
+        }
+        self.player.tick(input.get_time_passed())?;
+        Ok(())
+    }
+
+    fn update_player_debug_free_camera(&mut self, input: &Input) -> Result<(), StateError> {
+        const SPEED: f32 = 1.;
+        self.update_player_direction(input);
+        let mut offset = Point3f::from_scalar(0.);
+        if let Some(move_keys) = input.get_movement_keys_down() {
+            if move_keys[0] {
+                offset += self.player.get_direction();
+            }
+            if move_keys[1] {
+                offset -= self.player.get_direction().cross(&Point3f::new(0., 0., 1.));
+            }
+            if move_keys[2] {
+                offset -= self.player.get_direction();
+            }
+            if move_keys[3] {
+                offset += self.player.get_direction().cross(&Point3f::new(0., 0., 1.));
+            }
+        }
+        if input.key_pressed("SPACE") {
+            offset += Point3f::new(0., 0., 1.);
+        }
+        if (offset.length() > 0.) {
+            self.player.mod_translation(offset.as_normalized() * SPEED);
         }
         self.player.tick(input.get_time_passed())?;
         Ok(())

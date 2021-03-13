@@ -50,4 +50,6 @@ pub enum GraphicsError {
     FunctionFailure(String),
     #[error("invalid image format: {0}")]
     InvalidImageFormat(String),
+    #[error("render info shader stack is empty, but active shader was requested")]
+    EmptyShaderStack,
 }

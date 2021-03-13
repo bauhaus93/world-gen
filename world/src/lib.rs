@@ -4,27 +4,24 @@ extern crate log;
 extern crate env_logger;
 extern crate gl;
 extern crate glm;
-extern crate num_traits;
 extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 extern crate byteorder;
 extern crate bytes;
-extern crate futures;
-extern crate rayon;
 extern crate serde;
 extern crate serde_yaml;
 extern crate test;
+extern crate thiserror;
 
 extern crate core;
 
+mod architect;
 mod chunk;
-//pub mod erosion;
-pub mod architect;
-pub mod height_map;
-pub mod noise;
-pub mod triangulation;
-pub mod water;
+mod height_map;
+mod noise;
+mod triangulation;
+mod water;
 pub mod world;
 pub mod world_error;
 pub mod world_state;

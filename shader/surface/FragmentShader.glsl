@@ -23,7 +23,7 @@ uniform struct LightSource {
     float specular_shininess;
 }scene_lights[2];
 
-const float FOG_DEPTH = 0.00075;
+const float FOG_DEPTH = 0.0004;
 
 vec3 calculate_light_factor(int index) {
     vec3 ambient = scene_lights[index].color * scene_lights[index].ambient_intensity;

@@ -25,6 +25,9 @@ uniform struct LightSource {
     float specular_shininess;
 }scene_lights[2];
 
+
+const float FOG_DEPTH = 0.0010;
+
 vec3 calculate_light_factor(int i, vec3 normal) {
     vec3 ambient = scene_lights[i].color * scene_lights[i].ambient_intensity;
     vec3 diffuse = vec3(0., 0., 0.);
@@ -49,6 +52,11 @@ vec3 calculate_light_factor(int i, vec3 normal) {
     return ambient + diffuse + specular;
 }
 
+float calculate_fog_factor() {
+    float dist = gl_FragCoord.z / gl_FragCoord.w;
+    return exp(-pow((dist * FOG_DEPTH), 2));
+}
+
 void main() {
 	color = vec3(0.2, 0.2, 0.8);
 	vec2 tex_coords = texture2D(dudv_map, vec2(vertex.uv.x + dudv_offset, vertex.uv.y)).rg * 0.1;
@@ -61,6 +69,8 @@ void main() {
 			normal_map_color.b * 2.6,
 			normal_map_color.g * 2. + 1.));
 
+	normal = mix(vec3(0., 0., 1.), normal, exp(-pow(2 * (0.005 * gl_FragCoord.z / gl_FragCoord.w), 1.2)));
+
 	vec3 light_factor = vec3(0., 0., 0.);
     for (int i = 0; i < active_lights; i++) {
         light_factor += calculate_light_factor(i, normal);
@@ -70,6 +80,9 @@ void main() {
         }
     }
     color *= light_factor;
+
+    float fog_factor = calculate_fog_factor();
+    color = mix(vec3(0.7,0.7,0.9) * scene_lights[0].absolute_intensity / 1e8, color, fog_factor);
 
 
 }

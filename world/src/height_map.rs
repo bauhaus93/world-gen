@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn check_heightmap_triangulation() {
-        let hm = HeightMap::new(16, 1.);
+        let hm = HeightMap::new(16);
         assert!(hm.triangulate().is_some());
     }
 }

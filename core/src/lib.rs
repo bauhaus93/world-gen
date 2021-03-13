@@ -4,8 +4,8 @@ extern crate gl;
 extern crate glm;
 extern crate glutin;
 extern crate image;
-extern crate num_traits;
 extern crate palette;
+extern crate thiserror;
 
 pub mod bounding_box;
 pub mod camera;

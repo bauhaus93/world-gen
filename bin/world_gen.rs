@@ -13,7 +13,7 @@ use std::io::Write;
 use world::WorldState;
 
 fn main() {
-    const CONFIG_PATH: &'static str = "default.yaml";
+    const CONFIG_PATH: &'static str = "resources/default.yaml";
 
     init_custom_logger();
 

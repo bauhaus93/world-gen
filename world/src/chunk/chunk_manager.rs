@@ -136,7 +136,8 @@ impl Updatable for ChunkManager {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
         if self.build_stats_timer.fires() {
             info!(
-                "Avg build time: {:.2}ms",
+                "Active chunks: {}, avg chunk build time: {:.2}ms",
+                self.chunk_map.len(),
                 self.chunk_loader.get_avg_build_time()
             );
         }
@@ -193,10 +194,6 @@ fn load_surface_shader(directory: &str) -> Result<ShaderProgram, GraphicsError> 
         .add_resource("scene_lights[1].specular_intensity")
         .add_resource("scene_lights[1].specular_shininess")
         .finish()?;
-    // setting texture slot to 0
-    /*if let Err(e) = surface_shader_program.set_resource_integer("texture_array", 0) {
-        return Err(GraphicsError::from(e).into());
-    }*/
     Ok(surface_shader_program)
 }
 

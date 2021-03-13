@@ -28,6 +28,12 @@ build_debug:
 tags:
 	ctags -R core bin world
 
+resource_compress:
+	tar cvzf resources.tar.gz resources/
+
+resource_extract:
+	tar xvzf resources.tar.gz
+
 clean:
 	rm -rf target Cargo.lock
 

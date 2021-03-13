@@ -1,9 +1,9 @@
 use std::convert::TryInto;
 
-use super::{get_world_pos, ChunkError, CHUNK_SIZE};
-use crate::{architect::Architect, HeightMap, Noise};
-use core::graphics::{GraphicsError, Mesh, ShaderProgram};
-use core::traits::{RenderInfo, Renderable, Translatable};
+use super::{get_world_pos, ChunkError};
+use crate::HeightMap;
+use core::graphics::GraphicsError;
+use core::traits::{RenderInfo, Translatable};
 use core::{BoundingBox, Model, Point2f, Point2i, Point3f, Texture};
 
 pub struct Chunk {

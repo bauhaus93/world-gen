@@ -18,11 +18,8 @@ env_logger = "^0.8.3"
 thiserror = "^1.0.24"
 chrono = "^0.4.19"
 rand = "^0.8.3"
-num-traits = "^0.2.14"
 lazy_static = "^1.4.0"
 serde = { version = "^1.0.124", features = ["derive"] }
 serde_yaml = "^0.8.17"
 bytes = "^1.0.1"
 byteorder = "^1.4.2"
-rayon = "^1.5.0"
-futures = { version = "^0.3.13", features = ["executor"] }

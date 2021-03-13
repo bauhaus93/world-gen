@@ -2,9 +2,9 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use std::collections::BTreeSet;
 
-use crate::chunk::chunk_size::{get_world_pos, CHUNK_SIZE};
+use crate::chunk::{get_world_pos, CHUNK_SIZE};
 use crate::height_map::HeightMap;
-use crate::noise::presets::get_default_tree_noise;
+use crate::noise::presets::{get_default_noise, get_default_tree_noise};
 use crate::noise::Noise;
 use core::{Point2f, Point2i, Point3f, Seed};
 
@@ -14,10 +14,10 @@ pub struct Architect {
 }
 
 impl Architect {
-    pub fn from_noise(noise: Box<dyn Noise>) -> Self {
+    pub fn from_seed(seed: Seed) -> Self {
         Self {
-            height_noise: noise,
-            tree_noise: get_default_tree_noise(Seed::from_entropy()),
+            height_noise: get_default_noise(seed),
+            tree_noise: get_default_tree_noise(seed),
         }
     }
 
@@ -25,16 +25,10 @@ impl Architect {
         self.height_noise.get_noise(absolute_pos)
     }
 
-    pub fn create_heightmap(
-        &self,
-        chunk_pos: Point2i,
-        chunk_size: i32,
-        resolution: f32,
-    ) -> HeightMap {
+    pub fn create_heightmap(&self, chunk_pos: Point2i) -> HeightMap {
         HeightMap::from_noise(
             get_world_pos(chunk_pos, Point2f::new(0., 0.)),
-            chunk_size,
-            resolution,
+            CHUNK_SIZE,
             self.height_noise.as_ref(),
         )
     }

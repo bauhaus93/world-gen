@@ -12,7 +12,7 @@ use core::Point2i;
 pub struct Worker {
     architect: Arc<Architect>,
     stop: Arc<AtomicBool>,
-    input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<Point2i>>>,
     output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
 }
@@ -21,7 +21,7 @@ impl Worker {
     pub fn new(
         architect: Arc<Architect>,
         stop: Arc<AtomicBool>,
-        input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
+        input_queue: Arc<Mutex<VecDeque<Point2i>>>,
         output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
         build_stats: Arc<Mutex<BuildStats>>,
     ) -> Worker {
@@ -43,21 +43,18 @@ impl Worker {
 
     fn work_cycle(&self) -> Result<(), ChunkError> {
         let sleep_time = Duration::from_millis(500);
-        if let Some((pos, lod)) = self.get_chunk_pos()? {
+        if let Some(pos) = self.get_chunk_pos()? {
             let build_start = Instant::now();
-            self.build_chunk(pos, lod)?;
-            if lod == 0 {
-                // only want stats for high quality chunks
-                self.handle_build_stats(&build_start)?;
-            }
+            self.build_chunk(pos)?;
+            self.handle_build_stats(&build_start)?;
         } else {
             thread::sleep(sleep_time);
         }
         Ok(())
     }
 
-    fn build_chunk(&self, chunk_pos: Point2i, lod: u8) -> Result<(), ChunkError> {
-        let builder = ChunkBuilder::new(chunk_pos, lod, self.architect.as_ref())?;
+    fn build_chunk(&self, chunk_pos: Point2i) -> Result<(), ChunkError> {
+        let builder = ChunkBuilder::new(chunk_pos, self.architect.as_ref())?;
 
         match self.output_queue.lock() {
             Ok(mut guard) => (*guard).push_back(builder),
@@ -80,7 +77,7 @@ impl Worker {
         Ok(())
     }
 
-    fn get_chunk_pos(&self) -> Result<Option<(Point2i, u8)>, ChunkError> {
+    fn get_chunk_pos(&self) -> Result<Option<Point2i>, ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => Ok((*guard).pop_front()),
             Err(_poisoned) => Err(ChunkError::MutexPoison),

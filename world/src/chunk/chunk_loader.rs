@@ -12,7 +12,7 @@ const INPUT_QUEUE_MAX: usize = 300;
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,
     architect: Arc<Architect>,
-    input_queue: Arc<Mutex<VecDeque<(Point2i, u8)>>>,
+    input_queue: Arc<Mutex<VecDeque<Point2i>>>,
     output_queue: Arc<Mutex<VecDeque<ChunkBuilder>>>,
     build_stats: Arc<Mutex<BuildStats>>,
     handeled_positions: BTreeSet<Point2i>,
@@ -91,15 +91,15 @@ impl ChunkLoader {
         Ok(chunks)
     }
 
-    pub fn request(&mut self, chunk_pos: &[(Point2i, u8)]) -> Result<(), ChunkError> {
+    pub fn request(&mut self, chunk_pos: &[Point2i]) -> Result<(), ChunkError> {
         match self.input_queue.lock() {
             Ok(mut guard) => {
-                for (pos, lod) in chunk_pos {
+                for pos in chunk_pos {
                     if (*guard).len() >= INPUT_QUEUE_MAX {
                         break;
                     }
                     if self.handeled_positions.insert(*pos) {
-                        (*guard).push_back((*pos, *lod));
+                        (*guard).push_back(*pos);
                     }
                 }
                 Ok(())

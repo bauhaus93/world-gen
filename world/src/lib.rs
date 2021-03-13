@@ -10,6 +10,7 @@ extern crate rand;
 extern crate lazy_static;
 extern crate byteorder;
 extern crate bytes;
+extern crate futures;
 extern crate rayon;
 extern crate serde;
 extern crate serde_yaml;

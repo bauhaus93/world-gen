@@ -65,5 +65,5 @@ pub use self::float::Float;
 pub use self::update_error::UpdateError;
 
 pub use self::file::FileError;
-pub use self::point::{Point2f, Point2i, Point3f, Point3i};
+pub use self::point::{Point2f, Point2i, Point3f, Point3i, Point4f};
 pub use self::seed::Seed;

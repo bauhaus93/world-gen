@@ -2,9 +2,9 @@ window_x: 1920
 window_y: 1080
 mouse_sensitivity: 0.7
 
-near_radius: 10
-far_radius: 15
-active_radius: 20 
+near_radius: 20
+far_radius: 30
+active_radius: 50
 day_length: 720
 gravity: 0.10
 

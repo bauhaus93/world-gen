@@ -129,7 +129,7 @@ impl Texture {
         Ok(())
     }
 
-    pub fn write_data_r32f(&self, data: &[f32]) -> Result<(), OpenglError> {
+    pub fn write_data(&self, data: &[f32]) -> Result<(), OpenglError> {
         self.activate(0);
         let data_conv: Vec<GLfloat> = data.iter().map(|p| *p as GLfloat).collect(); // TODO: Maybe avoid unnecessary duplication
 
@@ -152,7 +152,7 @@ impl Texture {
             }
             _ => unimplemented!("Not yet handeled"),
         }
-        handle_new_2d_image(self.mipmaps);
+        handle_new_2d_image(self.mipmaps)?;
         self.deactivate();
 
         Ok(())

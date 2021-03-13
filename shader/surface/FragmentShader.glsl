@@ -2,7 +2,6 @@
 
 in vec4 gl_FragCoord;
 in VertexData {
-    vec3 uv;
     vec3 normal;
     vec3 frag_pos;
 } vertex;
@@ -58,7 +57,6 @@ float calculate_fog_factor() {
 void main() {
     float slope = max(0, dot(vertex.normal, vec3(0., 0., 1.)));
 	float height = vertex.frag_pos.z;
-    //color = texture(texture_array, vertex.uv).rgb;
 
 	color = vec3(0.2, 0.6, 0.2);
 	if (height > 140.){

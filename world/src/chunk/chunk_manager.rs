@@ -1,48 +1,55 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::iter;
 use std::rc::Rc;
+use std::sync::Arc;
 
-use super::{get_chunk_pos, Chunk, ChunkError, CHUNK_SIZE};
-use crate::{noise::get_default_noise, HeightMap, Noise};
+use super::{get_chunk_pos, get_world_pos, Chunk, ChunkError, ChunkLoader, CHUNK_SIZE};
+use crate::{Architect, HeightMap};
 use core::light::SceneLights;
 use core::{
-    Config, GraphicsError, Mesh, Point2i, Point3f, RenderInfo, Renderable, Seed, ShaderProgram,
-    ShaderProgramBuilder, Updatable, UpdateError,
+    Config, GraphicsError, Mesh, Point2f, Point2i, Point3f, RenderInfo, Renderable, ShaderProgram,
+    ShaderProgramBuilder, Timer, Updatable, UpdateError,
 };
 
-pub struct Chunks {
+pub struct ChunkManager {
     shader: Rc<ShaderProgram>,
+    chunk_loader: ChunkLoader,
     chunk_map: BTreeMap<Point2i, Chunk>,
+    build_stats_timer: Timer,
+    chunk_retrieval_timer: Timer,
     mesh: Mesh,
     lod_distances: [i32; 3],
-    height_noise: Box<dyn Noise>,
 }
 
-impl Chunks {
-    pub fn new(config: &Config) -> Result<Self, ChunkError> {
-        let mesh: Mesh = HeightMap::new(CHUNK_SIZE, 1.)
+impl ChunkManager {
+    pub fn new(architect: Architect, config: &Config) -> Result<Self, ChunkError> {
+        let mesh: Mesh = HeightMap::new(CHUNK_SIZE)
             .triangulate()
             .ok_or(ChunkError::HeightmapTriangulation)
             .and_then(|t| t.as_slice().try_into().map_err(ChunkError::from))?;
 
         let surface_shader_dir = config.get_str("surface_shader_dir")?;
         let surface_shader_program = load_surface_shader(surface_shader_dir)?;
-        let noise = get_default_noise(Seed::from_entropy());
 
-        Ok(Self {
+        let mut cm = Self {
             shader: Rc::new(surface_shader_program),
+            chunk_loader: ChunkLoader::new(Arc::new(architect)),
             chunk_map: BTreeMap::default(),
+            build_stats_timer: Timer::new(5000),
+            chunk_retrieval_timer: Timer::new(1000),
             mesh: mesh,
             lod_distances: get_lod_distances(config),
-            height_noise: noise,
-        })
+        };
+        cm.chunk_loader.start(8);
+        Ok(cm)
     }
 
-    pub fn request(&mut self, center: Point3f) {
+    pub fn request(&mut self, center: Point3f) -> Result<(), ChunkError> {
         let mut request_list: Vec<Point2i> = Vec::new();
-        let center_chunk_pos = get_chunk_pos(center);
+        let center_chunk = get_chunk_pos(center);
 
+        let max_distance = self.lod_distances[2] as f32;
         for r in 0..self.lod_distances[2] {
             let rad_iter_x = (-r..r + 1)
                 .zip(iter::repeat(r))
@@ -50,22 +57,24 @@ impl Chunks {
             let rad_iter_y = iter::repeat(r)
                 .zip(-r..r + 1)
                 .chain(iter::repeat(-r).zip(-r..r + 1));
-            for pos in rad_iter_x.chain(rad_iter_y) {
-                let abs_pos = center_chunk_pos + Point2i::new(pos.0, pos.1);
+            let offset_iter = rad_iter_x.chain(rad_iter_y).filter_map(|(x, y)| {
+                let p = Point2i::new(x, y);
+                if p.length() < max_distance {
+                    Some(p)
+                } else {
+                    None
+                }
+            });
+            for offset in offset_iter {
+                let abs_pos = center_chunk + offset;
                 if self.chunk_map.get(&abs_pos).is_none() && !request_list.contains(&abs_pos) {
                     request_list.push(abs_pos);
                 }
             }
         }
-        let max_distance = self.lod_distances[2] as f32;
-        for req in request_list
-            .into_iter()
-            .filter(|p| (*p - center_chunk_pos).get_length() < max_distance)
-            .take(100)
-        {
-            self.chunk_map
-                .insert(req, Chunk::new(req, self.height_noise.as_ref()).unwrap());
-        }
+        self.chunk_loader.request(request_list.as_slice())?;
+        self.unload_distant_chunks(center_chunk)?;
+        Ok(())
     }
 
     pub fn update_shader_resources(
@@ -83,21 +92,75 @@ impl Chunks {
         scene_lights.update_lights_for_shader(&self.shader)?;
         Ok(())
     }
-}
 
-impl Updatable for Chunks {
-    fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
+    pub fn get_height(&self, world_pos: Point3f) -> f32 {
+        let chunk_pos = get_chunk_pos(world_pos);
+        match self.chunk_map.get(&chunk_pos) {
+            Some(chunk) => chunk
+                .get_height(world_pos.as_xy() - get_world_pos(chunk_pos, Point2f::from_scalar(0.))),
+            None => 0.,
+        }
+    }
+
+    fn retrieve_loaded_chunks(&mut self) -> Result<(), ChunkError> {
+        let new_chunks = self.chunk_loader.get(500)?;
+        for (pos, chunk) in new_chunks.into_iter() {
+            self.chunk_map.insert(pos, chunk);
+        }
+        Ok(())
+    }
+
+    fn unload_distant_chunks(&mut self, center: Point2i) -> Result<(), ChunkError> {
+        let remove_list: Vec<Point2i> = self
+            .chunk_map
+            .keys()
+            .filter_map(|k| {
+                if (*k - center).length() > self.lod_distances[2] as f32 {
+                    Some(k.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if remove_list.len() > 0 {
+            trace!("Unloading {} chunks", remove_list.len());
+        }
+        remove_list.into_iter().for_each(|k| {
+            self.chunk_map.remove(&k);
+        });
         Ok(())
     }
 }
 
-impl Renderable for Chunks {
+impl Updatable for ChunkManager {
+    fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
+        if self.build_stats_timer.fires() {
+            info!(
+                "Avg build time: {:.2}ms",
+                self.chunk_loader.get_avg_build_time()
+            );
+        }
+
+        if self.chunk_retrieval_timer.fires() {
+            self.retrieve_loaded_chunks()
+                .map_err(|e| UpdateError::Internal(e.to_string()))?;
+        }
+
+        self.build_stats_timer.tick(time_passed)?;
+        self.chunk_retrieval_timer.tick(time_passed)?;
+        Ok(())
+    }
+}
+
+impl Renderable for ChunkManager {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         info.push_shader(self.shader.clone());
 
+        self.shader.set_resource_integer("chunk_size", CHUNK_SIZE)?;
         for chunk in self.chunk_map.values() {
-            chunk.prepare_rendering(info)?;
-            self.mesh.render(info)?;
+            if chunk.prepare_rendering(info)? {
+                self.mesh.render(info)?;
+            }
         }
 
         info.pop_shader();
@@ -109,9 +172,9 @@ fn load_surface_shader(directory: &str) -> Result<ShaderProgram, GraphicsError> 
     let surface_shader_program = ShaderProgramBuilder::new()
         .add_vertex_shader((directory.to_owned() + "/VertexShader.glsl").as_str())
         .add_fragment_shader((directory.to_owned() + "/FragmentShader.glsl").as_str())
-        //.add_resource("texture_array")
         .add_resource("mvp")
         .add_resource("model")
+        .add_resource("chunk_size")
         .add_resource("view_pos")
         .add_resource("fog_color")
         .add_resource("active_lights")
@@ -148,4 +211,10 @@ fn get_lod_distances(config: &Config) -> [i32; 3] {
         far_radius,
     );
     [near_radius, far_radius, active_radius]
+}
+
+impl Drop for ChunkManager {
+    fn drop(&mut self) {
+        self.chunk_loader.stop();
+    }
 }

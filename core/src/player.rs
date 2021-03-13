@@ -91,6 +91,10 @@ impl Player {
         self.speed = f32::max(self.speed + amount, 1e-3);
     }
 
+    pub fn get_speed(&self) -> f32 {
+        self.speed
+    }
+
     pub fn get_direction(&self) -> Point3f {
         create_direction(self.get_rotation())
     }

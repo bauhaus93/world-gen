@@ -5,7 +5,7 @@ use super::{Point2, Point2f};
 pub type Point2i = Point2<i32>;
 
 impl Point2i {
-    pub fn get_length(&self) -> f32 {
+    pub fn length(&self) -> f32 {
         ((self[0] as f32).powf(2.) + (self[1] as f32).powf(2.)).sqrt()
     }
 }

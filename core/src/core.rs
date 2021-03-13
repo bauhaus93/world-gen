@@ -143,6 +143,9 @@ fn handle_keyboard_event(event: &KeyboardInput, input: &mut Input) {
         0x3C => {
             input.set_key_pressed("F2", pressed);
         }
+        0x3D => {
+            input.set_key_pressed("F3", pressed);
+        }
         _ => {}
     }
 }

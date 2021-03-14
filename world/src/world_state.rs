@@ -19,7 +19,7 @@ impl WorldState {
         let player = Player::default();
         let world = World::new(&config).map_err(|e| StateError::Setup(e.to_string()))?;
 
-        camera.set_far((CHUNK_SIZE * config.get_int_or_default("active_radius", 50)) as f32 * 16.);
+        camera.set_far((CHUNK_SIZE * config.get_int_or_default("active_radius", 50)) as f32 * 8.);
 
         Ok(WorldState {
             camera: camera,

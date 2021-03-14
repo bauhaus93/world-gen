@@ -7,6 +7,8 @@ layout(location = 2) in vec3 vertex_normal;
 uniform mat4 mvp;
 uniform mat4 model;
 uniform vec3 view_pos;
+uniform float dudv_offset;
+uniform sampler2D dudv_map;
 
 out VertexData {
 	vec2 uv;

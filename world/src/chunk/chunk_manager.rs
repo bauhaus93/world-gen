@@ -4,11 +4,11 @@ use std::iter;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use super::{get_chunk_pos, get_world_pos, Chunk, ChunkError, ChunkLoader, CHUNK_SIZE};
+use super::{get_chunk_pos, get_relative_pos, Chunk, ChunkError, ChunkLoader, CHUNK_SIZE};
 use crate::{Architect, HeightMap};
 use core::light::SceneLights;
 use core::{
-    Config, GraphicsError, Mesh, Point2f, Point2i, Point3f, RenderInfo, Renderable, ShaderProgram,
+    Config, GraphicsError, Mesh, Point2i, Point3f, RenderInfo, Renderable, ShaderProgram,
     ShaderProgramBuilder, Timer, Updatable, UpdateError,
 };
 
@@ -18,16 +18,15 @@ pub struct ChunkManager {
     chunk_map: BTreeMap<Point2i, Chunk>,
     build_stats_timer: Timer,
     chunk_retrieval_timer: Timer,
-    mesh: Mesh,
+    mesh: [Mesh; 3],
     lod_distances: [i32; 3],
 }
 
 impl ChunkManager {
     pub fn new(architect: Architect, config: &Config) -> Result<Self, ChunkError> {
-        let mesh: Mesh = HeightMap::new(CHUNK_SIZE)
-            .triangulate()
-            .ok_or(ChunkError::HeightmapTriangulation)
-            .and_then(|t| t.as_slice().try_into().map_err(ChunkError::from))?;
+        let mesh_lod0: Mesh = HeightMap::new(CHUNK_SIZE, 1.).try_into()?;
+        let mesh_lod1: Mesh = HeightMap::new(CHUNK_SIZE / 4, 4.2).try_into()?;
+        let mesh_lod2: Mesh = HeightMap::new(CHUNK_SIZE / 8, 8.).try_into()?;
 
         let surface_shader_dir = config.get_str("surface_shader_dir")?;
         let surface_shader_program = load_surface_shader(surface_shader_dir)?;
@@ -37,8 +36,8 @@ impl ChunkManager {
             chunk_loader: ChunkLoader::new(Arc::new(architect)),
             chunk_map: BTreeMap::default(),
             build_stats_timer: Timer::new(5000),
-            chunk_retrieval_timer: Timer::new(1000),
-            mesh: mesh,
+            chunk_retrieval_timer: Timer::new(500),
+            mesh: [mesh_lod0, mesh_lod1, mesh_lod2],
             lod_distances: get_lod_distances(config),
         };
         cm.chunk_loader.start(8);
@@ -96,8 +95,7 @@ impl ChunkManager {
     pub fn get_height(&self, world_pos: Point3f) -> f32 {
         let chunk_pos = get_chunk_pos(world_pos);
         match self.chunk_map.get(&chunk_pos) {
-            Some(chunk) => chunk
-                .get_height(world_pos.as_xy() - get_world_pos(chunk_pos, Point2f::from_scalar(0.))),
+            Some(chunk) => chunk.get_height(get_relative_pos(world_pos)),
             None => 0.,
         }
     }
@@ -160,7 +158,7 @@ impl Renderable for ChunkManager {
         self.shader.set_resource_integer("chunk_size", CHUNK_SIZE)?;
         for chunk in self.chunk_map.values() {
             if chunk.prepare_rendering(info)? {
-                self.mesh.render(info)?;
+                self.mesh[0].render(info)?;
             }
         }
 

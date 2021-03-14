@@ -7,7 +7,7 @@ use super::{BuildStats, Chunk, ChunkBuilder, ChunkError, Worker};
 use crate::architect::Architect;
 use core::Point2i;
 
-const INPUT_QUEUE_MAX: usize = 300;
+const INPUT_QUEUE_MAX: usize = 500;
 
 pub struct ChunkLoader {
     stop: Arc<AtomicBool>,

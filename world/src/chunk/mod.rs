@@ -14,5 +14,5 @@ pub use self::chunk_error::ChunkError;
 pub use self::chunk_loader::ChunkLoader;
 pub use self::chunk_manager::ChunkManager;
 #[allow(unused)]
-pub use self::chunk_size::{get_chunk_pos, get_world_pos, CHUNK_SIZE};
+pub use self::chunk_size::{get_chunk_pos, get_relative_pos, get_world_pos, CHUNK_SIZE};
 use self::worker::Worker;

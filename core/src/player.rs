@@ -13,7 +13,7 @@ pub struct Player {
 impl Player {
     pub fn align_camera(&self, camera: &mut Camera) {
         let mut pos = self.get_translation();
-        pos[2] += 3.;
+        pos[2] += 4.;
         camera.set_translation(pos);
         camera.set_rotation(self.get_rotation());
     }

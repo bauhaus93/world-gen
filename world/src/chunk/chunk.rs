@@ -17,7 +17,7 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(pos: Point2i, heightmap: HeightMap) -> Result<Self, ChunkError> {
         let mut model = Model::default();
-        let abs_pos = get_world_pos(pos, Point2f::from_scalar(0.));
+        let abs_pos = get_world_pos(pos, None);
         model.set_translation(abs_pos.extend(0.));
 
         let texture: Texture = heightmap.clone().try_into()?;

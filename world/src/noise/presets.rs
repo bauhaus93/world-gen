@@ -10,7 +10,7 @@ pub fn get_default_noise(seed: Seed) -> Box<dyn Noise> {
         .seed(Seed::from_rng(&mut local_rng))
         .octaves(6)
         .scale(1e-3)
-        .roughness(0.5)
+        .roughness(0.3)
         .range([-1., 1.])
         .modifier(ModifierType::FactoredExponent(10., 2.))
         .above(0.)

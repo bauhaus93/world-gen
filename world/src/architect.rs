@@ -27,8 +27,9 @@ impl Architect {
 
     pub fn create_heightmap(&self, chunk_pos: Point2i) -> HeightMap {
         HeightMap::from_noise(
-            get_world_pos(chunk_pos, Point2f::new(0., 0.)),
+            get_world_pos(chunk_pos, None),
             CHUNK_SIZE,
+            1.,
             self.height_noise.as_ref(),
         )
     }
@@ -47,7 +48,7 @@ impl Architect {
             trees
                 .into_iter()
                 .map(|offset| {
-                    let abs_pos = get_world_pos(chunk_pos, offset.into());
+                    let abs_pos = get_world_pos(chunk_pos, Some(offset.into()));
                     let height = self.get_height(abs_pos);
                     abs_pos.extend(height)
                 })

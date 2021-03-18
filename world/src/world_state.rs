@@ -32,12 +32,13 @@ impl WorldState {
 }
 
 impl State for WorldState {
-    fn update(&mut self, input: &Input) -> Result<(), StateError> {
-        if input.key_pressed("F1") {
+    fn update(&mut self, input: &mut Input) -> Result<(), StateError> {
+        if input.key_pressed("F1") > 250 {
             self.fly_mode = !self.fly_mode;
             if self.fly_mode {
                 self.player.clear_momentum();
             }
+            input.clear_key("F1");
         }
         if self.fly_mode {
             self.update_player_fly_mode(input)?;
@@ -61,27 +62,29 @@ impl WorldState {
         self.player.align_camera(&mut self.camera);
     }
 
-    fn update_world(&mut self, input: &Input) -> Result<(), StateError> {
+    fn update_world(&mut self, input: &mut Input) -> Result<(), StateError> {
         self.world.set_center(self.player.get_translation());
         self.world.tick(input.get_time_passed())?;
         Ok(())
     }
-    fn update_player(&mut self, input: &Input) -> Result<(), StateError> {
+    fn update_player(&mut self, input: &mut Input) -> Result<(), StateError> {
         self.update_player_direction(input);
         self.update_player_momentum(input);
         self.world.interact(&mut self.player);
 
-        if input.key_pressed("F2") {
-            self.player.mod_speed(0.25);
+        if input.key_pressed("F2") > 250 {
+            self.player.mod_speed(self.player.get_speed() * 0.25);
+            input.clear_key("F2");
         }
-        if input.key_pressed("F3") {
-            self.player.mod_speed(-0.25);
+        if input.key_pressed("F3") > 250 {
+            self.player.mod_speed(-self.player.get_speed() * 0.2);
+            input.clear_key("F3");
         }
         self.player.tick(input.get_time_passed())?;
         Ok(())
     }
 
-    fn update_player_fly_mode(&mut self, input: &Input) -> Result<(), StateError> {
+    fn update_player_fly_mode(&mut self, input: &mut Input) -> Result<(), StateError> {
         self.update_player_direction(input);
         let mut offset = Point3f::from_scalar(0.);
         if let Some(move_keys) = input.get_movement_keys_down() {
@@ -98,18 +101,20 @@ impl WorldState {
                 offset += self.player.get_direction().cross(&Point3f::new(0., 0., 1.));
             }
         }
-        if input.key_pressed("SPACE") {
+        if input.key_pressed("SPACE") > 0 {
             offset += Point3f::new(0., 0., 1.);
         }
         if offset.length() > 0. {
             self.player
                 .mod_translation(offset.as_normalized() * self.player.get_speed());
         }
-        if input.key_pressed("F2") {
-            self.player.mod_speed(0.25);
+        if input.key_pressed("F2") > 250 {
+            self.player.mod_speed(self.player.get_speed() * 0.25);
+            input.clear_key("F2");
         }
-        if input.key_pressed("F3") {
-            self.player.mod_speed(-0.25);
+        if input.key_pressed("F3") > 250 {
+            self.player.mod_speed(-self.player.get_speed() * 0.2);
+            input.clear_key("F3");
         }
         self.player.tick(input.get_time_passed())?;
         Ok(())
@@ -125,13 +130,13 @@ impl WorldState {
         }
     }
 
-    fn update_player_momentum(&mut self, input: &Input) {
+    fn update_player_momentum(&mut self, input: &mut Input) {
         if !self.player.is_jumping() {
             if let Some(move_keys) = input.get_movement_keys_down() {
                 self.player.add_move_momentum(&move_keys);
             }
 
-            if input.key_pressed("SPACE") {
+            if input.key_pressed("SPACE") > 0 {
                 self.player.jump(3.);
             }
         }

@@ -48,7 +48,7 @@ impl Core {
                             + last_update.elapsed().subsec_millis(),
                     );
                     last_update = Instant::now();
-                    if let Err(e) = state.update(&state_input) {
+                    if let Err(e) = state.update(&mut state_input) {
                         error!("Update state: {}", e);
                         *control_flow = ControlFlow::Exit;
                         return;

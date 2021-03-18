@@ -207,9 +207,3 @@ fn get_lod_distances(config: &Config) -> [i32; 3] {
     );
     [near_radius, far_radius, active_radius]
 }
-
-impl Drop for ChunkManager {
-    fn drop(&mut self) {
-        self.chunk_loader.stop();
-    }
-}

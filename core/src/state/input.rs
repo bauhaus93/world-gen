@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
+use std::time::Instant;
 
 pub struct Input {
     time_passed: u32,
-    keys_pressed: BTreeMap<String, bool>,
+    keys_pressed: BTreeMap<String, Instant>,
     mouse_delta: Option<(f64, f64)>,
 }
 
@@ -22,7 +23,20 @@ impl Input {
     }
 
     pub fn set_key_pressed(&mut self, key: &str, pressed: bool) {
-        self.keys_pressed.insert(key.to_string(), pressed);
+        match pressed {
+            true => {
+                self.keys_pressed
+                    .entry(key.to_string())
+                    .or_insert(Instant::now());
+            }
+            false => match self.keys_pressed.remove(key) {
+                _ => {}
+            },
+        }
+    }
+
+    pub fn clear_key(&mut self, key: &str) {
+        self.set_key_pressed(key, false);
     }
 
     pub fn set_mouse_delta(&mut self, delta: (f64, f64)) {
@@ -33,10 +47,13 @@ impl Input {
         self.mouse_delta = None;
     }
 
-    pub fn key_pressed(&self, key: &str) -> bool {
+    pub fn key_pressed(&self, key: &str) -> u32 {
         match self.keys_pressed.get(key) {
-            Some(key_down) => *key_down,
-            None => false,
+            Some(key_down) => {
+                (*key_down).elapsed().as_secs() as u32 * 1000
+                    + (*key_down).elapsed().subsec_millis()
+            }
+            None => 0,
         }
     }
 
@@ -60,7 +77,7 @@ impl Input {
         const ORDER: &'static str = "WASD";
         for i in 0..4 {
             move_down[i] = match self.keys_pressed.get(&ORDER[i..i + 1]) {
-                Some(d) => *d,
+                Some(_) => true,
                 None => false,
             };
         }

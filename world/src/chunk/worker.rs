@@ -56,31 +56,26 @@ impl Worker {
     fn build_chunk(&self, chunk_pos: Point2i) -> Result<(), ChunkError> {
         let builder = ChunkBuilder::new(chunk_pos, self.architect.as_ref())?;
 
-        match self.output_queue.lock() {
-            Ok(mut guard) => (*guard).push_back(builder),
-            Err(_poisoned) => {
-                return Err(ChunkError::MutexPoison);
-            }
-        }
-        Ok(())
+        self.output_queue
+            .lock()
+            .map(|mut q| q.push_back(builder))
+            .or(Err(ChunkError::MutexPoison))
     }
 
     fn handle_build_stats(&self, build_start: &Instant) -> Result<(), ChunkError> {
         let build_time =
             build_start.elapsed().as_secs() as u32 * 1000 + build_start.elapsed().subsec_millis();
-        match self.build_stats.lock() {
-            Ok(mut guard) => (*guard).add_time(build_time),
-            Err(_poisoned) => {
-                return Err(ChunkError::MutexPoison);
-            }
-        }
-        Ok(())
+
+        self.build_stats
+            .lock()
+            .map(|mut bs| bs.add_time(build_time))
+            .or(Err(ChunkError::MutexPoison))
     }
 
     fn get_chunk_pos(&self) -> Result<Option<Point2i>, ChunkError> {
-        match self.input_queue.lock() {
-            Ok(mut guard) => Ok((*guard).pop_front()),
-            Err(_poisoned) => Err(ChunkError::MutexPoison),
-        }
+        self.input_queue
+            .lock()
+            .map(|mut q| q.pop_front())
+            .or(Err(ChunkError::MutexPoison))
     }
 }

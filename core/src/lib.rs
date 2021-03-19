@@ -5,6 +5,7 @@ extern crate glm;
 extern crate glutin;
 extern crate image;
 extern crate palette;
+extern crate sha2;
 extern crate thiserror;
 
 pub mod bounding_box;

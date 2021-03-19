@@ -5,7 +5,7 @@ LOG_ENV_STRING=RUST_LOG="$(LOG_STRING)"
 
 .PHONY: all release debug tests bench build_release build_debug clean tags
 
-all: release tags
+all: tags release
 
 release: build_release
 	$(LOG_ENV_STRING) cargo run --release --bin world_gen
@@ -26,7 +26,7 @@ build_debug:
 	cargo build --bin world_gen
 
 tags:
-	ctags -R core bin world
+	ctags -R core/src bin world/src
 
 resource_compress:
 	tar cvzf resources.tar.gz resources/

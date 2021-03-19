@@ -1,5 +1,5 @@
-/target
 /resources
+target
 Cargo.lock
 tags
 *.rs.bk

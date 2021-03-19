@@ -18,26 +18,28 @@ pub struct ChunkManager {
     chunk_map: BTreeMap<Point2i, Chunk>,
     build_stats_timer: Timer,
     chunk_retrieval_timer: Timer,
-    mesh: [Mesh; 3],
+    mesh: [Mesh; 2],
     lod_distances: [i32; 3],
 }
 
 impl ChunkManager {
-    pub fn new(architect: Architect, config: &Config) -> Result<Self, ChunkError> {
+    pub fn new(architect: Arc<Architect>, config: &Config) -> Result<Self, ChunkError> {
         let mesh_lod0: Mesh = HeightMap::new(CHUNK_SIZE, 1.).try_into()?;
-        let mesh_lod1: Mesh = HeightMap::new(CHUNK_SIZE / 4, 4.2).try_into()?;
-        let mesh_lod2: Mesh = HeightMap::new(CHUNK_SIZE / 8, 8.).try_into()?;
+        let mesh_lod1: Mesh = HeightMap::new(CHUNK_SIZE / 8, 9.).try_into()?;
 
         let surface_shader_dir = config.get_str("surface_shader_dir")?;
         let surface_shader_program = load_surface_shader(surface_shader_dir)?;
+        surface_shader_program
+            .set_resource_integer("chunk_size", CHUNK_SIZE)
+            .map_err(GraphicsError::from)?;
 
         let mut cm = Self {
             shader: Rc::new(surface_shader_program),
-            chunk_loader: ChunkLoader::new(Arc::new(architect)),
+            chunk_loader: ChunkLoader::new(architect),
             chunk_map: BTreeMap::default(),
             build_stats_timer: Timer::new(5000),
             chunk_retrieval_timer: Timer::new(500),
-            mesh: [mesh_lod0, mesh_lod1, mesh_lod2],
+            mesh: [mesh_lod0, mesh_lod1],
             lod_distances: get_lod_distances(config),
         };
         cm.chunk_loader.start(8);
@@ -155,7 +157,6 @@ impl Renderable for ChunkManager {
     fn render<'a>(&self, info: &'a mut RenderInfo) -> Result<(), GraphicsError> {
         info.push_shader(self.shader.clone());
 
-        self.shader.set_resource_integer("chunk_size", CHUNK_SIZE)?;
         for chunk in self.chunk_map.values() {
             if chunk.prepare_rendering(info)? {
                 self.mesh[0].render(info)?;

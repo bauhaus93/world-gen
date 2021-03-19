@@ -14,6 +14,10 @@ impl Default for BuildStats {
 
 impl BuildStats {
     pub fn add_time(&mut self, build_time: u32) {
+        if self.build_count > 40000 {
+            self.build_time_accumulated = 0;
+            self.build_count = 0;
+        }
         self.build_time_accumulated += build_time;
         self.build_count += 1;
     }

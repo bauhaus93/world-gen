@@ -40,7 +40,7 @@ fn main() {
             return;
         }
     };
-    core.run(state);
+    core.run(state, 30);
 }
 
 fn init_custom_logger() {

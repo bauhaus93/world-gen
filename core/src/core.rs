@@ -1,4 +1,5 @@
-use std::time::Instant;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 use gl;
 use gl::types::GLsizei;
@@ -34,19 +35,23 @@ impl Core {
         Ok(core)
     }
 
-    pub fn run(self, mut state: Box<dyn State>) -> ! {
+    pub fn run(self, mut state: Box<dyn State>, target_fps: u32) -> ! {
         let context = self.context;
         let mut hibernate = false;
         let mut state_input = Input::default();
         let mut last_update = Instant::now();
+        let mut sleep_time = Duration::from_millis(0);
+        let mut frame_counter = 0;
+        let mut time_passed_last10 = 0;
 
         self.event_loop
             .run(move |evt, _tgt, control_flow| match evt {
                 Event::MainEventsCleared => {
-                    state_input.set_time_passed(
-                        last_update.elapsed().as_secs() as u32 * 1000
-                            + last_update.elapsed().subsec_millis(),
-                    );
+                    frame_counter += 1;
+                    let time_passed = last_update.elapsed().as_secs() as u32 * 1000
+                        + last_update.elapsed().subsec_millis();
+                    time_passed_last10 += time_passed;
+                    state_input.set_time_passed(time_passed);
                     last_update = Instant::now();
                     if let Err(e) = state.update(&mut state_input) {
                         error!("Update state: {}", e);
@@ -69,6 +74,12 @@ impl Core {
                         error!("Swap Buffers: {}", e);
                         *control_flow = ControlFlow::Exit;
                     }
+                    if frame_counter % 10 == 0 {
+                        sleep_time =
+                            update_sleep_time(sleep_time, time_passed_last10 / 10, target_fps);
+                        time_passed_last10 = 0;
+                    }
+                    sleep(sleep_time);
                 }
 
                 Event::DeviceEvent {
@@ -104,6 +115,24 @@ impl Core {
                 }
                 _ => {}
             })
+    }
+}
+
+fn update_sleep_time(
+    curr_sleep_time: Duration,
+    last_time_passed: u32,
+    target_fps: u32,
+) -> Duration {
+    let derivation =
+        ((last_time_passed + curr_sleep_time.subsec_millis()) * target_fps) as i32 - 1000;
+    if derivation.abs() > target_fps as i32 {
+        let sleep_time = i32::max(
+            0,
+            curr_sleep_time.subsec_millis() as i32 - derivation.signum(),
+        ) as u64;
+        Duration::from_millis(sleep_time)
+    } else {
+        curr_sleep_time
     }
 }
 

@@ -1,6 +1,8 @@
-use crate::Point2i;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use sha2::{Digest, Sha256};
 use std::fmt;
+
+use crate::Point2i;
 
 #[derive(Clone, Copy)]
 pub struct Seed([u8; 32]);
@@ -18,8 +20,10 @@ impl Seed {
 
     pub fn from_string(string: &str) -> Self {
         let mut seed = [0; 32];
-        for (s, c) in seed.iter_mut().zip(string.bytes()) {
-            *s = c;
+        let dig = Sha256::digest(string.as_bytes());
+
+        for (s, c) in seed.iter_mut().zip(dig.iter().cycle()) {
+            *s = *c;
         }
         Self(seed)
     }

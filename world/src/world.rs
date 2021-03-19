@@ -1,4 +1,5 @@
 use rand::rngs::StdRng;
+use std::sync::Arc;
 
 use crate::architect::Architect;
 use crate::chunk::{ChunkManager, CHUNK_SIZE};
@@ -14,6 +15,7 @@ pub struct World {
     sun: Sun,
     chunk_manager: ChunkManager,
     chunk_update_timer: Timer,
+    decoration_timer: Timer,
     object_manager: ObjectManager,
     scene_lights: SceneLights,
     monkey_id: u32,
@@ -30,14 +32,12 @@ impl World {
         info!("Day length is {}s", day_length);
         info!("Gravity is {}", gravity);
 
-        //let seed = Seed::from_entropy();
-        let seed = Seed::from_byte_string("598FA4C6E7911AAA26DA2327D2D183B2")
-            .unwrap_or_else(|| Seed::from_entropy());
+        let seed = Seed::from_string("SEAS");
         info!("World seed = {}", seed);
         let mut rng: StdRng = seed.into();
 
         let mut object_manager = ObjectManager::from_yaml(&object_prototypes_path)?;
-        let architect = Architect::from_seed(Seed::from_rng(&mut rng));
+        let architect = Arc::new(Architect::from_seed(Seed::from_rng(&mut rng)));
         let chunk_manager = ChunkManager::new(architect, config)?;
 
         let monkey_id = object_manager.create_object("monkey", true)?;
@@ -55,6 +55,7 @@ impl World {
             sun: Sun::with_day_length(day_length),
             chunk_manager: chunk_manager,
             chunk_update_timer: Timer::new(1000),
+            decoration_timer: Timer::new(100),
             object_manager: object_manager,
             scene_lights: create_default_scene_lights(),
             monkey_id: monkey_id,
@@ -73,9 +74,9 @@ impl World {
         let forward_xy = player.get_direction().as_xy().as_normalized();
         let forward_height = self
             .chunk_manager
-            .get_height((player_pos_xy + forward_xy).extend(0.));
+            .get_height((player_pos_xy + forward_xy * player.get_speed()).extend(0.));
         let forward_z = forward_height - chunk_height;
-        player.update_forward(forward_xy.extend(forward_z));
+        player.update_forward(forward_xy.extend(forward_z).as_normalized());
 
         let height_diff = player.get_z() - chunk_height;
         if height_diff > 0. {
@@ -144,8 +145,8 @@ impl Renderable for World {
         self.surface_texture.deactivate();*/
         // self.object_manager.render(info)?;
         self.chunk_manager.render(info)?;
-        self.skybox.render(info)?;
         self.water_surface.render(info)?;
+        self.skybox.render(info)?;
         Ok(())
     }
 }
@@ -153,11 +154,14 @@ impl Renderable for World {
 impl Updatable for World {
     fn tick(&mut self, time_passed: u32) -> Result<(), UpdateError> {
         self.chunk_manager.tick(time_passed)?;
+        self.decoration_timer.tick(time_passed)?;
         if self.chunk_update_timer.fires() {
             self.chunk_manager
                 .request(self.center)
                 .map_err(|e| UpdateError::Internal(e.to_string()))?;
         }
+
+        if self.decoration_timer.fires() {}
 
         self.skybox.set_translation(self.center);
         self.sun.set_rotation_center(self.center);

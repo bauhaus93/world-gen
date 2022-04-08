@@ -74,7 +74,7 @@ impl World {
         let forward_xy = player.get_direction().as_xy().as_normalized();
         let forward_height = self
             .chunk_manager
-            .get_height((player_pos_xy + forward_xy * player.get_speed()).extend(0.));
+            .get_height((player_pos_xy + forward_xy).extend(0.));
         let forward_z = forward_height - chunk_height;
         player.update_forward(forward_xy.extend(forward_z).as_normalized());
 

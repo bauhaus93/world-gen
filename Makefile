@@ -3,9 +3,11 @@ LOG_LEVEL=debug
 LOG_STRING=core=$(LOG_LEVEL),world_gen=$(LOG_LEVEL),world=$(LOG_LEVEL)
 LOG_ENV_STRING=RUST_LOG="$(LOG_STRING)"
 
-.PHONY: all release debug tests bench build_release build_debug clean tags
+.PHONY: all check release debug tests bench build_release build_debug clean tags resource_compress resource_extract
 
 all: tags release
+
+check: tests bench
 
 release: build_release
 	$(LOG_ENV_STRING) cargo run --release --bin world_gen
@@ -26,7 +28,7 @@ build_debug:
 	cargo build --bin world_gen
 
 tags:
-	ctags -R core/src bin world/src
+	ctags -R bin core/src world/src
 
 resource_compress:
 	tar cvzf resources.tar.gz resources/
@@ -35,5 +37,5 @@ resource_extract:
 	tar xvzf resources.tar.gz
 
 clean:
-	rm -rf target Cargo.lock
+	rm -rf target core/target world/target
 

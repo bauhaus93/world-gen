@@ -35,7 +35,10 @@ impl SceneLights {
         for (_, (i, _)) in &self.light_map {
             used_indices.insert(*i);
         }
-        let all_indices = BTreeSet::from((0..MAX_SCENE_LIGHTS).collect());
+        let mut all_indices = BTreeSet::new();
+        (0..MAX_SCENE_LIGHTS).for_each(|e| {
+            all_indices.insert(e);
+        });
         let free_indices = all_indices.difference(&used_indices);
         let min_index = free_indices
             .into_iter()
